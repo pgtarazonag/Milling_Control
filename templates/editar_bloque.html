@@ -1,0 +1,71 @@
+{% extends "base.html" %}
+{% block title %}Editar Bloque | Fresado Pro{% endblock %}
+{% block instructions %}
+<div class="alert alert-success d-flex align-items-center" role="alert">
+  <i class="bi bi-pencil me-2"></i>
+  Edita los datos del bloque seleccionado. Los cambios se guardan automáticamente.
+</div>
+{% endblock %}
+{% block content %}
+<div class="card border-0 shadow-sm animate__animated animate__fadeInUp">
+  <div class="card-body">
+    <h3 class="mb-3"><i class="bi bi-pencil"></i> Editar Bloque</h3>
+    <form method="post" class="row g-3">
+      <div class="col-md-6">
+        <label class="form-label">Material</label>
+        <select name="material" class="form-select" required>
+          <option value="">-- Selecciona --</option>
+          {% for mat in materiales %}
+            <option value="{{ mat }}" {% if bloque.material == mat %}selected{% endif %}>{{ mat }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="col-md-6">
+        <label class="form-label">Marca</label>
+        <select name="marca" class="form-select">
+          <option value="">-- Selecciona --</option>
+          {% for m in marcas %}
+            <option value="{{ m }}" {% if bloque.marca == m %}selected{% endif %}>{{ m }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="col-md-6">
+        <label class="form-label">Shade</label>
+        <select name="shade" class="form-select" required>
+          <option value="">-- Selecciona --</option>
+          {% for s in shades %}
+            <option value="{{ s }}" {% if bloque.shade == s %}selected{% endif %}>{{ s }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="col-md-6">
+        <label class="form-label">Grosor</label>
+        <select name="grosor" class="form-select" required>
+          <option value="">-- Selecciona --</option>
+          {% for g in grosores %}
+            <option value="{{ g }}" {% if bloque.grosor|string == g|string %}selected{% endif %}>{{ g }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="col-md-6">
+        <label class="form-label">Cantidad</label>
+        <input type="number" name="cantidad" class="form-control" value="{{ bloque.cantidad }}" min="1">
+      </div>
+      <div class="col-md-6">
+        <label class="form-label">Código de Barra</label>
+        <input type="text" name="codigo_barra" class="form-control" value="{{ bloque.codigo_barra }}">
+      </div>
+      <div class="col-md-6">
+        <label class="form-label">Estado</label>
+        <select name="estado" class="form-select" required>
+          <option value="nuevo" {% if bloque.estado == 'nuevo' %}selected{% endif %}>Nuevo</option>
+          <option value="usado" {% if bloque.estado == 'usado' %}selected{% endif %}>Usado</option>
+        </select>
+      </div>
+      <div class="col-12 text-end">
+        <button type="submit" class="btn btn-success"><i class="bi bi-save"></i> Guardar Cambios</button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

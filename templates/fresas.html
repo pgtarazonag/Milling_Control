@@ -1,0 +1,156 @@
+{% extends "base.html" %}
+{% block title %}{{ _('Milling') }} | Fresado Pro{% endblock %}
+{% block instructions %}
+<div class="alert alert-warning d-flex align-items-center" role="alert">
+  <i class="bi bi-tools me-2"></i>
+  {{ _('Manage the inventory and installation of milling tools. Select compatible materials and keep your equipment always ready.') }}
+</div>
+{% endblock %}
+{% block content %}
+<div class="row g-4">
+  <!-- Columna izquierda: Instalar fresa y fresas instaladas -->
+  <div class="col-lg-6 order-lg-1">
+    <div class="card border-0 shadow-sm animate__animated animate__fadeInUp mb-4">
+      <div class="card-body">
+        <h5 class="mb-3"><i class="bi bi-arrow-down-circle"></i> {{ _('Install Milling Tool in Machine') }}</h5>
+        <form method="post" class="row g-3 mb-4 align-items-end">
+          <input type="hidden" name="instalar_fresa" value="1">
+          <div class="col-md-6">
+            <label class="form-label">{{ _('Type') }}</label>
+            <select name="tipo_diametro_instalar" class="form-select" required>
+              <option value="">-- {{ _('Select') }} --</option>
+              {% for fresa in fresas_inventario if fresa.cantidad > 0 %}
+                <option value="{{ fresa.tipo }}">{{ fresa.tipo }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="col-md-6">
+            <label class="form-label">{{ _('Machine') }}</label>
+            <select name="maquina_instalar" class="form-select" required>
+              <option value="">-- {{ _('Select') }} --</option>
+              {% for m in maquinas %}
+                <option value="{{ m }}">{{ m }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="col-12 text-end">
+            <button type="submit" class="btn btn-primary"><i class="bi bi-arrow-down-circle"></i> {{ _('Install in Machine') }}</button>
+          </div>
+        </form>
+      </div>
+    </div>
+    <div class="card border-0 shadow-sm animate__animated animate__fadeInUp">
+      <div class="card-body">
+        <h5 class="mb-3"><i class="bi bi-cpu"></i> {{ _('Installed Milling Tools') }}</h5>
+        <div class="table-responsive animate__animated animate__fadeIn">
+          <table class="table table-bordered table-sm table-striped table-fresas-inst" id="tabla-fresas-inst">
+            <thead class="table-secondary">
+              <tr>
+                <th><i class="bi bi-hash"></i> ID</th>
+                <th><i class="bi bi-tools"></i> {{ _('Type') }}</th>
+                <th><i class="bi bi-cpu"></i> {{ _('Machine') }}</th>
+                <th><i class="bi bi-palette"></i> {{ _('Compatible Materials') }}</th>
+                <th><i class="bi bi-calendar"></i> {{ _('Installation Date') }}</th>
+                <th><i class="bi bi-bar-chart"></i> {{ _('Milled Models') }}</th>
+                <th><i class="bi bi-gear"></i> {{ _('Actions') }}</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for fresa in fresas_instaladas %}
+              <tr>
+                <td>{{ fresa.id }}</td>
+                <td>{{ fresa.tipo }}</td>
+                <td>{{ fresa.maquina }}</td>
+                <td>{{ fresa.materiales }}</td>
+                <td>{{ fresa.fecha_instalacion.strftime('%Y-%m-%d %H:%M') }}</td>
+                <td>{{ fresa.modelos_fresados }}</td>
+                <td>
+                  <form method="post" action="{{ url_for('fresas.eliminar_instalada', fresa_id=fresa.id) }}" style="display:inline;">
+                    <button type="submit" class="btn btn-outline-danger btn-sm"><i class="bi bi-trash"></i></button>
+                  </form>
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+  <!-- Columna derecha: Agregar inventario y listado de inventario -->
+  <div class="col-lg-6 order-lg-2">
+    <div class="card border-0 shadow-sm animate__animated animate__fadeInUp mb-4">
+      <div class="card-body">
+        <h3 class="mb-3"><i class="bi bi-tools"></i> {{ _('Inventory and Milling Tool Management') }}</h3>
+        <form method="post" class="row g-3 mb-4">
+          <input type="hidden" name="agregar_inventario" value="1">
+          <div class="col-md-6">
+            <label class="form-label">{{ _('Type') }}</label>
+            <input type="text" name="tipo" class="form-control" required>
+          </div>
+          <div class="col-md-6">
+            <label class="form-label">{{ _('Count') }}</label>
+            <input type="number" name="cantidad" class="form-control" min="1" value="1" required>
+          </div>
+          <div class="col-12">
+            <label class="form-label">{{ _('Compatible Materials') }}</label>
+            <div class="d-flex flex-wrap">
+              {% for tipo in tipos_material %}
+                <div class="form-check me-2">
+                  <input class="form-check-input" type="checkbox" name="materiales" value="{{ tipo }}" id="mat-{{ tipo }}">
+                  <label class="form-check-label" for="mat-{{ tipo }}">{{ tipo }}</label>
+                </div>
+              {% endfor %}
+            </div>
+            <small class="form-text text-muted">{{ _('Select one or more') }}</small>
+          </div>
+          <div class="col-12 text-end">
+            <button type="submit" class="btn btn-success"><i class="bi bi-plus-circle"></i> {{ _('Add to Inventory') }}</button>
+          </div>
+        </form>
+      </div>
+    </div>
+    <div class="card border-0 shadow-sm animate__animated animate__fadeInUp">
+      <div class="card-body">
+        <h5 class="mb-3"><i class="bi bi-list-ul"></i> {{ _('Inventory List') }}</h5>
+        <div class="table-responsive animate__animated animate__fadeIn">
+          <table class="table table-striped table-hover table-fresas-inv" id="tabla-fresas-inv">
+            <thead class="table-warning">
+              <tr>
+                <th><i class="bi bi-hash"></i> {{ _('Type') }}</th>
+                <th><i class="bi bi-cube"></i> {{ _('Count') }}</th>
+                <th><i class="bi bi-palette"></i> {{ _('Compatible Materials') }}</th>
+                <th><i class="bi bi-calendar"></i> {{ _('Registration Date') }}</th>
+                <th><i class="bi bi-gear"></i> {{ _('Actions') }}</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for fresa in fresas_inventario %}
+              <tr>
+                <td>{{ fresa.tipo }}</td>
+                <td>{{ fresa.cantidad }}</td>
+                <td>{{ fresa.materiales }}</td>
+                <td>{{ fresa.fecha_registro.strftime('%Y-%m-%d %H:%M') }}</td>
+                <td>
+                  <button type="button" class="btn btn-outline-warning btn-sm" data-bs-toggle="modal" data-bs-target="#editarInventarioModal{{ fresa.id }}"><i class="bi bi-pencil"></i></button>
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+{% block scripts %}
+{{ super() }}
+<script>
+$(document).ready(function(){
+  $('#tabla-fresas-inv, #tabla-fresas-inst').DataTable({
+    language: { url: window.getDataTablesLangUrl() }
+  });
+});
+</script>
+{% endblock %}

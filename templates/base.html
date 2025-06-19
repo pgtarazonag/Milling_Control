@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html lang="{{ session.get('lang', 'es') }}">
+<head>
+    <meta charset="UTF-8">
+    <title>{% block title %}{{ _('Dashboard') }}{% endblock %}</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!-- Bootstrap 5 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Bootstrap Icons -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css">
+    <!-- DataTables CSS -->
+    <link rel="stylesheet" href="https://cdn.datatables.net/1.13.7/css/dataTables.bootstrap5.min.css">
+    <style>
+        body { background: #f4f6fa; font-family: 'Inter', 'Segoe UI', Arial, sans-serif; }
+        /* --- Sidebar despliegue sólo al acercarse mucho al borde izquierdo --- */
+        .sidebar-proximity-zone {
+            position: fixed;
+            left: 0;
+            top: 0;
+            width: 14px; /* Más ancho para facilitar el hover */
+            height: 100vh;
+            z-index: 1050;
+            background: transparent;
+            pointer-events: auto;
+        }
+        @media (max-width: 991px) {
+            .sidebar-proximity-zone { display: none; }
+        }
+        .sidebar {
+            background: #23272f;
+            min-height: 100vh;
+            padding-top: 2rem;
+            transition: background 0.2s, color 0.2s, width 0.3s, min-width 0.3s, left 0.3s, opacity 0.3s;
+            width: 64px; /* Más grueso cuando está oculto */
+            min-width: 64px;
+            left: 0;
+            position: fixed;
+            z-index: 1040;
+            opacity: 0.7;
+            pointer-events: auto;
+        }
+        .sidebar.sidebar-open,
+        .sidebar:hover, .sidebar:focus-within {
+            width: 160px;
+            min-width: 160px;
+            opacity: 1;
+        }
+        /* --- Sidebar icon visibility fix --- */
+        .sidebar .nav-link {
+            color: #fff;
+            font-size: 0.95rem;
+            display: flex;
+            align-items: center;
+            gap: 0.6em;
+            transition: color 0.2s, background 0.2s, opacity 0.2s;
+            white-space: nowrap;
+            opacity: 1; /* Always visible, even when collapsed */
+            justify-content: center;
+        }
+        .sidebar.sidebar-open .nav-link,
+        .sidebar:hover .nav-link,
+        .sidebar:focus-within .nav-link {
+            justify-content: flex-start;
+        }
+        .sidebar .nav-link span.menu-text {
+            display: none;
+        }
+        .sidebar.sidebar-open .nav-link span.menu-text,
+        .sidebar:hover .nav-link span.menu-text,
+        .sidebar:focus-within .nav-link span.menu-text {
+            display: inline;
+            margin-left: 0.5em;
+        }
+        .sidebar .nav-link .bi {
+            display: inline-block;
+            vertical-align: middle;
+        }
+        .sidebar .nav-link.active, .sidebar .nav-link:hover {
+            background: #2d323c;
+            color: #ffc107;
+        }
+        .sidebar .bi {
+            font-size: 1.2em;
+        }
+        .sidebar .nav-item {
+            margin-bottom: 0.2em;
+        }
+        @media (max-width: 991px) {
+            .sidebar { min-height: auto; padding-top: 1rem; width: 100vw; min-width: 0; position: static; opacity: 1; }
+            .sidebar .nav-link { opacity: 1; }
+        }
+        .content {
+            padding: 2.5rem 2rem 1rem 2rem;
+            animation: fadeIn 0.7s;
+            margin-left: 40px; /* Ajuste para sidebar más delgada */
+            transition: margin-left 0.3s, width 0.3s;
+            width: calc(100% - 40px);
+        }
+        .sidebar.sidebar-open ~ .content,
+        .sidebar:hover ~ .content,
+        .sidebar:focus-within ~ .content {
+            margin-left: 160px;
+            width: calc(100% - 160px);
+        }
+        @media (max-width: 991px) {
+            .content { margin-left: 0; padding: 1.2rem 0.5rem; width: 100%; }
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: none; }
+        }
+        .topbar {
+            background: #23272f;
+            color: #fff;
+            padding: 0.7rem 2rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+        }
+        .topbar .logo {
+            font-weight: 700;
+            font-size: 1.3rem;
+            letter-spacing: 1px;
+            display: flex;
+            align-items: center;
+            gap: 0.5em;
+            color: #fff;
+        }
+        .topbar .nav-pills .nav-link {
+            color: #fff !important;
+            background: transparent;
+            transition: background 0.2s, color 0.2s;
+        }
+        .topbar .nav-pills .nav-link.active, .topbar .nav-pills .nav-link:hover {
+            background: #1976d2;
+            color: #fff !important;
+        }
+        .footer {
+            background: #23272f;
+            color: #b0b3b8;
+            text-align: center;
+            padding: 1.2rem 0 0.5rem 0;
+            font-size: 0.98rem;
+            margin-top: 2rem;
+            border-top: 1px solid #2d323c;
+            letter-spacing: 0.02em;
+        }
+    </style>
+    {% block head %}{% endblock %}
+</head>
+<body>
+    <div class="sidebar-proximity-zone" tabindex="-1"></div>
+    <div class="topbar">
+        <span class="logo"><i class="bi bi-cpu"></i> Fresado Pro</span>
+        <nav class="d-none d-md-block">
+          <ul class="nav nav-pills">
+            <li class="nav-item"><a class="nav-link {% if request.endpoint == 'home' %}active{% endif %}" href="{{ url_for('home') }}"><i class="bi bi-house-door"></i> {{ _('Home') }}</a></li>
+            <li class="nav-item"><a class="nav-link {% if request.endpoint == 'ordenes.ordenes' %}active{% endif %}" href="{{ url_for('ordenes.ordenes') }}"><i class="bi bi-list-check"></i> {{ _('Orders') }}</a></li>
+            <li class="nav-item"><a class="nav-link {% if request.endpoint == 'bloques.bloques' %}active{% endif %}" href="{{ url_for('bloques.bloques') }}"><i class="bi bi-box"></i> {{ _('Blocks') }}</a></li>
+            <li class="nav-item"><a class="nav-link {% if request.endpoint == 'fresas.fresas' %}active{% endif %}" href="{{ url_for('fresas.fresas') }}"><i class="bi bi-tools"></i> {{ _('Milling') }}</a></li>
+            <li class="nav-item"><a class="nav-link {% if request.endpoint == 'mantenimiento.mantenimiento' %}active{% endif %}" href="{{ url_for('mantenimiento.mantenimiento') }}"><i class="bi bi-gear"></i> {{ _('Maintenance') }}</a></li>
+            <li class="nav-item"><a class="nav-link {% if request.endpoint == 'historial.historial_bloques' %}active{% endif %}" href="{{ url_for('historial.historial_bloques') }}"><i class="bi bi-clock-history"></i> {{ _('History') }}</a></li>
+            <li class="nav-item"><a class="nav-link {% if request.endpoint == 'configuracion.configuracion' %}active{% endif %}" href="{{ url_for('configuracion.configuracion') }}"><i class="bi bi-sliders"></i> {{ _('Settings') }}</a></li>
+          </ul>
+        </nav>
+        <span class="d-none d-md-block">{{ _('Advanced dental lab management') }}</span>
+    </div>
+    <div class="container-fluid">
+        <div class="row">
+            <!-- Menú lateral -->
+            <nav class="col-md-2 d-none d-md-block sidebar" tabindex="0">
+                <ul class="nav flex-column">
+                    <li class="nav-item">
+                        <a class="nav-link {% if request.endpoint == 'home' %}active{% endif %}" href="{{ url_for('home') }}">
+                            <i class="bi bi-house-door"></i> <span class="menu-text">{{ _('Home') }}</span>
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link {% if request.endpoint == 'ordenes.ordenes' %}active{% endif %}" href="{{ url_for('ordenes.ordenes') }}">
+                            <i class="bi bi-list-check"></i> <span class="menu-text">{{ _('Orders') }}</span>
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link {% if request.endpoint == 'bloques.bloques' %}active{% endif %}" href="{{ url_for('bloques.bloques') }}">
+                            <i class="bi bi-box"></i> <span class="menu-text">{{ _('Blocks') }}</span>
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link {% if request.endpoint == 'fresas.fresas' %}active{% endif %}" href="{{ url_for('fresas.fresas') }}">
+                            <i class="bi bi-tools"></i> <span class="menu-text">{{ _('Milling') }}</span>
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link {% if request.endpoint == 'mantenimiento.mantenimiento' %}active{% endif %}" href="{{ url_for('mantenimiento.mantenimiento') }}">
+                            <i class="bi bi-gear"></i> <span class="menu-text">{{ _('Maintenance') }}</span>
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link {% if request.endpoint == 'historial.historial_bloques' %}active{% endif %}" href="{{ url_for('historial.historial_bloques') }}">
+                            <i class="bi bi-clock-history"></i> <span class="menu-text">{{ _('History') }}</span>
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link {% if request.endpoint == 'configuracion.configuracion' %}active{% endif %}" href="{{ url_for('configuracion.configuracion') }}">
+                            <i class="bi bi-sliders"></i> <span class="menu-text">{{ _('Settings') }}</span>
+                        </a>
+                    </li>
+                </ul>
+            </nav>
+            <!-- Contenido principal -->
+            <main class="col-md-9 ms-sm-auto col-lg-10 content">
+                {% block content %}{% endblock %}
+            </main>
+        </div>
+    </div>
+    <footer class="footer">
+        <div>
+            <span>Fresado Pro &copy; {{ 2025 }} | {{ _('Developed for dental labs') }} | <i class="bi bi-github"></i> <a href="https://github.com/" target="_blank" style="color:#b0b3b8;text-decoration:underline;">GitHub</a></span>
+        </div>
+        <div style="font-size:0.93em; margin-top:0.3em;">{{ _('Optimized for data analysis, productivity, and user experience.') }}</div>
+    </footer>
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    <!-- jQuery y DataTables JS -->
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+    <script src="https://cdn.datatables.net/1.13.7/js/jquery.dataTables.min.js"></script>
+    <script src="https://cdn.datatables.net/1.13.7/js/dataTables.bootstrap5.min.js"></script>
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+    <script src="/static/chart.min.js"></script>
+    <script>
+      // Animación de entrada para tablas y cards
+      $(document).ready(function(){
+        $(".table, .card, .ordenes-card, .pendientes-table").css({opacity:0, transform:'translateY(30px)'}).animate({opacity:1, transform:'none'}, 700);
+      });
+    </script>
+    <script>
+      // DataTables language URLs
+      var datatablesLangUrl = {
+        es: '//cdn.datatables.net/plug-ins/1.13.7/i18n/es-ES.json',
+        en: '//cdn.datatables.net/plug-ins/1.13.7/i18n/en-GB.json'
+      };
+      var currentLang = "{{ session.get('lang', 'es') }}";
+      window.getDataTablesLangUrl = function() {
+        return datatablesLangUrl[currentLang] || datatablesLangUrl['es'];
+      };
+    </script>
+    <script>
+    // --- Sidebar despliegue sólo al acercarse mucho al borde izquierdo ---
+    $(function(){
+      var $sidebar = $('.sidebar');
+      var $zone = $('.sidebar-proximity-zone');
+      var openSidebar = function(){ $sidebar.addClass('sidebar-open'); };
+      var closeSidebar = function(){ $sidebar.removeClass('sidebar-open'); };
+      $zone.on('mouseenter focusin', openSidebar);
+      $zone.on('mouseleave focusout', closeSidebar);
+      $sidebar.on('mouseleave focusout', closeSidebar);
+      $sidebar.on('mouseenter focusin', openSidebar);
+      // Cierra si el mouse sale de ambos, pero ignora clicks y movimientos fuera de la zona y la sidebar
+      $(document).on('mousemove', function(e){
+        // Solo abre si el mouse está sobre la zona o la sidebar
+        if (!$(e.target).closest('.sidebar, .sidebar-proximity-zone').length) {
+          closeSidebar();
+        }
+      });
+      // Evita que la sidebar se abra por hover accidental sobre otros elementos
+      $sidebar.on('mouseover', function(e){
+        if (!$sidebar.hasClass('sidebar-open') && !$(e.relatedTarget).hasClass('sidebar-proximity-zone')) {
+          closeSidebar();
+        }
+      });
+    });
+    </script>
+    {% block scripts %}{% endblock %}
+</body>
+</html>

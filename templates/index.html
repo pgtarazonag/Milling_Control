@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Registro de Orden</title>
+</head>
+<body>
+    <h1>Registrar nueva orden</h1>
+    <form method="POST">
+        <label>Código de Orden:</label><br>
+        <input type="text" name="codigo_orden" required><br><br>
+
+        <label>Material:</label><br>
+        <input type="text" name="material" required><br><br>
+
+        <label>Código de Barra:</label><br>
+        <input type="text" name="codigo_barra" required><br><br>
+
+        <label>Máquina:</label><br>
+        <select name="maquina" required>
+            <option value="">Seleccionar</option>
+            <option value="A">Máquina A</option>
+            <option value="B">Máquina B</option>
+            <option value="C">Máquina C</option>
+            <option value="D">Máquina D</option>
+        </select><br><br>
+
+        <button type="submit">Registrar</button>
+    </form>
+</body>
+</html>

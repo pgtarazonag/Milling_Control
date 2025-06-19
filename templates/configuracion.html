@@ -1,0 +1,66 @@
+{% extends "base.html" %}
+{% block title %}{{ _('Settings') }} | Fresado Pro{% endblock %}
+{% block instructions %}
+<div class="alert alert-secondary d-flex align-items-center" role="alert">
+  <i class="bi bi-sliders me-2"></i>
+  {{ _('Edit key system parameters. Changes are reflected automatically in all tabs.') }}
+</div>
+{% endblock %}
+{% block content %}
+<div class="card border-0 shadow-sm animate__animated animate__fadeInUp">
+  <div class="card-body">
+    <h3 class="mb-3"><i class="bi bi-sliders"></i> {{ _('General Settings') }}</h3>
+    <form method="post" class="row g-3">
+      <div class="col-md-6">
+        <label class="form-label"><i class="bi bi-cpu"></i> {{ _('Machines (comma separated)') }}</label>
+        <input type="text" name="maquinas" class="form-control" value="{{ maquinas|join(', ') }}" required>
+        <div class="form-text">{{ _('Example') }}: A, B, C, D</div>
+      </div>
+      <div class="col-md-6">
+        <label class="form-label"><i class="bi bi-box"></i> {{ _('Materials (comma separated)') }}</label>
+        <input type="text" name="materiales" class="form-control" value="{{ materiales|join(', ') }}" required>
+        <div class="form-text">{{ _('Example') }}: Zirconia, Disilicate, PMMA, Wax</div>
+      </div>
+      <div class="col-md-6">
+        <label class="form-label"><i class="bi bi-palette"></i> {{ _('Available shades (comma separated)') }}</label>
+        <input type="text" name="shades" class="form-control" value="{{ shades|join(', ') }}" required>
+        <div class="form-text">{{ _('Example') }}: A1, A2, A3, B1, B2, C1, C2</div>
+      </div>
+      <div class="col-md-6">
+        <label class="form-label"><i class="bi bi-award"></i> {{ _('Material brands (comma separated)') }}</label>
+        <input type="text" name="marcas" class="form-control" value="{{ marcas|join(', ') }}" required>
+        <div class="form-text">{{ _('Example') }}: Vita, Ivoclar, Aidite</div>
+      </div>
+      <div class="col-md-6">
+        <label class="form-label"><i class="bi bi-rulers"></i> {{ _('Available thicknesses (comma separated)') }}</label>
+        <input type="text" name="grosores" class="form-control" value="{{ grosores|join(', ') }}" required>
+        <div class="form-text">{{ _('Example') }}: 14, 16, 18, 20, 22, 25</div>
+      </div>
+      <div class="col-md-6">
+        <label class="form-label"><i class="bi bi-fire"></i> {{ _('Ovens (comma separated)') }}</label>
+        <input type="text" name="hornos" class="form-control" value="{{ hornos|join(', ') }}" required>
+        <div class="form-text">{{ _('Example') }}: Oven 1, Oven 2, Oven 3</div>
+      </div>
+      <div class="col-md-6">
+        <label class="form-label"><i class="bi bi-wind"></i> {{ _('Vacuum cleaners (comma separated)') }}</label>
+        <input type="text" name="aspiradoras" class="form-control" value="{{ aspiradoras|join(', ') }}" required>
+        <div class="form-text">{{ _('Example') }}: Vacuum 1, Vacuum 2, Vacuum 3</div>
+      </div>
+      <div class="col-12 text-end">
+        <button type="submit" class="btn btn-secondary"><i class="bi bi-save"></i> {{ _('Save Changes') }}</button>
+      </div>
+    </form>
+    <form method="post" action="{{ url_for('set_language') }}" class="mb-3">
+      <div class="row">
+        <div class="col-md-4">
+          <label class="form-label"><i class="bi bi-translate"></i> {{ _('Language') }}</label>
+          <select name="lang" class="form-select" onchange="this.form.submit()">
+            <option value="es" {% if session.get('lang', 'es') == 'es' %}selected{% endif %}>{{ _('Spanish') }}</option>
+            <option value="en" {% if session.get('lang') == 'en' %}selected{% endif %}>{{ _('English') }}</option>
+          </select>
+        </div>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

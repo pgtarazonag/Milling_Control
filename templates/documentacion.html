@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+{% block title %}{{ _('Documentation for Machines') }} | Fresado Pro{% endblock %}
+{% block content %}
+<div class="container py-4">
+  <h2 class="mb-4"><i class="bi bi-journal-text"></i> {{ _('Documentation for Machines') }}</h2>
+  <div class="alert alert-info mb-4">{{ _('Edit model, serial, and link for each machine. The link should point to the manufacturer page.') }}</div>
+  <form method="post">
+    <div class="table-responsive mb-4">
+      <table class="table table-bordered align-middle">
+        <thead class="table-light">
+          <tr>
+            <th>{{ _('Type') }}</th>
+            <th>{{ _('Name') }}</th>
+            <th>{{ _('Model') }}</th>
+            <th>{{ _('Serial') }}</th>
+            <th>{{ _('Link') }}</th>
+            <th>{{ _('Actions') }}</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for m in maquinas %}
+          <tr>
+            <td>{{ _(m.tipo) }}</td>
+            <td>{{ m.nombre }}</td>
+            <td><input type="text" name="modelo_{{ m.id }}" value="{{ m.modelo }}" class="form-control form-control-sm"></td>
+            <td><input type="text" name="serie_{{ m.id }}" value="{{ m.serie }}" class="form-control form-control-sm"></td>
+            <td><input type="url" name="link_{{ m.id }}" value="{{ m.link }}" class="form-control form-control-sm"></td>
+            <td>
+              {% if m.link %}
+                <a href="{{ m.link }}" target="_blank" class="btn btn-outline-primary btn-sm">{{ _('Open') }}</a>
+              {% endif %}
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    <div class="text-end">
+      <button type="submit" class="btn btn-success"><i class="bi bi-save"></i> {{ _('Save') }}</button>
+    </div>
+  </form>
+</div>
+{% endblock %}

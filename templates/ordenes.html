@@ -1,0 +1,335 @@
+{% extends "base.html" %}
+{% block title %}{{ _('Orders') }} | Fresado Pro{% endblock %}
+{% block instructions %}
+<div class="alert alert-primary d-flex align-items-center" role="alert">
+  <i class="bi bi-list-check me-2"></i>
+  {{ _('Here you can manage and analyze all milling orders. Use filters to explore data and access details with one click.') }}
+</div>
+{% endblock %}
+{% block content %}
+<div class="row g-4">
+  <div class="col-lg-8 order-lg-1">
+    <div class="card border-0 shadow-sm animate__animated animate__fadeInUp mb-4">
+      <div class="card-body">
+        <h5 class="mb-3"><i class="bi bi-plus-circle"></i> {{ _('Create New Order') }}</h5>
+        <form method="post" class="row g-2 align-items-end" id="orden-form">
+          <input type="hidden" name="codigo_orden" id="codigo-orden-hidden" value="{{ request.form.get('codigo_orden', '') }}">
+          <input type="hidden" name="modelos_por_caso" id="modelos-por-caso-hidden" value="{{ request.form.get('modelos_por_caso', '') }}">
+          <input type="hidden" name="pendientes_seleccionados" id="pendientes-seleccionados-hidden" value="{{ request.form.get('pendientes_seleccionados', pendientes_seleccionados|default('')) }}">
+          <!-- Primera fila: Material, Shade, Máquina -->
+          <div class="col-md-4">
+            <label class="form-label">{{ _('Material') }}</label>
+            <select class="form-select" name="material" id="material" size="6" required style="height:auto;min-height:120px;">
+              <option value="">-- {{ _('Select') }} --</option>
+              {% for tipo in tipos_material %}
+                <option value="{{ tipo }}" {% if material == tipo %}selected{% endif %}>{{ tipo }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="col-md-4">
+            <label class="form-label">{{ _('Shade') }}</label>
+            <select class="form-select" name="shade" id="shade" size="6" required style="height:auto;min-height:120px;">
+              <option value="">-- {{ _('Select') }} --</option>
+              {% for s in shades_disponibles %}
+                <option value="{{ s }}" {% if shade == s %}selected{% endif %}>{{ s }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="col-md-4">
+            <label class="form-label">{{ _('Machine') }}</label>
+            <select class="form-select" name="maquina" id="maquina" size="6" required style="height:auto;min-height:120px;">
+              <option value="">-- {{ _('Select') }} --</option>
+              {% for m in maquinas %}
+                <option value="{{ m }}" {% if request.form.get('maquina', maquina) == m %}selected{% endif %}>{{ m }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <style>
+            select#material:focus option:checked, select#material option:checked {
+              background: #1976d2 !important;
+              color: #fff !important;
+            }
+            select#shade:focus option:checked, select#shade option:checked {
+              background: #8e24aa !important;
+              color: #fff !important;
+            }
+            select#maquina:focus option:checked, select#maquina option:checked {
+              background: #43a047 !important;
+              color: #fff !important;
+            }
+          </style>
+          <!-- Segunda fila: Bloques Usados y Bloques Nuevos -->
+          <div class="col-md-6">
+            <label class="form-label">{{ _('Used Blocks') }}</label>
+            <select name="bloque_usado_id" class="form-select">
+              <option value="">-- {{ _('Select') }} --</option>
+              {% for bloque in bloques_usados %}
+                <option value="{{ bloque.id }}">{{ bloque.codigo_barra }} | {{ bloque.material }} | {{ bloque.shade }} | Modelos: {{ bloque.modelos_fresados }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="col-md-6">
+            <label class="form-label">{{ _('New Blocks') }}</label>
+            <select name="bloque_nuevo_id" class="form-select">
+              <option value="">-- {{ _('Select') }} --</option>
+              {% for bloque in bloques_nuevos %}
+                <option value="{{ bloque.id }}">{{ bloque.codigo_barra }} | {{ bloque.material }} | {{ bloque.shade }} | Cant: {{ bloque.cantidad }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <!-- Tercera fila: Código de Orden, Cantidad de Modelos, Botón -->
+          <div class="col-md-5">
+            <label class="form-label">{{ _('Order Code') }}</label>
+            <input type="text" name="codigo_orden" class="form-control" required>
+          </div>
+          <div class="col-md-4">
+            <label class="form-label">{{ _('Model Count') }}</label>
+            <input type="number" name="cantidad_modelos" class="form-control" min="1" value="1" required>
+          </div>
+          <div class="col-md-3 text-end">
+            <button type="submit" class="btn btn-success"><i class="bi bi-plus-circle"></i> {{ _('Add') }}</button>
+          </div>
+        </form>
+      </div>
+    </div>
+    <div class="card border-0 shadow-sm animate__animated animate__fadeInUp">
+      <div class="card-body">
+        <div class="table-responsive animate__animated animate__fadeIn">
+          <table class="table table-striped table-hover ordenes-table" id="tabla-ordenes">
+            <thead class="table-primary">
+              <tr>
+                <th><i class="bi bi-fingerprint"></i> {{ _('ID') }}</th>
+                <th><i class="bi bi-hash"></i> {{ _('Order Code') }}</th>
+                <th><i class="bi bi-upc"></i> {{ _('Barcode') }}</th>
+                <th><i class="bi bi-box"></i> {{ _('Material') }}</th>
+                <th><i class="bi bi-palette"></i> {{ _('Shade') }}</th>
+                <th><i class="bi bi-cpu"></i> {{ _('Machine') }}</th>
+                <th><i class="bi bi-123"></i> {{ _('Model Count') }}</th>
+                <th><i class="bi bi-calendar"></i> {{ _('Date') }}</th>
+                <th><i class="bi bi-gear"></i> {{ _('Actions') }}</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for orden in ordenes %}
+              <tr>
+                <td>{{ orden.id }}</td>
+                <td>{{ orden.codigo_orden }}</td>
+                <td>{{ orden.codigo_barra }}</td>
+                <td>{{ orden.material }}</td>
+                <td>{{ orden.shade }}</td>
+                <td>{{ orden.maquina }}</td>
+                <td>{{ orden.cantidad_modelos }}</td>
+                <td>{{ orden.fecha_creacion.strftime('%Y-%m-%d') }}</td>
+                <td>
+                  <a href="{{ url_for('ordenes.editar_orden', orden_id=orden.id) }}" class="btn btn-outline-secondary btn-sm"><i class="bi bi-pencil"></i></a>
+                  <form method="post" action="{{ url_for('ordenes.eliminar_orden', orden_id=orden.id) }}" style="display:inline;">
+                    <button type="submit" class="btn btn-outline-danger btn-sm"><i class="bi bi-trash"></i></button>
+                  </form>
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="col-lg-4 order-lg-2 d-flex flex-column" style="height:100%;">
+    <div class="card border-0 shadow-sm mb-4 animate__animated animate__fadeInUp flex-grow-1 d-flex flex-column" style="min-height:500px; height:100%;">
+      <div class="card-body d-flex flex-column" style="flex:1 1 auto;">
+        <h5 class="card-title mb-3"><i class="bi bi-hourglass-split"></i> {{ _('Pending Cases') }}</h5>
+        <form method="post" class="mb-2 d-flex">
+          <input type="text" name="codigo_orden_pendiente" class="form-control me-2" placeholder="{{ _('Scan or enter code') }}" required>
+          <button type="submit" class="btn btn-outline-primary"><i class="bi bi-plus"></i></button>
+        </form>
+        <div class="table-responsive" style="flex:1 1 auto; overflow:auto; min-height:300px; max-height:none;">
+          <form id="pendientes-select-form" onsubmit="return false;">
+          <table class="table table-sm table-hover table-bordered mb-0 pendientes-table-font" id="tabla-pendientes">
+            <thead class="table-light">
+              <tr>
+                <th style="width:2em;"></th>
+                <th>{{ _('Code') }}</th>
+                <th>{{ _('Date') }}</th>
+                <th style="width:6em;">{{ _('Model Count') }}</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for pendiente in pendientes_orden %}
+              <tr>
+                <td class="text-center align-middle">
+                  <input type="checkbox" class="form-check-input pendiente-checkbox" value="{{ pendiente.codigo_orden }}" data-codigo="{{ pendiente.codigo_orden }}" id="pendiente-{{ pendiente.id }}">
+                </td>
+                <td class="align-middle">
+                  <label for="pendiente-{{ pendiente.id }}" style="cursor:pointer;">{{ pendiente.codigo_orden }}</label>
+                </td>
+                <td class="align-middle">{{ pendiente.fecha_escaneo.strftime('%Y-%m-%d %H:%M') }}</td>
+                <td class="align-middle">
+                  <input type="number" min="1" class="form-control form-control-sm modelos-input" style="width:70px;" data-codigo="{{ pendiente.codigo_orden }}" disabled>
+                </td>
+                <td class="align-middle">
+                  <form method="post" action="{{ url_for('ordenes.editar_pendiente', pendiente_id=pendiente.id) }}" style="display:inline;">
+                    <button type="button" class="btn btn-outline-secondary btn-sm btn-editar-pendiente" data-id="{{ pendiente.id }}" data-codigo="{{ pendiente.codigo_orden }}"><i class="bi bi-pencil"></i></button>
+                  </form>
+                  <form method="post" action="{{ url_for('ordenes.eliminar_pendiente', pendiente_id=pendiente.id) }}" style="display:inline;">
+                    <button type="submit" class="btn btn-outline-danger btn-sm"><i class="bi bi-trash"></i></button>
+                  </form>
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+<style>
+.pendientes-table-font, .pendientes-table-font td, .pendientes-table-font th {
+  font-size: 0.89em !important;
+}
+</style>
+{% endblock %}
+{% block scripts %}
+{{ super() }}
+<script>
+$(document).ready(function(){
+  // DataTable para tabla de pendientes (ordenar y filtrar)
+  $('#tabla-pendientes').DataTable({
+    language: { url: window.getDataTablesLangUrl() },
+    paging: false,
+    info: false,
+    searching: true,
+    order: [[2, 'asc']]
+  });
+
+  // Botón editar pendiente (modal simple prompt)
+  $(document).on('click', '.btn-editar-pendiente', function(){
+    var id = $(this).data('id');
+    var codigoActual = $(this).data('codigo');
+    var nuevoCodigo = prompt('Editar código de orden:', codigoActual);
+    if(nuevoCodigo && nuevoCodigo !== codigoActual) {
+      var form = $(this).closest('form');
+      // Crea input oculto para el nuevo código
+      if(form.find('input[name="codigo_orden"]').length === 0) {
+        form.append('<input type="hidden" name="codigo_orden" value="'+nuevoCodigo+'">');
+      } else {
+        form.find('input[name="codigo_orden"]').val(nuevoCodigo);
+      }
+      form.submit();
+    }
+  });
+});
+</script>
+<script>
+$(document).ready(function(){
+  // DataTable para tabla de órdenes
+  $('#tabla-ordenes').DataTable({
+    language: { url: window.getDataTablesLangUrl() },
+    order: [[0, 'desc']], // Ordenar por ID descendente por defecto
+    paging: true,
+    searching: true,
+    info: true
+  });
+});
+</script>
+<script>
+$(document).ready(function(){
+  // --- Filtro dinámico de bloques por Material y Shade ---
+  $('#material, #shade').on('change', function() {
+    var codigoOrdenInput = $("input[name='codigo_orden']");
+    var modelosPorCasoInput = $("input[name='modelos_por_caso']");
+    var cantidadModelosInput = $("input[name='cantidad_modelos']");
+    var pendientesSeleccionados = $(".pendiente-checkbox:checked");
+    // Solo guardar el código de orden si NO hay pendientes seleccionados y el input NO está vacío
+    if(pendientesSeleccionados.length === 0 && codigoOrdenInput.val().trim() !== "") {
+      localStorage.setItem('ordenes_codigo_orden', codigoOrdenInput.val());
+    } else {
+      // Si hay pendientes seleccionados o el input está vacío, no guardar el código de orden
+      localStorage.removeItem('ordenes_codigo_orden');
+    }
+    localStorage.setItem('ordenes_modelos_por_caso', modelosPorCasoInput.val());
+    localStorage.setItem('ordenes_cantidad_modelos', cantidadModelosInput.val());
+    var pendientes = [];
+    $(".pendiente-checkbox:checked").each(function(){ pendientes.push($(this).val()); });
+    localStorage.setItem('ordenes_pendientes', pendientes.join(","));
+    var modelos = [];
+    $(".modelos-input").each(function(){ modelos.push($(this).val()); });
+    localStorage.setItem('ordenes_modelos_inputs', modelos.join(","));
+    var form = $('#orden-form');
+    form.attr('method', 'post');
+    form.submit();
+  });
+
+  // Al cargar, si hay valores en localStorage, restáuralos (espera a que los inputs existan)
+  setTimeout(function() {
+    if(localStorage.getItem('ordenes_codigo_orden')) {
+      // Solo restaurar si NO hay pendientes seleccionados y el input está vacío
+      if($(".pendiente-checkbox:checked").length === 0 && $("input[name='codigo_orden']").val().trim() === "") {
+        $("input[name='codigo_orden']").val(localStorage.getItem('ordenes_codigo_orden'));
+      }
+      localStorage.removeItem('ordenes_codigo_orden');
+    }
+    if(localStorage.getItem('ordenes_modelos_por_caso')) {
+      $("input[name='modelos_por_caso']").val(localStorage.getItem('ordenes_modelos_por_caso'));
+      localStorage.removeItem('ordenes_modelos_por_caso');
+    }
+    if(localStorage.getItem('ordenes_cantidad_modelos')) {
+      $("input[name='cantidad_modelos']").val(localStorage.getItem('ordenes_cantidad_modelos'));
+      localStorage.removeItem('ordenes_cantidad_modelos');
+    }
+    if(localStorage.getItem('ordenes_pendientes')) {
+      var pendientesSeleccionados = localStorage.getItem('ordenes_pendientes').split(',');
+      pendientesSeleccionados.forEach(function(codigo){
+        $(".pendiente-checkbox[value='"+codigo+"']").prop('checked', true).trigger('change');
+      });
+      localStorage.removeItem('ordenes_pendientes');
+    }
+    if(localStorage.getItem('ordenes_modelos_inputs')) {
+      var modelos = localStorage.getItem('ordenes_modelos_inputs').split(',');
+      $(".modelos-input").each(function(idx){
+        if(modelos[idx]) $(this).val(modelos[idx]);
+      });
+      localStorage.removeItem('ordenes_modelos_inputs');
+    }
+  }, 100);
+});
+</script>
+<script>
+$(function(){
+  // Selección de casos pendientes: llena el input de código de orden automáticamente
+  function updateCodigoOrdenYModelos() {
+    var codigos = [];
+    var modelos = [];
+    $(".pendiente-checkbox:checked").each(function(){
+      var codigo = $(this).data('codigo');
+      codigos.push(codigo);
+      var modelosVal = $(".modelos-input[data-codigo='"+codigo+"']").val();
+      modelos.push(modelosVal ? modelosVal : '');
+    });
+    if(codigos.length > 0) {
+      $("input[name='codigo_orden']").val(codigos.join(", "));
+    } // Solo sobreescribe si hay pendientes seleccionados
+    $("input[name='modelos_por_caso']").val(modelos.join(", "));
+  }
+  $(document).on('change', '.pendiente-checkbox', function(){
+    var codigo = $(this).data('codigo');
+    var modelosInput = $(".modelos-input[data-codigo='"+codigo+"']");
+    if($(this).is(':checked')) {
+      modelosInput.prop('disabled', false).val(1);
+    } else {
+      modelosInput.prop('disabled', true).val("");
+    }
+    updateCodigoOrdenYModelos();
+  });
+  $(document).on('input', '.modelos-input', function(){
+    updateCodigoOrdenYModelos();
+  });
+  // Inicializa input oculto para modelos_por_caso si no existe
+  if($("input[name='modelos_por_caso']").length === 0) {
+    $("input[name='codigo_orden']").after('<input type="hidden" name="modelos_por_caso" value="">');
+  }
+});
+</script>
+{% endblock %}

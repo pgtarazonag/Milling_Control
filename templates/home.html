@@ -1,0 +1,113 @@
+{% extends "base.html" %}
+{% block title %}{{ _('Home') }} | Fresado Pro{% endblock %}
+{% block instructions %}
+<div class="alert alert-info d-flex align-items-center" role="alert">
+  <i class="bi bi-info-circle me-2"></i>
+  {{ _('Welcome to') }} <b>Fresado Pro</b>. {{ _('Use the sidebar to navigate between main functions. Here you can analyze data, manage orders, blocks, milling tools, and more. Optimize your dental lab!') }}
+</div>
+{% endblock %}
+{% block content %}
+<div class="row g-4">
+  <div class="col-md-6">
+    <div class="card border-0 shadow-sm animate__animated animate__fadeInUp">
+      <div class="card-body">
+        <h6 class="card-title mb-3"><i class="bi bi-bar-chart-line"></i> {{ _('Production Analysis by Machine (last weeks)') }}</h6>
+        <canvas id="graficaModelosMaquina" height="120"></canvas>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-6">
+    <div class="card border-0 shadow-sm animate__animated animate__fadeInUp">
+      <div class="card-body">
+        <h6 class="card-title mb-3"><i class="bi bi-pie-chart"></i> {{ _('Material Distribution (Pie Chart)') }}</h6>
+        <canvas id="graficaMateriales" height="60"></canvas>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-6">
+    <div class="card border-0 shadow-sm animate__animated animate__fadeInUp">
+      <div class="card-body">
+        <h6 class="card-title mb-3"><i class="bi bi-bar-chart"></i> {{ _('Blocks by Shade') }}</h6>
+        <canvas id="graficaBloquesShade" height="120"></canvas>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-6">
+    <div class="card border-0 shadow-sm animate__animated animate__fadeInUp">
+      <div class="card-body">
+        <h6 class="card-title mb-3"><i class="bi bi-pie-chart"></i> {{ _('Models by Shade (Pie Chart)') }}</h6>
+        <canvas id="graficaModelosShadeSemana" height="60"></canvas>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+{% block scripts %}
+{{ super() }}
+<script src="/static/chart.min.js"></script>
+<script>
+// Animaciones de cards
+$(document).ready(function(){
+  $('.card').css({opacity:0, transform:'translateY(30px)'}).each(function(i,el){
+    setTimeout(function(){$(el).animate({opacity:1, transform:'none'}, 700);}, 200*i);
+  });
+  // Cargar datos de las gráficas
+  $.getJSON('/ordenes/api/graficas-inventario', function(data) {
+    // Modelos por máquina
+    var ctx1 = document.getElementById('graficaModelosMaquina').getContext('2d');
+    new Chart(ctx1, {
+      type: 'bar',
+      data: {
+        labels: data.modelos_maquina.map(x => x.semana + ' - ' + x.maquina),
+        datasets: [{
+          label: 'Modelos',
+          data: data.modelos_maquina.map(x => x.cantidad),
+          backgroundColor: '#1976d2',
+        }]
+      },
+      options: {responsive:true, plugins:{legend:{display:false}}}
+    });
+    // Pie chart: Material Distribution
+    var ctx2 = document.getElementById('graficaMateriales').getContext('2d');
+    new Chart(ctx2, {
+      type: 'pie',
+      data: {
+        labels: data.modelos_material_semana.map(x => x.material),
+        datasets: [{
+          data: data.modelos_material_semana.map(x => x.cantidad),
+          backgroundColor: ['#1976d2','#43a047','#fbc02d','#8e24aa','#e53935','#00838f']
+        }]
+      },
+      options: {responsive:true, radius: '45%', plugins:{legend:{position:'bottom'}}}
+    });
+    // Bloques por shade
+    var ctx3 = document.getElementById('graficaBloquesShade').getContext('2d');
+    new Chart(ctx3, {
+      type: 'bar',
+      data: {
+        labels: data.bloques_shade.map(x => x.shade),
+        datasets: [{
+          label: 'Bloques',
+          data: data.bloques_shade.map(x => x.cantidad),
+          backgroundColor: '#8e24aa',
+        }]
+      },
+      options: {responsive:true, plugins:{legend:{display:false}}}
+    });
+    // Pie chart: Models by Shade
+    var ctx4 = document.getElementById('graficaModelosShadeSemana').getContext('2d');
+    new Chart(ctx4, {
+      type: 'pie',
+      data: {
+        labels: data.modelos_shade_semana.map(x => x.shade),
+        datasets: [{
+          data: data.modelos_shade_semana.map(x => x.cantidad),
+          backgroundColor: ['#1976d2','#43a047','#fbc02d','#8e24aa','#e53935','#00838f']
+        }]
+      },
+      options: {responsive:true, radius: '45%', plugins:{legend:{position:'bottom'}}}
+    });
+  });
+});
+</script>
+{% endblock %}

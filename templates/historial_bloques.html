@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+{% block title %}{{ _('History') }} | Fresado Pro{% endblock %}
+{% block instructions %}
+<div class="alert alert-secondary d-flex align-items-center" role="alert">
+  <i class="bi bi-clock-history me-2"></i>
+  {{ _('Consult the history of deleted or modified blocks. Analyze changes and keep inventory control.') }}
+</div>
+{% endblock %}
+{% block content %}
+<div class="card border-0 shadow-sm animate__animated animate__fadeInUp">
+  <div class="card-body">
+    <h3 class="mb-3"><i class="bi bi-clock-history"></i> {{ _('Block History') }}</h3>
+    <div class="table-responsive animate__animated animate__fadeIn">
+      <table class="table table-striped table-hover" id="tabla-historial">
+        <thead class="table-secondary">
+          <tr>
+            <th><i class="bi bi-hash"></i> {{ _('Code') }}</th>
+            <th><i class="bi bi-box"></i> {{ _('Material') }}</th>
+            <th><i class="bi bi-palette"></i> {{ _('Shade') }}</th>
+            <th><i class="bi bi-award"></i> {{ _('Brand') }}</th>
+            <th><i class="bi bi-rulers"></i> {{ _('Thickness') }}</th>
+            <th><i class="bi bi-cube"></i> {{ _('Quantity') }}</th>
+            <th><i class="bi bi-calendar"></i> {{ _('Creation Date') }}</th>
+            <th><i class="bi bi-calendar-x"></i> {{ _('Deletion Date') }}</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for bloque in bloques_historial %}
+          <tr>
+            <td>{{ bloque.codigo_barra }}</td>
+            <td>{{ bloque.material }}</td>
+            <td>{{ bloque.shade }}</td>
+            <td>{{ bloque.marca }}</td>
+            <td>{{ bloque.grosor }}</td>
+            <td>{{ bloque.cantidad }}</td>
+            <td>{{ bloque.fecha_creacion.strftime('%Y-%m-%d') }}</td>
+            <td>{{ bloque.fecha_eliminacion.strftime('%Y-%m-%d') }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% endblock %}
+{% block scripts %}
+{{ super() }}
+<script>
+$(document).ready(function(){
+  $('#tabla-historial').DataTable({
+    language: { url: window.getDataTablesLangUrl() }
+  });
+});
+</script>
+{% endblock %}
