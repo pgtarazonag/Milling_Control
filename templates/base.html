@@ -11,7 +11,7 @@
     <!-- DataTables CSS -->
     <link rel="stylesheet" href="https://cdn.datatables.net/1.13.7/css/dataTables.bootstrap5.min.css">
     <style>
-        body { background: #f4f6fa; font-family: 'Inter', 'Segoe UI', Arial, sans-serif; }
+        body { background: #f7fafc; font-family: 'Inter', 'Segoe UI', Arial, sans-serif; }
         /* --- Sidebar despliegue sólo al acercarse mucho al borde izquierdo --- */
         .sidebar-proximity-zone {
             position: fixed;
@@ -27,7 +27,7 @@
             .sidebar-proximity-zone { display: none; }
         }
         .sidebar {
-            background: #23272f;
+            background: #e3eaf1;
             min-height: 100vh;
             padding-top: 2rem;
             transition: background 0.2s, color 0.2s, width 0.3s, min-width 0.3s, left 0.3s, opacity 0.3s;
@@ -41,13 +41,13 @@
         }
         .sidebar.sidebar-open,
         .sidebar:hover, .sidebar:focus-within {
-            width: 160px;
-            min-width: 160px;
+            width: 200px;
+            min-width: 200px;
             opacity: 1;
         }
         /* --- Sidebar icon visibility fix --- */
         .sidebar .nav-link {
-            color: #fff;
+            color: #3a4a5d;
             font-size: 0.95rem;
             display: flex;
             align-items: center;
@@ -76,8 +76,8 @@
             vertical-align: middle;
         }
         .sidebar .nav-link.active, .sidebar .nav-link:hover {
-            background: #2d323c;
-            color: #ffc107;
+            background: #b3d8e6;
+            color: #0077b6;
         }
         .sidebar .bi {
             font-size: 1.2em;
@@ -99,8 +99,8 @@
         .sidebar.sidebar-open ~ .content,
         .sidebar:hover ~ .content,
         .sidebar:focus-within ~ .content {
-            margin-left: 160px;
-            width: calc(100% - 160px);
+            margin-left: 200px;
+            width: calc(100% - 200px);
         }
         @media (max-width: 991px) {
             .content { margin-left: 0; padding: 1.2rem 0.5rem; width: 100%; }
@@ -110,7 +110,7 @@
             to { opacity: 1; transform: none; }
         }
         .topbar {
-            background: #23272f;
+            background: #0077b6;
             color: #fff;
             padding: 0.7rem 2rem;
             display: flex;
@@ -137,14 +137,51 @@
             color: #fff !important;
         }
         .footer {
-            background: #23272f;
-            color: #b0b3b8;
+            background: #e3eaf1;
+            color: #3a4a5d;
             text-align: center;
             padding: 1.2rem 0 0.5rem 0;
             font-size: 0.98rem;
             margin-top: 2rem;
             border-top: 1px solid #2d323c;
             letter-spacing: 0.02em;
+        }
+        .card {
+            background: #fafdff;
+            border-radius: 1.2rem;
+            box-shadow: 0 2px 12px #b3d8e633;
+            border: none;
+        }
+        .btn-primary, .btn-success {
+            background: linear-gradient(90deg, #00b4d8 0%, #48cae4 100%);
+            color: #fff;
+            border: none;
+        }
+        .btn-primary:hover, .btn-success:hover {
+            background: linear-gradient(90deg, #0077b6 0%, #00b4d8 100%);
+        }
+        .form-label {
+            color: #0077b6;
+            font-weight: 500;
+        }
+        .table-primary, .table-info, .table-secondary, .table-warning {
+            background: #e3f2fd !important;
+            color: #0077b6 !important;
+        }
+        .table-striped > tbody > tr:nth-of-type(odd) {
+            background-color: #f1f8fb;
+        }
+        .table-striped > tbody > tr:nth-of-type(even) {
+            background-color: #fafdff;
+        }
+        .alert-primary, .alert-success, .alert-info, .alert-warning, .alert-secondary, .alert-dark {
+            background: #e3f2fd;
+            color: #0077b6;
+            border: none;
+        }
+        .form-control:focus, .form-select:focus {
+            border-color: #00b4d8;
+            box-shadow: 0 0 0 0.2rem #b3d8e655;
         }
     </style>
     {% block head %}{% endblock %}

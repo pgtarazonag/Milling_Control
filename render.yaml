@@ -1,0 +1,13 @@
+# Render service definition for Flask app
+services:
+  - type: web
+    name: fresado-webapp
+    env: python
+    buildCommand: "pip install -r requirements.txt"
+    startCommand: "gunicorn app:create_app()"
+    envVars:
+      - key: FLASK_ENV
+        value: production
+      - key: SECRET_KEY
+        value: supersecreto
+    plan: free
