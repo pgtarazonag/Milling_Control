@@ -21,15 +21,18 @@ from flask import Flask, render_template, session, request, redirect, url_for
 from extensions import db
 # Importamos la función de traducción
 from translations import _
+from dotenv import load_dotenv
+import os
+
+load_dotenv()
 
 # Definimos la función principal que crea y configura la app
 def create_app():
     # Creamos la instancia de la aplicación Flask
     app = Flask(__name__)
     # Configuramos la base de datos y la clave secreta
-    app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///fresado.db'
+    app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('DATABASE_URL', 'sqlite:///fresado.db')
     app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-    import os
     app.secret_key = os.environ.get('SECRET_KEY', 'supersecreto')
     # Inicializamos la base de datos con la app
     db.init_app(app)
@@ -83,7 +86,6 @@ def create_app():
 
 # Si este archivo se ejecuta directamente, inicia el servidor en modo debug
 if __name__ == '__main__':
-    import os
     port = int(os.environ.get('PORT', 5000))
     app = create_app()
     app.run(debug=True, host='0.0.0.0', port=port)
