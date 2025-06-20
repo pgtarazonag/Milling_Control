@@ -12,8 +12,11 @@
     <div class="card border-0 shadow-sm animate__animated animate__fadeInUp mb-4">
       <div class="card-body">
         <h5 class="mb-3"><i class="bi bi-plus-circle"></i> {{ _('Create New Order') }}</h5>
+        {% if error %}
+          <div class="alert alert-danger">{{ error }}</div>
+        {% endif %}
         <form method="post" class="row g-2 align-items-end" id="orden-form">
-          <input type="hidden" name="codigo_orden" id="codigo-orden-hidden" value="{{ request.form.get('codigo_orden', '') }}">
+          {# Eliminar input oculto de codigo_orden, solo dejar el visible #}
           <input type="hidden" name="modelos_por_caso" id="modelos-por-caso-hidden" value="{{ request.form.get('modelos_por_caso', '') }}">
           <input type="hidden" name="pendientes_seleccionados" id="pendientes-seleccionados-hidden" value="{{ request.form.get('pendientes_seleccionados', pendientes_seleccionados|default('')) }}">
           <!-- Primera fila: Material, Shade, Máquina -->

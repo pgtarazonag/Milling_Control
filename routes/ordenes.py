@@ -186,6 +186,7 @@ def ordenes():
 
     # Si el formulario es para crear una orden individual o múltiple (códigos separados por coma)
     if request.method == 'POST' and 'codigo_orden' in request.form:
+        print("DEBUG POST DATA:", dict(request.form))
         codigos_orden = request.form.get('codigo_orden', '').strip()
         if codigos_orden:
             codigos_lista = [c.strip() for c in codigos_orden.split(',') if c.strip()]
