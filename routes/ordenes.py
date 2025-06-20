@@ -22,6 +22,11 @@ from datetime import datetime
 import random
 import string
 
+# Tipos de material fijos para la app dental
+TIPOS_MATERIAL_FIJOS = [
+    "Disilicato", "Zirconia", "PMMA", "Cera", "Composite", "Resina"
+]
+
 # Definimos el blueprint para las rutas de órdenes
 ordenes_bp = Blueprint('ordenes', __name__, url_prefix='/ordenes')
 
