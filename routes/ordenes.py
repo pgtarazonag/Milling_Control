@@ -21,6 +21,7 @@ from extensions import db
 from datetime import datetime
 import random
 import string
+from sqlalchemy import func, text
 
 # Tipos de material fijos para la app dental
 TIPOS_MATERIAL_FIJOS = [
@@ -380,7 +381,6 @@ def editar_pendiente(pendiente_id):
 def api_graficas_inventario():
     # Bloques por shade
     from models import Bloque, Orden
-    from sqlalchemy import func
     # Bloques por shade (solo inventario actual)
     bloques_shade = (
         db.session.query(Bloque.shade, func.sum(Bloque.cantidad))
@@ -390,20 +390,18 @@ def api_graficas_inventario():
     # Modelos fresados por máquina por semana (últimas 8 semanas)
     modelos_maquina = (
         db.session.query(
-            func.strftime('%Y-%W', Orden.fecha_creacion),
+            func.to_char(Orden.fecha_creacion, 'IYYY-IW'),
             Orden.maquina,
             func.sum(Orden.cantidad_modelos)
         )
-        .group_by(func.strftime('%Y-%W', Orden.fecha_creacion), Orden.maquina)
-        .order_by(func.strftime('%Y-%W', Orden.fecha_creacion).desc())
+        .group_by(func.to_char(Orden.fecha_creacion, 'IYYY-IW'), Orden.maquina)
+        .order_by(func.to_char(Orden.fecha_creacion, 'IYYY-IW').desc())
         .limit(32)
         .all()
     )
     # Modelos fresados por shade esta semana
     from datetime import datetime, timedelta
     hoy = datetime.utcnow()
-    semana = hoy.isocalendar()[1]
-    anio = hoy.year
     primer_dia_semana = hoy - timedelta(days=hoy.weekday())
     modelos_shade_semana = (
         db.session.query(Orden.shade, func.sum(Orden.cantidad_modelos))
@@ -420,9 +418,9 @@ def api_graficas_inventario():
     )
     # Modelos fresados por día (últimos 14 días)
     modelos_dia = (
-        db.session.query(func.strftime('%Y-%m-%d', Orden.fecha_creacion), func.sum(Orden.cantidad_modelos))
-        .group_by(func.strftime('%Y-%m-%d', Orden.fecha_creacion))
-        .order_by(func.strftime('%Y-%m-%d', Orden.fecha_creacion).desc())
+        db.session.query(func.to_char(Orden.fecha_creacion, 'YYYY-MM-DD'), func.sum(Orden.cantidad_modelos))
+        .group_by(func.to_char(Orden.fecha_creacion, 'YYYY-MM-DD'))
+        .order_by(func.to_char(Orden.fecha_creacion, 'YYYY-MM-DD').desc())
         .limit(14)
         .all()
     )
