@@ -21,10 +21,11 @@ from flask import Flask, render_template, session, request, redirect, url_for
 from extensions import db
 # Importamos la función de traducción
 from translations import _
-from dotenv import load_dotenv
 import os
 
-load_dotenv()
+if os.environ.get("RAILWAY_ENV") is None and os.environ.get("RENDER") is None:
+    from dotenv import load_dotenv
+    load_dotenv()
 
 # Definimos la función principal que crea y configura la app
 def create_app():
