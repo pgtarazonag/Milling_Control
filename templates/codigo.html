@@ -22,7 +22,7 @@
           {% for codigo in codigos %}
           <tr>
             <td>{{ codigo.codigo_orden }}</td>
-            <td>{{ codigo.fecha_escaneo.strftime('%Y-%m-%d %H:%M') }}</td>
+            <td><span class="fecha-tabla">{{ codigo.fecha_escaneo.strftime('%Y-%m-%d %H:%M') }}</span></td>
           </tr>
           {% endfor %}
         </tbody>

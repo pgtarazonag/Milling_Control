@@ -16,12 +16,15 @@ Paso a paso:
 """
 
 # Importamos Flask y la función para renderizar plantillas HTML
-from flask import Flask, render_template, session, request, redirect, url_for
+from flask import Flask, render_template, session, request, redirect, url_for, jsonify
 # Importamos la base de datos desde extensions.py
 from extensions import db
 # Importamos la función de traducción
 from translations import _
+from flask_babel import Babel
 import os
+import pytz
+from datetime import datetime
 
 if os.environ.get("RAILWAY_ENV") is None and os.environ.get("RENDER") is None:
     from dotenv import load_dotenv
@@ -35,8 +38,23 @@ def create_app():
     app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('DATABASE_URL', 'sqlite:///fresado.db')
     app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
     app.secret_key = os.environ.get('SECRET_KEY', 'supersecreto')
+    # Configuración de Babel para traducción
+    app.config['BABEL_DEFAULT_LOCALE'] = 'es'
+    app.config['BABEL_SUPPORTED_LOCALES'] = ['es', 'en']
+    babel = Babel(app)
     # Inicializamos la base de datos con la app
     db.init_app(app)
+
+    @app.template_filter('vancouver')
+    def vancouver_filter(dt):
+        if not dt:
+            return ''
+        tz = pytz.timezone('America/Vancouver')
+        if dt.tzinfo:
+            return dt.astimezone(tz).strftime('%Y-%m-%d %H:%M')
+        else:
+            # Si viene naive, asumir UTC
+            return dt.replace(tzinfo=pytz.UTC).astimezone(tz).strftime('%Y-%m-%d %H:%M')
 
     # Importamos los modelos para que se creen las tablas
     import models
@@ -71,7 +89,50 @@ def create_app():
     # Definimos la ruta principal que muestra la página de inicio
     @app.route('/')
     def home():
-        return render_template('home.html')
+        # Obtener materiales, marcas y configuración avanzada para los filtros
+        from models import Bloque, FresaInventario, Configuracion
+        tipos_material = db.session.query(Bloque.material).distinct().all()
+        tipos_material = [m[0] for m in tipos_material if m[0]]
+        marcas = db.session.query(Bloque.marca).distinct().all()
+        marcas = [m[0] for m in marcas if m[0]]
+        # Obtener configuración avanzada de materiales
+        try:
+            materiales_avanzado = Configuracion.get_lista('materiales_avanzado')
+            if isinstance(materiales_avanzado, dict):
+                pass
+            elif materiales_avanzado and isinstance(materiales_avanzado, list) and isinstance(materiales_avanzado[0], str) and materiales_avanzado[0].startswith('{'):
+                import json
+                materiales_avanzado = json.loads(materiales_avanzado[0])
+            else:
+                materiales_avanzado = {}
+        except Exception:
+            materiales_avanzado = {}
+        # Obtener configuración de máquinas para el filtro en la gráfica de fresas nuevas
+        try:
+            fresas_maquinas = Configuracion.get_lista('fresas_maquinas')
+            if isinstance(fresas_maquinas, dict):
+                pass
+            elif fresas_maquinas and isinstance(fresas_maquinas, list) and isinstance(fresas_maquinas[0], str) and fresas_maquinas[0].startswith('{'):
+                import json
+                fresas_maquinas = json.loads(fresas_maquinas[0])
+            else:
+                fresas_maquinas = {}
+        except Exception:
+            fresas_maquinas = {}
+        maquinas = Configuracion.get_lista('maquinas', default=['A','B','C','D'])
+        fresas_nuevas = db.session.query(FresaInventario).all()
+        return render_template('home.html', tipos_material=tipos_material, marcas=marcas, fresas_nuevas=fresas_nuevas, materiales_avanzado=materiales_avanzado, maquinas=maquinas, fresas_maquinas=fresas_maquinas)
+
+    # Ruta para obtener la hora actual de Vancouver
+    @app.route('/api/hora-vancouver')
+    def api_hora_vancouver():
+        tz = pytz.timezone('America/Vancouver')
+        ahora = datetime.now(tz)
+        return jsonify({
+            'fecha_hora': ahora.strftime('%Y-%m-%d %H:%M'),
+            'iso': ahora.isoformat(),
+            'zona': 'America/Vancouver'
+        })
 
     # Creamos las tablas de la base de datos si no existen
     with app.app_context():

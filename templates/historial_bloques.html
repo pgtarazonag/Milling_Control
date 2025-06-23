@@ -52,8 +52,8 @@
             <td>{{ bloque.marca }}</td>
             <td>{{ bloque.grosor }}</td>
             <td>{{ bloque.cantidad }}</td>
-            <td>{{ bloque.fecha_creacion.strftime('%Y-%m-%d') }}</td>
-            <td>{{ bloque.fecha_eliminacion.strftime('%Y-%m-%d') }}</td>
+            <td><span class="fecha-tabla">{{ bloque.fecha_creacion|vancouver }}</span></td>
+            <td><span class="fecha-tabla">{{ bloque.fecha_eliminacion|vancouver }}</span></td>
           </tr>
           {% endfor %}
         </tbody>

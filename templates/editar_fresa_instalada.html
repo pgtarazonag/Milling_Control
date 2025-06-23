@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+{% block title %}{{ _('Edit Installed Milling Tool') }} | Fresado Pro{% endblock %}
+{% block content %}
+<div class="container py-4">
+  <div class="row justify-content-center">
+    <div class="col-md-7 col-lg-6">
+      <div class="card border-0 shadow-sm animate__animated animate__fadeInUp">
+        <div class="card-body">
+          <h3 class="mb-3"><i class="bi bi-tools"></i> {{ _('Edit Installed Milling Tool') }}</h3>
+          <form method="post">
+            <div class="mb-3">
+              <label class="form-label">{{ _('Type') }}</label>
+              <select name="tipo" class="form-select" required>
+                <option value="">-- {{ _('Select') }} --</option>
+                {% for tipo in tipos_fresa %}
+                  <option value="{{ tipo }}" {% if fresa.tipo == tipo %}selected{% endif %}>{{ tipo }}</option>
+                {% endfor %}
+              </select>
+            </div>
+            <div class="mb-3">
+              <label class="form-label">{{ _('Machine') }}</label>
+              <select name="maquina" class="form-select" required>
+                <option value="">-- {{ _('Select') }} --</option>
+                {% for m in maquinas %}
+                  <option value="{{ m }}" {% if fresa.maquina == m %}selected{% endif %}>{{ m }}</option>
+                {% endfor %}
+              </select>
+            </div>
+            <div class="mb-3">
+              <label class="form-label">{{ _('Compatible Materials') }}</label>
+              <input type="text" name="materiales" class="form-control" value="{{ fresa.materiales }}">
+              <small class="form-text text-muted">{{ _('Separate with comma') }}</small>
+            </div>
+            <div class="mb-3">
+              <label class="form-label">{{ _('Milled Models') }}</label>
+              <input type="number" name="modelos_fresados" class="form-control" value="{{ fresa.modelos_fresados }}" min="0">
+            </div>
+            <div class="text-end">
+              <a href="{{ url_for('fresas.fresas') }}" class="btn btn-secondary">{{ _('Cancel') }}</a>
+              <button type="submit" class="btn btn-primary">{{ _('Save Changes') }}</button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

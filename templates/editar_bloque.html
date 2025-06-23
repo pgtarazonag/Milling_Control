@@ -69,3 +69,41 @@
   </div>
 </div>
 {% endblock %}
+{% block scripts %}
+{{ super() }}
+<script>
+const materialesAvanzado = {{ materiales_avanzado|default({})|tojson|safe }};
+$(document).ready(function() {
+  function actualizarShadesYMarcas() {
+    const mat = $('select[name=material]').val();
+    // Shades
+    let shades = materialesAvanzado[mat] ? materialesAvanzado[mat]['shades'] : [];
+    let $shade = $('select[name=shade]');
+    let shadeActual = $shade.val();
+    $shade.empty();
+    $shade.append('<option value="">-- Selecciona --</option>');
+    shades.forEach(function(s) {
+      $shade.append('<option value="'+s+'">'+s+'</option>');
+    });
+    if (shadeActual && shades.includes(shadeActual)) {
+      $shade.val(shadeActual);
+    }
+    // Marcas
+    let marcas = materialesAvanzado[mat] ? materialesAvanzado[mat]['marcas'] : [];
+    let $marca = $('select[name=marca]');
+    let marcaActual = $marca.val();
+    $marca.empty();
+    $marca.append('<option value="">-- Selecciona --</option>');
+    marcas.forEach(function(m) {
+      $marca.append('<option value="'+m+'">'+m+'</option>');
+    });
+    if (marcaActual && marcas.includes(marcaActual)) {
+      $marca.val(marcaActual);
+    }
+  }
+  $('select[name=material]').on('change', actualizarShadesYMarcas);
+  // Inicializar al cargar
+  actualizarShadesYMarcas();
+});
+</script>
+{% endblock %}

@@ -24,8 +24,8 @@ from datetime import datetime
 class Orden(db.Model):
     # id único para cada orden
     id = db.Column(db.Integer, primary_key=True)
-    # Código de la orden
-    codigo_orden = db.Column(db.String(100))
+    # Códigos de caso asociados a la orden (separados por coma)
+    codigos_caso = db.Column(db.Text)
     # Material usado en la orden
     material = db.Column(db.String(50))
     # Marca del material
@@ -40,6 +40,12 @@ class Orden(db.Model):
     cantidad_modelos = db.Column(db.Integer)
     # Fecha de creación de la orden
     fecha_creacion = db.Column(db.DateTime, default=datetime.utcnow)
+
+    def get_codigos_caso(self):
+        # Devuelve una lista de los códigos de caso asociados a la orden
+        if self.codigos_caso:
+            return [c.strip() for c in self.codigos_caso.split(',') if c.strip()]
+        return []
 
 # Modelo para los bloques de material
 class Bloque(db.Model):
@@ -132,15 +138,24 @@ class Configuracion(db.Model):
     def get_lista(clave, default=None):
         c = Configuracion.query.filter_by(clave=clave).first()
         if c:
-            return [x.strip() for x in c.valor.split(',') if x.strip()]
+            valor = c.valor.strip()
+            if (valor.startswith('{') and valor.endswith('}')) or (valor.startswith('[') and valor.endswith(']')):
+                import json
+                return json.loads(valor)
+            return [x.strip() for x in valor.split(',') if x.strip()]
         return default or []
 
     @staticmethod
     def set_lista(clave, lista):
         c = Configuracion.query.filter_by(clave=clave).first()
+        # Si es una lista con un solo elemento que parece JSON, guardar tal cual
+        if isinstance(lista, list) and len(lista) == 1 and (str(lista[0]).strip().startswith('{') or str(lista[0]).strip().startswith('[')):
+            valor = str(lista[0]).strip()
+        else:
+            valor = ','.join(lista)
         if not c:
-            c = Configuracion(clave=clave, valor=','.join(lista))
+            c = Configuracion(clave=clave, valor=valor)
             db.session.add(c)
         else:
-            c.valor = ','.join(lista)
+            c.valor = valor
         db.session.commit()

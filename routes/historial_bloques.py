@@ -17,6 +17,10 @@ from models import BloqueHistorial, Orden, Bloque, FresaInventario, FresaInstala
 from extensions import db
 import io
 import pandas as pd
+from datetime import datetime
+import pytz
+
+VANCOUVER_TZ = pytz.timezone('America/Vancouver')
 
 # Creamos un blueprint llamado 'historial' para agrupar las rutas relacionadas con el historial
 historial_bp = Blueprint('historial', __name__, url_prefix='/historial')

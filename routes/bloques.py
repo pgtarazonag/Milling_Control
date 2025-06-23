@@ -17,6 +17,8 @@ from flask import Blueprint, render_template, request, redirect, url_for
 from models import Bloque, BloqueHistorial, Configuracion
 from extensions import db
 from datetime import datetime
+import pytz
+VANCOUVER_TZ = pytz.timezone('America/Vancouver')
 
 # Definimos el blueprint para las rutas de bloques
 bloques_bp = Blueprint('bloques', __name__, url_prefix='/bloques')
@@ -28,28 +30,47 @@ def bloques():
     shades = Configuracion.get_lista('shades', default=['A1','A2','A3','B1','B2','C1','C2'])
     marcas = Configuracion.get_lista('marcas', default=['Vita','Ivoclar','Aidite'])
     grosores = Configuracion.get_lista('grosores', default=['14','16','18','20','22','25'])
+    # Cargar configuración avanzada de materiales
+    import json
+    try:
+        materiales_avanzado = Configuracion.get_lista('materiales_avanzado')
+        if not materiales_avanzado or not isinstance(materiales_avanzado, dict):
+            # Si es una lista con un solo elemento JSON, decodificar
+            import json
+            if isinstance(materiales_avanzado, list) and len(materiales_avanzado) == 1 and (str(materiales_avanzado[0]).strip().startswith('{') or str(materiales_avanzado[0]).strip().startswith('[')):
+                materiales_avanzado = json.loads(materiales_avanzado[0])
+            else:
+                materiales_avanzado = {}
+    except Exception:
+        materiales_avanzado = {}
     error = None
     # Si se envía el formulario para agregar un bloque nuevo
     if request.method == 'POST':
         material = request.form.get('material', '').strip()
         shade = request.form.get('shade', '').strip()
         grosor_str = request.form.get('grosor', '').strip()
-        marca = request.form.get('marca', '').strip() if material == "Zirconia" else None
+        marca = request.form.get('marca', '').strip()
         cantidad_str = request.form.get('cantidad', '').strip()
-        # Validación básica
-        if not material or not shade or not grosor_str or not cantidad_str:
-            error = 'Todos los campos son obligatorios.'
+        # Validación estricta: todos los campos obligatorios
+        if not material or not shade or not grosor_str or not cantidad_str or not marca:
+            error = 'Todos los campos (material, shade, grosor, marca y cantidad) son obligatorios.'
         else:
             try:
                 grosor = int(grosor_str)
                 cantidad = int(cantidad_str)
+                from datetime import datetime
+                import pytz
+                VANCOUVER_TZ = pytz.timezone('America/Vancouver')
+                ahora_van = datetime.now(VANCOUVER_TZ)
+                # Guardar la fecha en UTC pero mostrarla en Vancouver
                 nuevo = Bloque(
                     material=material,
                     marca=marca,
                     shade=shade,
                     grosor=grosor,
                     cantidad=cantidad,
-                    estado='nuevo'
+                    estado='nuevo',
+                    fecha_creacion=ahora_van.astimezone(pytz.utc)
                 )
                 db.session.add(nuevo)
                 db.session.commit()
@@ -83,6 +104,20 @@ def bloques():
         bloques_usados = query_usados.all()
         bloques_nuevos = query_nuevos.all()
 
+    # Convertir fechas a Vancouver para mostrar en la tabla
+    from pytz import timezone, UTC
+    tz_van = timezone('America/Vancouver')
+    for b in bloques_usados:
+        if b.fecha_creacion:
+            b.fecha_vancouver = b.fecha_creacion.replace(tzinfo=UTC).astimezone(tz_van)
+        else:
+            b.fecha_vancouver = None
+    for b in bloques_nuevos:
+        if b.fecha_creacion:
+            b.fecha_vancouver = b.fecha_creacion.replace(tzinfo=UTC).astimezone(tz_van)
+        else:
+            b.fecha_vancouver = None
+
     # Renderizamos la plantilla HTML con los bloques encontrados
     return render_template(
         'bloques.html',
@@ -92,7 +127,8 @@ def bloques():
         grosores=grosores,
         bloques_usados=bloques_usados,
         bloques_nuevos=bloques_nuevos,
-        error=error
+        error=error,
+        materiales_avanzado=materiales_avanzado
     )
 
 # Ruta para editar un bloque existente
@@ -102,6 +138,18 @@ def editar_bloque(bloque_id):
     marcas = Configuracion.get_lista('marcas', default=['Vita','Ivoclar','Aidite'])
     grosores = Configuracion.get_lista('grosores', default=['14','16','18','20','22','25'])
     bloque = Bloque.query.get_or_404(bloque_id)
+    # Cargar configuración avanzada de materiales para shades y marcas dependientes
+    import json
+    try:
+        materiales_avanzado = Configuracion.get_lista('materiales_avanzado')
+        if isinstance(materiales_avanzado, dict):
+            pass
+        elif materiales_avanzado and isinstance(materiales_avanzado, list) and isinstance(materiales_avanzado[0], str) and materiales_avanzado[0].startswith('{'):
+            materiales_avanzado = json.loads(materiales_avanzado[0])
+        else:
+            materiales_avanzado = {}
+    except Exception:
+        materiales_avanzado = {}
     if request.method == 'POST':
         # Actualizamos los datos del bloque con los valores del formulario
         bloque.material = request.form['material']
@@ -124,7 +172,8 @@ def editar_bloque(bloque_id):
         materiales=materiales,
         marcas=marcas,
         grosores=grosores,
-        shades=Configuracion.get_lista('shades', default=['A1','A2','A3','B1','B2','C1','C2'])
+        shades=Configuracion.get_lista('shades', default=['A1','A2','A3','B1','B2','C1','C2']),
+        materiales_avanzado=materiales_avanzado
     )
 
 # Ruta para eliminar un bloque (lo guarda en el historial antes de eliminar)
@@ -144,7 +193,7 @@ def eliminar_bloque(bloque_id):
         modelos_fresados=bloque.modelos_fresados,
         codigos_orden_fresados=bloque.codigos_orden_fresados,
         fecha_creacion=bloque.fecha_creacion,
-        fecha_eliminacion=datetime.utcnow()
+        fecha_eliminacion=datetime.now(VANCOUVER_TZ)
     )
     db.session.add(historial)
     db.session.delete(bloque)

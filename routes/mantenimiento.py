@@ -12,19 +12,17 @@ Este archivo permite llevar un control de las actividades de mantenimiento reali
 """
 
 # Importamos los módulos necesarios y los modelos de datos
-from flask import Blueprint, render_template, request, redirect, url_for, flash
+from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify
 from models import Mantenimiento, Orden, Bloque, Configuracion
 from extensions import db
 from datetime import datetime, timedelta
 import re
 import json
+import pytz
+from flask_babel import _  # Asegúrate de tener flask_babel instalado en requirements.txt
 
 mantenimiento_bp = Blueprint('mantenimiento', __name__, url_prefix='/mantenimiento')
-
-# Actividades de mantenimiento (pueden ser configurables en el futuro)
-ACTIVIDADES = [
-    {'nombre': 'Limpieza general', 'intervalo': 1, 'unidad': 'semana'}
-]
+VANCOUVER_TZ = pytz.timezone('America/Vancouver')
 
 # Ruta principal para ver y registrar actividades de mantenimiento
 @mantenimiento_bp.route('/', methods=['GET', 'POST'])
@@ -43,7 +41,18 @@ def mantenimiento():
     else:
         maquinas = FRESADORAS
         grupo = 'fresadoras'
-    actividades = ACTIVIDADES
+    # Actividades personalizadas por grupo
+    actividades_mant = Configuracion.get_lista('actividades_mantenimiento', default={
+        'fresadoras': ['limpieza_general'],
+        'hornos': ['calibracion_temperatura'],
+        'aspiradoras': ['cambio_filtro']
+    })
+    if isinstance(actividades_mant, list) and actividades_mant and isinstance(actividades_mant[0], str) and actividades_mant[0].startswith('{'):
+        import json
+        actividades_mant = json.loads(actividades_mant[0])
+    elif not isinstance(actividades_mant, dict):
+        actividades_mant = {'fresadoras': [], 'hornos': [], 'aspiradoras': []}
+    actividades = [ {'nombre': _(act)} for act in actividades_mant.get(grupo, []) ]
 
     if request.method == 'POST':
         maquina = request.form.get('maquina')
@@ -54,7 +63,7 @@ def mantenimiento():
         if not maquina or not actividad:
             error = "La máquina y la actividad son obligatorias."
         else:
-            fecha = datetime.utcnow()
+            fecha = datetime.now(VANCOUVER_TZ)
             try:
                 intervalo_int = int(intervalo)
             except (TypeError, ValueError):
@@ -111,6 +120,19 @@ def mantenimiento():
             if key not in proximas or reg.proxima_fecha < proximas[key].proxima_fecha:
                 proximas[key] = reg
     proximas_actividades = sorted(proximas.values(), key=lambda r: r.proxima_fecha)
+
+    # Si la petición viene de home, devolver solo la lista (API)
+    if request.args.get('api') == '1':
+        # Serializar solo los campos necesarios
+        return jsonify([
+            {
+                'id': r.id,
+                'maquina': r.maquina,
+                'actividad': r.actividad,
+                'proxima_fecha': r.proxima_fecha.isoformat() if r.proxima_fecha else None
+            }
+            for r in proximas_actividades
+        ])
 
     return render_template(
         'mantenimiento.html',

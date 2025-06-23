@@ -1,8 +1,13 @@
 from flask import Blueprint, render_template, request, redirect, url_for, flash
 from models import Configuracion
 from extensions import db
+import json
+import re
 
 configuracion_bp = Blueprint('configuracion', __name__, url_prefix='/configuracion')
+
+def normalize_key(s):
+    return re.sub(r'[^a-zA-Z0-9]', '_', s)
 
 @configuracion_bp.route('/', methods=['GET', 'POST'])
 def configuracion():
@@ -13,6 +18,38 @@ def configuracion():
     grosores = Configuracion.get_lista('grosores', default=['14','16','18','20','22','25'])
     hornos = Configuracion.get_lista('hornos', default=['Horno 1','Horno 2','Horno 3'])
     aspiradoras = Configuracion.get_lista('aspiradoras', default=['Aspiradora 1','Aspiradora 2','Aspiradora 3'])
+    # Actividades de mantenimiento por grupo
+    actividades_mant = Configuracion.get_lista('actividades_mantenimiento', default={
+        'fresadoras': ['limpieza_general'],
+        'hornos': ['calibracion_temperatura'],
+        'aspiradoras': ['cambio_filtro']
+    })
+    if isinstance(actividades_mant, list) and actividades_mant and isinstance(actividades_mant[0], str) and actividades_mant[0].startswith('{'):
+        actividades_mant = json.loads(actividades_mant[0])
+    elif not isinstance(actividades_mant, dict):
+        actividades_mant = {'fresadoras': [], 'hornos': [], 'aspiradoras': []}
+    # Cargar configuración avanzada previa (si existe y es válida)
+    try:
+        materiales_avanzado = Configuracion.get_lista('materiales_avanzado')
+        if isinstance(materiales_avanzado, dict):
+            pass  # Ya es un dict válido
+        elif materiales_avanzado and isinstance(materiales_avanzado, list) and isinstance(materiales_avanzado[0], str) and materiales_avanzado[0].startswith('{'):
+            materiales_avanzado = json.loads(materiales_avanzado[0])
+        else:
+            materiales_avanzado = {}
+    except Exception:
+        materiales_avanzado = {}
+    # Cargar asociación fresa-maquinas
+    try:
+        fresas_maquinas = Configuracion.get_lista('fresas_maquinas')
+        if isinstance(fresas_maquinas, dict):
+            pass
+        elif fresas_maquinas and isinstance(fresas_maquinas, list) and isinstance(fresas_maquinas[0], str) and fresas_maquinas[0].startswith('{'):
+            fresas_maquinas = json.loads(fresas_maquinas[0])
+        else:
+            fresas_maquinas = {}
+    except Exception:
+        fresas_maquinas = {}
     if request.method == 'POST':
         nuevas_maquinas = [m.strip() for m in request.form.get('maquinas','').split(',') if m.strip()]
         Configuracion.set_lista('maquinas', nuevas_maquinas)
@@ -28,6 +65,53 @@ def configuracion():
         Configuracion.set_lista('marcas', nuevas_marcas)
         nuevos_grosores = [g.strip() for g in request.form.get('grosores','').split(',') if g.strip()]
         Configuracion.set_lista('grosores', nuevos_grosores)
+        # Guardar actividades de mantenimiento por grupo
+        actividades_mant_post = {
+            'fresadoras': [a.strip() for a in request.form.get('actividades_fresadoras','').replace('\r','').split('\n') if a.strip()],
+            'hornos': [a.strip() for a in request.form.get('actividades_hornos','').replace('\r','').split('\n') if a.strip()],
+            'aspiradoras': [a.strip() for a in request.form.get('actividades_aspiradoras','').replace('\r','').split('\n') if a.strip()]
+        }
+        Configuracion.set_lista('actividades_mantenimiento', [json.dumps(actividades_mant_post)])
+        # Guardar configuración avanzada de materiales
+        materiales_avanzado_post = {}
+        for m in nuevos_materiales:
+            norm = normalize_key(m)
+            shades_key = f'shades_{norm}'
+            marcas_key = f'marcas_{norm}'
+            shades_val = [s.strip() for s in request.form.get(shades_key, '').split(',') if s.strip()]
+            marcas_val = [s.strip() for s in request.form.get(marcas_key, '').split(',') if s.strip()]
+            materiales_avanzado_post[m] = {'shades': shades_val, 'marcas': marcas_val}
+        # Asegurar que todos los materiales tengan shades y marcas aunque sean vacíos
+        for m in nuevos_materiales:
+            if m not in materiales_avanzado_post:
+                materiales_avanzado_post[m] = {'shades': [], 'marcas': []}
+        Configuracion.set_lista('materiales_avanzado', [json.dumps(materiales_avanzado_post)])
+        # Guardar asociación fresa-maquinas
+        tipos_fresa = [f.strip() for f in request.form.get('tipos_fresa','').split(',') if f.strip()]
+        fresas_maquinas_post = {}
+        for f in tipos_fresa:
+            norm = normalize_key(f)
+            maquinas_key = f'maquinas_fresa_{norm}'
+            maquinas_val = request.form.getlist(maquinas_key)
+            fresas_maquinas_post[f] = maquinas_val
+        Configuracion.set_lista('fresas_maquinas', [json.dumps(fresas_maquinas_post)])
         flash('Configuración actualizada correctamente.')
         return redirect(url_for('configuracion.configuracion'))
-    return render_template('configuracion.html', maquinas=maquinas, materiales=materiales, shades=shades, marcas=marcas, grosores=grosores, hornos=hornos, aspiradoras=aspiradoras)
+    # Al mostrar el formulario, asegurar que todos los materiales tengan shades y marcas aunque sean vacíos
+    for m in materiales:
+        if m not in materiales_avanzado:
+            materiales_avanzado[m] = {'shades': [], 'marcas': []}
+    return render_template(
+        'configuracion.html',
+        maquinas=maquinas,
+        materiales=materiales,
+        shades=shades,
+        marcas=marcas,
+        grosores=grosores,
+        hornos=hornos,
+        aspiradoras=aspiradoras,
+        materiales_avanzado=materiales_avanzado,
+        fresas_maquinas=fresas_maquinas,
+        normalize_key=normalize_key,
+        actividades_mant=actividades_mant
+    )

@@ -46,6 +46,76 @@
         <input type="text" name="aspiradoras" class="form-control" value="{{ aspiradoras|join(', ') }}" required>
         <div class="form-text">{{ _('Example') }}: Vacuum 1, Vacuum 2, Vacuum 3</div>
       </div>
+      <div class="col-12">
+        <h5 class="mt-4 mb-2"><i class="bi bi-sliders"></i> Shades y Marcas por Material</h5>
+        <div class="row g-2">
+          {% for mat in materiales %}
+          {% set norm = normalize_key(mat) %}
+          <div class="col-md-4">
+            <div class="card card-body mb-2 p-2 border border-primary-subtle">
+              <b>{{ mat }}</b>
+              <div class="mb-1">
+                <label class="form-label mb-0">Shades ({{ mat }})</label>
+                <input type="text" name="shades_{{ norm }}" class="form-control form-control-sm" value="{{ (request.form.get('shades_' ~ norm) if request.form.get('shades_' ~ norm) is not none else (materiales_avanzado[mat]['shades']|join(', ') if materiales_avanzado.get(mat) else '')) }}" placeholder="Ej: A1, A2, B1">
+              </div>
+              <div>
+                <label class="form-label mb-0">Marcas ({{ mat }})</label>
+                <input type="text" name="marcas_{{ norm }}" class="form-control form-control-sm" value="{{ (request.form.get('marcas_' ~ norm) if request.form.get('marcas_' ~ norm) is not none else (materiales_avanzado[mat]['marcas']|join(', ') if materiales_avanzado.get(mat) else '')) }}" placeholder="Ej: Vita, Aidite">
+              </div>
+            </div>
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+      <div class="col-12 mt-4">
+        <h5 class="mb-2"><i class="bi bi-tools"></i> Asociación de tipos de fresa a máquinas</h5>
+        <div class="mb-2">
+          <label class="form-label">Tipos de fresa (separados por coma)</label>
+          <input type="text" name="tipos_fresa" class="form-control" value="{{ fresas_maquinas.keys()|join(', ') if fresas_maquinas else '' }}" placeholder="Ej: Fresa A, Fresa B, Fresa C">
+          <div class="form-text">Agrega o edita los tipos de fresa disponibles.</div>
+        </div>
+        <div class="row g-2">
+          {% for fresa in fresas_maquinas.keys() %}
+          {% set norm = normalize_key(fresa) %}
+          <div class="col-md-4">
+            <div class="card card-body mb-2 p-2 border border-info-subtle">
+              <b>{{ fresa }}</b>
+              <div class="mb-1">
+                <label class="form-label mb-0">Máquinas compatibles</label>
+                <div class="d-flex flex-wrap">
+                  {% for m in maquinas %}
+                  <div class="form-check me-2">
+                    <input class="form-check-input" type="checkbox" name="maquinas_fresa_{{ norm }}" value="{{ m }}" id="maq-{{ norm }}-{{ m }}" {% if m in fresas_maquinas[fresa] %}checked{% endif %}>
+                    <label class="form-check-label" for="maq-{{ norm }}-{{ m }}">{{ m }}</label>
+                  </div>
+                  {% endfor %}
+                </div>
+              </div>
+            </div>
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+      <div class="col-12 mt-4">
+        <h5 class="mb-2"><i class="bi bi-wrench"></i> {{ _('Maintenance activities by group') }}</h5>
+        <div class="row g-2">
+          <div class="col-md-4">
+            <label class="form-label">{{ _('Fresadoras activities (one per line)') }}</label>
+            <textarea name="actividades_fresadoras" class="form-control" rows="5" placeholder="limpieza_general\najuste_ejes">{{ actividades_mant['fresadoras']|join('\n') if actividades_mant['fresadoras'] else '' }}</textarea>
+            <div class="form-text">{{ _('Use translation keys, one per line.') }}</div>
+          </div>
+          <div class="col-md-4">
+            <label class="form-label">{{ _('Ovens activities (one per line)') }}</label>
+            <textarea name="actividades_hornos" class="form-control" rows="5" placeholder="calibracion_temperatura\nlimpieza_interna">{{ actividades_mant['hornos']|join('\n') if actividades_mant['hornos'] else '' }}</textarea>
+            <div class="form-text">{{ _('Use translation keys, one per line.') }}</div>
+          </div>
+          <div class="col-md-4">
+            <label class="form-label">{{ _('Vacuum activities (one per line)') }}</label>
+            <textarea name="actividades_aspiradoras" class="form-control" rows="5" placeholder="cambio_filtro\nrevisar_motor">{{ actividades_mant['aspiradoras']|join('\n') if actividades_mant['aspiradoras'] else '' }}</textarea>
+            <div class="form-text">{{ _('Use translation keys, one per line.') }}</div>
+          </div>
+        </div>
+      </div>
       <div class="col-12 text-end">
         <button type="submit" class="btn btn-secondary"><i class="bi bi-save"></i> {{ _('Save Changes') }}</button>
       </div>

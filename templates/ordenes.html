@@ -15,8 +15,7 @@
         {% if error %}
           <div class="alert alert-danger">{{ error }}</div>
         {% endif %}
-        <form method="post" class="row g-2 align-items-end" id="orden-form">
-          {# Eliminar input oculto de codigo_orden, solo dejar el visible #}
+        <form method="post" class="row g-2 align-items-end" id="orden-form" onsubmit="return validarBloquesSeleccionados();">
           <input type="hidden" name="modelos_por_caso" id="modelos-por-caso-hidden" value="{{ request.form.get('modelos_por_caso', '') }}">
           <input type="hidden" name="pendientes_seleccionados" id="pendientes-seleccionados-hidden" value="{{ request.form.get('pendientes_seleccionados', pendientes_seleccionados|default('')) }}">
           <!-- Primera fila: Material, Shade, Máquina -->
@@ -76,14 +75,17 @@
             <select name="bloque_nuevo_id" class="form-select">
               <option value="">-- {{ _('Select') }} --</option>
               {% for bloque in bloques_nuevos %}
-                <option value="{{ bloque.id }}">{{ bloque.codigo_barra }} | {{ bloque.material }} | {{ bloque.shade }} | Cant: {{ bloque.cantidad }}</option>
+                <option value="{{ bloque.id }}">
+                  {{ bloque.shade }} | Marca: {{ bloque.marca if bloque.marca else '-' }} | Grosor: {{ bloque.grosor if bloque.grosor else '-' }} | Cant: {{ bloque.cantidad }}
+                </option>
               {% endfor %}
             </select>
           </div>
           <!-- Tercera fila: Código de Orden, Cantidad de Modelos, Botón -->
           <div class="col-md-5">
-            <label class="form-label">{{ _('Order Code') }}</label>
-            <input type="text" name="codigo_orden" class="form-control" required>
+            <label class="form-label">{{ _('Order Codes') }}</label>
+            <input type="text" name="codigo_orden" class="form-control" required placeholder="ABC123, DEF456, GHI789">
+            <small class="text-muted">{{ _('Enter one or more case codes separated by commas.') }}</small>
           </div>
           <div class="col-md-4">
             <label class="form-label">{{ _('Model Count') }}</label>
@@ -93,6 +95,17 @@
             <button type="submit" class="btn btn-success"><i class="bi bi-plus-circle"></i> {{ _('Add') }}</button>
           </div>
         </form>
+        <script>
+        function validarBloquesSeleccionados() {
+          var usado = document.querySelector('select[name=\'bloque_usado_id\']').value;
+          var nuevo = document.querySelector('select[name=\'bloque_nuevo_id\']').value;
+          if(usado && nuevo) {
+            alert('No puedes seleccionar un bloque nuevo y uno usado al mismo tiempo. Elige solo uno.');
+            return false;
+          }
+          return true;
+        }
+        </script>
       </div>
     </div>
     <div class="card border-0 shadow-sm animate__animated animate__fadeInUp">
@@ -102,9 +115,10 @@
             <thead class="table-primary">
               <tr>
                 <th><i class="bi bi-fingerprint"></i> {{ _('ID') }}</th>
-                <th><i class="bi bi-hash"></i> {{ _('Order Code') }}</th>
+                <th><i class="bi bi-hash"></i> {{ _('Order Codes') }}</th>
                 <th><i class="bi bi-upc"></i> {{ _('Barcode') }}</th>
                 <th><i class="bi bi-box"></i> {{ _('Material') }}</th>
+                <th><i class="bi bi-award"></i> {{ _('Brand') }}</th>
                 <th><i class="bi bi-palette"></i> {{ _('Shade') }}</th>
                 <th><i class="bi bi-cpu"></i> {{ _('Machine') }}</th>
                 <th><i class="bi bi-123"></i> {{ _('Model Count') }}</th>
@@ -116,16 +130,21 @@
               {% for orden in ordenes %}
               <tr>
                 <td>{{ orden.id }}</td>
-                <td>{{ orden.codigo_orden }}</td>
+                <td>
+                  {% for code in orden.get_codigos_caso() %}
+                    <span class="badge bg-info text-dark me-1">{{ code }}</span>
+                  {% endfor %}
+                </td>
                 <td>{{ orden.codigo_barra }}</td>
                 <td>{{ orden.material }}</td>
+                <td>{{ orden.marca if orden.marca else '-' }}</td>
                 <td>{{ orden.shade }}</td>
                 <td>{{ orden.maquina }}</td>
                 <td>{{ orden.cantidad_modelos }}</td>
-                <td>{{ orden.fecha_creacion.strftime('%Y-%m-%d') }}</td>
+                <td><span class="fecha-tabla">{{ orden.fecha_creacion|vancouver }}</span></td>
                 <td>
                   <a href="{{ url_for('ordenes.editar_orden', orden_id=orden.id) }}" class="btn btn-outline-secondary btn-sm"><i class="bi bi-pencil"></i></a>
-                  <form method="post" action="{{ url_for('ordenes.eliminar_orden', orden_id=orden.id) }}" style="display:inline;">
+                  <form method="post" action="{{ url_for('ordenes.eliminar_orden', orden_id=orden.id) }}" style="display:inline;" class="form-eliminar-orden" data-codigo="{{ orden.codigos_caso }}" data-material="{{ orden.material }}" data-marca="{{ orden.marca }}" data-shade="{{ orden.shade }}" data-maquina="{{ orden.maquina }}">
                     <button type="submit" class="btn btn-outline-danger btn-sm"><i class="bi bi-trash"></i></button>
                   </form>
                 </td>
@@ -145,6 +164,10 @@
           <input type="text" name="codigo_orden_pendiente" class="form-control me-2" placeholder="{{ _('Scan or enter code') }}" required>
           <button type="submit" class="btn btn-outline-primary"><i class="bi bi-plus"></i></button>
         </form>
+        <div class="d-flex mb-2 gap-2">
+          <button type="button" class="btn btn-outline-secondary btn-xs px-2 py-1" id="btn-select-all" title="{{ _('Select All') }}"><i class="bi bi-check2-square"></i></button>
+          <button type="button" class="btn btn-outline-secondary btn-xs px-2 py-1" id="btn-deselect-all" title="{{ _('Deselect All') }}"><i class="bi bi-square"></i></button>
+        </div>
         <div class="table-responsive" style="flex:1 1 auto; overflow:auto; min-height:300px; max-height:none;">
           <form id="pendientes-select-form" onsubmit="return false;">
           <table class="table table-sm table-hover table-bordered mb-0 pendientes-table-font" id="tabla-pendientes">
@@ -196,6 +219,18 @@
 {% endblock %}
 {% block scripts %}
 {{ super() }}
+<script>
+// Confirmación al eliminar orden
+$(document).on('submit', '.form-eliminar-orden', function(e) {
+  const codigo = $(this).data('codigo');
+  const material = $(this).data('material');
+  const marca = $(this).data('marca');
+  const shade = $(this).data('shade');
+  const maquina = $(this).data('maquina');
+  const msg = `¿Está seguro de eliminar esta orden?\n\nCódigo: ${codigo}\nMaterial: ${material}\nMarca: ${marca}\nShade: ${shade}\nMáquina: ${maquina}`;
+  if(!confirm(msg)) e.preventDefault();
+});
+</script>
 <script>
 $(document).ready(function(){
   // DataTable para tabla de pendientes (ordenar y filtrar)
@@ -334,5 +369,19 @@ $(function(){
     $("input[name='codigo_orden']").after('<input type="hidden" name="modelos_por_caso" value="">');
   }
 });
+</script>
+<script>
+  $(document).ready(function(){
+    // Foco automático al input de casos pendientes al cargar la página
+    $("input[name='codigo_orden_pendiente']").focus();
+    // Seleccionar todos
+    $('#btn-select-all').click(function(){
+      $('.pendiente-checkbox').prop('checked', true);
+    });
+    // Deseleccionar todos
+    $('#btn-deselect-all').click(function(){
+      $('.pendiente-checkbox').prop('checked', false);
+    });
+  });
 </script>
 {% endblock %}

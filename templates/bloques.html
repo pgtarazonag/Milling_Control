@@ -18,7 +18,7 @@
             <select class="form-select" name="material" id="material" size="6" required style="height:auto;min-height:120px;">
               <option value="">-- {{ _('Select') }} --</option>
               {% for mat in materiales %}
-                <option value="{{ mat }}" {% if request.form.get('material', '') == mat %}selected{% endif %}>{{ mat }}</option>
+                <option value="{{ mat }}" {% if request.form.get('material', '') == mat or (not request.form.get('material') and mat == 'Zirconia') %}selected{% endif %}>{{ mat }}</option>
               {% endfor %}
             </select>
           </div>
@@ -33,7 +33,7 @@
           </div>
           <div class="col-md-3">
             <label class="form-label">{{ _('Brand') }}</label>
-            <select class="form-select" name="marca" id="marca" size="6" style="height:auto;min-height:120px;">
+            <select class="form-select" name="marca" id="marca" size="6" required style="height:auto;min-height:120px;">
               <option value="">-- {{ _('Select') }} --</option>
               {% for m in marcas %}
                 <option value="{{ m }}" {% if request.form.get('marca', '') == m %}selected{% endif %}>{{ m }}</option>
@@ -87,9 +87,9 @@
                 <td>{{ bloque.marca }}</td>
                 <td>{{ bloque.grosor }}</td>
                 <td>{{ bloque.modelos_fresados }}</td>
-                <td>{% if bloque.fecha_creacion %}{{ bloque.fecha_creacion.strftime('%Y-%m-%d') }}{% endif %}</td>
+                <td><span class="fecha-tabla">{{ bloque.fecha_creacion|vancouver }}</span></td>
                 <td>
-                  <form method="post" action="{{ url_for('bloques.eliminar_bloque', bloque_id=bloque.id) }}" style="display:inline;">
+                  <form method="post" action="{{ url_for('bloques.eliminar_bloque', bloque_id=bloque.id) }}" style="display:inline;" class="form-eliminar-bloque" data-codigo="{{ bloque.codigo_barra }}" data-material="{{ bloque.material }}" data-marca="{{ bloque.marca }}" data-shade="{{ bloque.shade }}" data-grosor="{{ bloque.grosor }}">
                     <button type="submit" class="btn btn-outline-danger btn-sm"><i class="bi bi-trash"></i></button>
                   </form>
                   <a href="{{ url_for('bloques.editar_bloque', bloque_id=bloque.id) }}" class="btn btn-outline-warning btn-sm"><i class="bi bi-pencil"></i></a>
@@ -127,9 +127,9 @@
                 <td>{{ bloque.marca }}</td>
                 <td>{{ bloque.grosor }}</td>
                 <td>{{ bloque.cantidad }}</td>
-                <td>{% if bloque.fecha_creacion %}{{ bloque.fecha_creacion.strftime('%Y-%m-%d') }}{% endif %}</td>
+                <td><span class="fecha-tabla">{{ bloque.fecha_creacion|vancouver }}</span></td>
                 <td>
-                  <form method="post" action="{{ url_for('bloques.eliminar_bloque', bloque_id=bloque.id) }}" style="display:inline;">
+                  <form method="post" action="{{ url_for('bloques.eliminar_bloque', bloque_id=bloque.id) }}" style="display:inline;" class="form-eliminar-bloque" data-codigo="{{ bloque.codigo_barra }}" data-material="{{ bloque.material }}" data-marca="{{ bloque.marca }}" data-shade="{{ bloque.shade }}" data-grosor="{{ bloque.grosor }}">
                     <button type="submit" class="btn btn-outline-danger btn-sm"><i class="bi bi-trash"></i></button>
                   </form>
                   <a href="{{ url_for('bloques.editar_bloque', bloque_id=bloque.id) }}" class="btn btn-outline-warning btn-sm"><i class="bi bi-pencil"></i></a>
@@ -167,6 +167,53 @@ select#grosor:focus option:checked, select#grosor option:checked {
 {% endblock %}
 {% block scripts %}
 {{ super() }}
+<script>
+// Confirmación al eliminar bloque
+$(document).on('submit', '.form-eliminar-bloque', function(e) {
+  const codigo = $(this).data('codigo');
+  const material = $(this).data('material');
+  const marca = $(this).data('marca');
+  const shade = $(this).data('shade');
+  const grosor = $(this).data('grosor');
+  const msg = `¿Está seguro de eliminar este bloque?\n\nCódigo: ${codigo}\nMaterial: ${material}\nMarca: ${marca}\nShade: ${shade}\nGrosor: ${grosor}`;
+  if(!confirm(msg)) e.preventDefault();
+});
+</script>
+<script>
+// Pasar la configuración avanzada de materiales al JS
+const materialesAvanzado = {{ materiales_avanzado|default({})|tojson|safe }};
+$(document).ready(function() {
+  // Al cambiar el material, actualizar shades y marcas
+  $('#material').on('change', function() {
+    const mat = $(this).val();
+    // Shades
+    let shades = materialesAvanzado[mat] ? materialesAvanzado[mat]['shades'] : [];
+    let $shade = $('#shade');
+    $shade.empty();
+    $shade.append('<option value="">-- Select --</option>');
+    shades.forEach(function(s) {
+      $shade.append('<option value="'+s+'">'+s+'</option>');
+    });
+    // Marcas
+    let marcas = materialesAvanzado[mat] ? materialesAvanzado[mat]['marcas'] : [];
+    let $marca = $('#marca');
+    $marca.empty();
+    $marca.append('<option value="">-- Select --</option>');
+    marcas.forEach(function(m) {
+      $marca.append('<option value="'+m+'">'+m+'</option>');
+    });
+  });
+  // Si ya hay un material seleccionado (por validación fallida), disparar el evento para poblar shades/marcas
+  if($('#material').val()) {
+    $('#material').trigger('change');
+    // Seleccionar shade y marca si estaban en el form
+    const shadeSel = "{{ request.form.get('shade', '') }}";
+    if(shadeSel) $('#shade').val(shadeSel);
+    const marcaSel = "{{ request.form.get('marca', '') }}";
+    if(marcaSel) $('#marca').val(marcaSel);
+  }
+});
+</script>
 <script>
 $(document).ready(function(){
   // Para bloques nuevos: columna 4 (cantidad)

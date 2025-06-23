@@ -18,10 +18,13 @@ Este archivo gestiona toda la lógica relacionada con la creación y visualizaci
 from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify
 from models import Orden, Bloque, BloqueHistorial, FresaInstalada, OrdenPendiente, Configuracion
 from extensions import db
-from datetime import datetime
+from datetime import datetime, timedelta
 import random
 import string
 from sqlalchemy import func, text
+import pytz
+
+VANCOUVER_TZ = pytz.timezone('America/Vancouver')
 
 # Tipos de material fijos para la app dental
 TIPOS_MATERIAL_FIJOS = [
@@ -144,7 +147,7 @@ def ordenes():
                     estado='usado',
                     modelos_fresados=cantidad_modelos * len(codigos_seleccionados),
                     codigos_orden_fresados=','.join(codigos_seleccionados),
-                    fecha_creacion=datetime.utcnow()
+                    fecha_creacion=datetime.now(VANCOUVER_TZ)
                 )
                 db.session.add(nuevo_bloque_usado)
                 bloque = nuevo_bloque_usado
@@ -161,12 +164,12 @@ def ordenes():
                 nueva_orden = Orden(
                     codigo_orden=codigo_orden,
                     material=bloque.material,
-                    marca=bloque.marca,
+                    marca=bloque.marca if hasattr(bloque, 'marca') else None,
                     shade=bloque.shade,
                     codigo_barra=bloque.codigo_barra,
                     maquina=maquina,
                     cantidad_modelos=cantidad_modelos,
-                    fecha_creacion=datetime.utcnow()
+                    fecha_creacion=datetime.now(VANCOUVER_TZ)
                 )
                 db.session.add(nueva_orden)
                 # Eliminamos el código de la lista de pendientes
@@ -186,7 +189,6 @@ def ordenes():
 
     # Si el formulario es para crear una orden individual o múltiple (códigos separados por coma)
     if request.method == 'POST' and 'codigo_orden' in request.form:
-        print("DEBUG POST DATA:", dict(request.form))
         codigos_orden = request.form.get('codigo_orden', '').strip()
         if codigos_orden:
             codigos_lista = [c.strip() for c in codigos_orden.split(',') if c.strip()]
@@ -248,7 +250,7 @@ def ordenes():
                         estado='usado',
                         modelos_fresados=sum(cantidades),
                         codigos_orden_fresados=','.join(codigos_lista),
-                        fecha_creacion=datetime.utcnow()
+                        fecha_creacion=datetime.now(VANCOUVER_TZ)
                     )
                     db.session.add(nuevo_bloque_usado)
                     bloque = nuevo_bloque_usado
@@ -259,18 +261,19 @@ def ordenes():
             if not bloque:
                 error = "Debes seleccionar un bloque usado o nuevo."
             else:
-                for codigo_orden, cantidad_modelos in zip(codigos_lista, cantidades):
-                    nueva_orden = Orden(
-                        codigo_orden=codigo_orden,
-                        material=bloque.material,
-                        marca=bloque.marca,
-                        shade=bloque.shade,
-                        codigo_barra=bloque.codigo_barra,
-                        maquina=maquina,
-                        cantidad_modelos=cantidad_modelos,
-                        fecha_creacion=datetime.utcnow()
-                    )
-                    db.session.add(nueva_orden)
+                # --- CAMBIO: crear una sola orden con todos los códigos de caso ---
+                nueva_orden = Orden(
+                    codigos_caso=','.join(codigos_lista),
+                    material=bloque.material,
+                    marca=bloque.marca if hasattr(bloque, 'marca') else None,
+                    shade=bloque.shade,
+                    codigo_barra=bloque.codigo_barra,
+                    maquina=maquina,
+                    cantidad_modelos=sum(cantidades),
+                    fecha_creacion=datetime.now(VANCOUVER_TZ)
+                )
+                db.session.add(nueva_orden)
+                for codigo_orden in codigos_lista:
                     pendiente = OrdenPendiente.query.filter_by(codigo_orden=codigo_orden).first()
                     if pendiente:
                         db.session.delete(pendiente)
@@ -281,7 +284,7 @@ def ordenes():
                 if fresa_instalada:
                     fresa_instalada.modelos_fresados += sum(cantidades)
                 db.session.commit()
-                flash('Órdenes creadas correctamente.')
+                flash('Orden creada correctamente.')
                 return redirect(url_for('ordenes.ordenes', material=material_form, shade=shade_form))
 
     # Obtenemos todas las órdenes para mostrarlas en la tabla
@@ -349,18 +352,28 @@ def editar_orden(orden_id):
     - POST: Guarda los cambios realizados.
     """
     orden = Orden.query.get_or_404(orden_id)
-    # Obtener listas desde configuración
     materiales = Configuracion.get_lista('materiales')
     marcas = Configuracion.get_lista('marcas')
     shades = Configuracion.get_lista('shades')
     maquinas = Configuracion.get_lista('maquinas')
     if request.method == 'POST':
-        orden.codigo_orden = request.form['codigo_orden']
+        orden.codigos_caso = request.form['codigos_caso']
         orden.material = request.form['material']
         orden.marca = request.form['marca']
         orden.shade = request.form['shade']
         orden.maquina = request.form['maquina']
         orden.cantidad_modelos = request.form['cantidad_modelos']
+        # Actualizar fecha si se edita
+        if 'fecha_creacion' in request.form:
+            try:
+                nueva_fecha = request.form['fecha_creacion']
+                if nueva_fecha:
+                    from datetime import datetime
+                    import pytz
+                    VANCOUVER_TZ = pytz.timezone('America/Vancouver')
+                    orden.fecha_creacion = VANCOUVER_TZ.localize(datetime.strptime(nueva_fecha, '%Y-%m-%dT%H:%M'))
+            except Exception as e:
+                pass
         db.session.commit()
         flash('Orden actualizada correctamente.')
         return redirect(url_for('ordenes.ordenes'))
@@ -380,55 +393,126 @@ def editar_pendiente(pendiente_id):
 
 @ordenes_bp.route('/api/graficas-inventario')
 def api_graficas_inventario():
-    # Bloques por shade
     from models import Bloque, Orden
+    group = request.args.get('group', 'dia')
     # Bloques por shade (solo inventario actual)
     bloques_shade = (
         db.session.query(Bloque.shade, func.sum(Bloque.cantidad))
         .group_by(Bloque.shade)
         .all()
     )
-    # Modelos fresados por máquina por semana (últimas 8 semanas)
-    modelos_maquina = (
-        db.session.query(
-            func.to_char(Orden.fecha_creacion, 'IYYY-IW'),
-            Orden.maquina,
-            func.sum(Orden.cantidad_modelos)
-        )
-        .group_by(func.to_char(Orden.fecha_creacion, 'IYYY-IW'), Orden.maquina)
-        .order_by(func.to_char(Orden.fecha_creacion, 'IYYY-IW').desc())
-        .limit(32)
-        .all()
-    )
-    # Modelos fresados por shade esta semana
-    from datetime import datetime, timedelta
-    hoy = datetime.utcnow()
-    primer_dia_semana = hoy - timedelta(days=hoy.weekday())
-    modelos_shade_semana = (
-        db.session.query(Orden.shade, func.sum(Orden.cantidad_modelos))
-        .filter(Orden.fecha_creacion >= primer_dia_semana)
-        .group_by(Orden.shade)
-        .all()
-    )
-    # Modelos fresados por material esta semana
-    modelos_material_semana = (
-        db.session.query(Orden.material, func.sum(Orden.cantidad_modelos))
-        .filter(Orden.fecha_creacion >= primer_dia_semana)
-        .group_by(Orden.material)
-        .all()
-    )
-    # Modelos fresados por día (últimos 14 días)
-    modelos_dia = (
-        db.session.query(func.to_char(Orden.fecha_creacion, 'YYYY-MM-DD'), func.sum(Orden.cantidad_modelos))
-        .group_by(func.to_char(Orden.fecha_creacion, 'YYYY-MM-DD'))
-        .order_by(func.to_char(Orden.fecha_creacion, 'YYYY-MM-DD').desc())
-        .limit(14)
-        .all()
-    )
+    result = {'bloques_shade': [{'shade': s, 'cantidad': int(c or 0)} for s, c in bloques_shade]}
+    if group == 'dia':
+        modelos = db.session.query(
+            func.to_char(Orden.fecha_creacion, 'YYYY-MM-DD'), func.sum(Orden.cantidad_modelos)
+        ).group_by(func.to_char(Orden.fecha_creacion, 'YYYY-MM-DD')).order_by(func.to_char(Orden.fecha_creacion, 'YYYY-MM-DD').desc()).limit(14).all()
+        result['modelos_dia'] = [{'dia': d, 'cantidad': int(c or 0)} for d, c in modelos]
+    elif group == 'maquina':
+        modelos = db.session.query(
+            Orden.maquina, func.sum(Orden.cantidad_modelos)
+        ).group_by(Orden.maquina).all()
+        result['modelos_por_maquina'] = [{'maquina': m if m else '-', 'cantidad': int(c or 0)} for m, c in modelos]
+    elif group == 'material':
+        modelos = db.session.query(
+            Orden.material, func.sum(Orden.cantidad_modelos)
+        ).group_by(Orden.material).all()
+        result['modelos_por_material'] = [{'material': m if m else '-', 'cantidad': int(c or 0)} for m, c in modelos]
+    elif group == 'marca':
+        modelos = db.session.query(
+            Orden.marca, func.sum(Orden.cantidad_modelos)
+        ).group_by(Orden.marca).all()
+        result['modelos_por_marca'] = [{'marca': m if m else '-', 'cantidad': int(c or 0)} for m, c in modelos]
+    return jsonify(result)
+
+@ordenes_bp.route('/api/graficas-bloques-shade')
+def api_graficas_bloques_shade():
+    material = request.args.get('material')
+    estado = request.args.get('estado')
+    order = request.args.get('order', 'cantidad_desc')
+    marca = request.args.get('marca')  # Nuevo filtro de marca
+    query = db.session.query(Bloque.shade, func.sum(Bloque.cantidad).label('cantidad'))
+    if material:
+        query = query.filter(Bloque.material == material)
+    if estado:
+        query = query.filter(Bloque.estado == estado)
+    if marca:
+        query = query.filter(Bloque.marca == marca)
+    query = query.group_by(Bloque.shade)
+    if order == 'alfabetico':
+        query = query.order_by(Bloque.shade.asc())
+    elif order == 'cantidad_asc':
+        query = query.order_by(func.sum(Bloque.cantidad).asc())
+    else:
+        query = query.order_by(func.sum(Bloque.cantidad).desc())
+    data = query.all()
+    return jsonify([
+        {'shade': s, 'cantidad': int(c or 0)} for s, c in data
+    ])
+
+@ordenes_bp.route('/api/cases')
+def api_cases():
+    from sqlalchemy import func
+    tipo = request.args.get('tipo', 'ordenes')
+    dias = int(request.args.get('dias', 7))
+    ahora = datetime.now(VANCOUVER_TZ)
+    desde = ahora - timedelta(days=dias)
+    # Query base
+    q = db.session.query(Orden).filter(Orden.fecha_creacion >= desde)
+    # Agrupar por día
+    results = {}
+    for orden in q:
+        fecha = orden.fecha_creacion.astimezone(VANCOUVER_TZ).strftime('%Y-%m-%d')
+        if fecha not in results:
+            results[fecha] = 0
+        if tipo == 'ordenes':
+            results[fecha] += 1
+        elif tipo == 'casos':
+            results[fecha] += len(orden.get_codigos_caso())
+        elif tipo == 'modelos':
+            results[fecha] += orden.cantidad_modelos or 0
+    # Ordenar por fecha
+    labels = sorted(results.keys())
+    values = [results[l] for l in labels]
+    label = {'ordenes': 'Órdenes', 'casos': 'Casos', 'modelos': 'Modelos'}[tipo]
     return jsonify({
-        'bloques_shade': [{'shade': s, 'cantidad': int(c or 0)} for s, c in bloques_shade],
-        'modelos_maquina': [{'semana': s, 'maquina': m, 'cantidad': int(c or 0)} for s, m, c in modelos_maquina],
-        'modelos_shade_semana': [{'shade': s, 'cantidad': int(c or 0)} for s, c in modelos_shade_semana],
-        'modelos_material_semana': [{'material': m, 'cantidad': int(c or 0)} for m, c in modelos_material_semana],
-        'modelos_dia': [{'dia': d, 'cantidad': int(c or 0)} for d, c in modelos_dia],
+        'labels': labels,
+        'values': values,
+        'label': label,
+        'xLabel': 'Fecha'
     })
+
+@ordenes_bp.route('/api/record-cases')
+def api_record_cases():
+    """
+    Devuelve un registro diario de casos, órdenes o modelos fresados en los últimos N días.
+    Parámetros GET:
+      - tipo: 'casos', 'ordenes' o 'modelos'
+      - dias: número de días hacia atrás (int)
+    """
+    tipo = request.args.get('tipo', 'casos')
+    try:
+        dias = int(request.args.get('dias', 5))
+    except Exception:
+        dias = 5
+    hoy = datetime.now(VANCOUVER_TZ).replace(hour=0, minute=0, second=0, microsecond=0)
+    desde = hoy - timedelta(days=dias-1)
+    # Query base
+    query = db.session.query(Orden).filter(Orden.fecha_creacion >= desde)
+    # Agrupar por día
+    resultados = {}
+    for orden in query:
+        dia = orden.fecha_creacion.astimezone(VANCOUVER_TZ).strftime('%Y-%m-%d')
+        if dia not in resultados:
+            resultados[dia] = 0
+        if tipo == 'casos':
+            resultados[dia] += len(orden.get_codigos_caso())
+        elif tipo == 'ordenes':
+            resultados[dia] += 1
+        elif tipo == 'modelos':
+            resultados[dia] += orden.cantidad_modelos or 0
+    # Ordenar por fecha ascendente y omitir días sin datos
+    data = [
+        {'dia': dia, 'cantidad': resultados[dia]}
+        for dia in sorted(resultados.keys())
+    ]
+    return jsonify(data)

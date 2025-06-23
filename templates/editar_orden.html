@@ -71,8 +71,9 @@
                 <h3 class="mb-3 text-primary"><i class="bi bi-pencil"></i> {{ _('Edit Order') }}</h3>
                 <form method="post" class="row g-3">
                     <div class="col-md-6">
-                        <label class="form-label"><i class="bi bi-upc-scan"></i> {{ _('Order Code') }}</label>
-                        <input type="text" name="codigo_orden" class="form-control" value="{{ orden.codigo_orden }}" required>
+                        <label class="form-label"><i class="bi bi-upc-scan"></i> {{ _('Order Codes') }}</label>
+                        <input type="text" name="codigos_caso" class="form-control" value="{{ orden.codigos_caso }}" required placeholder="ABC123, DEF456, GHI789">
+                        <small class="text-muted">{{ _('Enter one or more case codes separated by commas.') }}</small>
                     </div>
                     <div class="col-md-6">
                         <label class="form-label"><i class="bi bi-bezier2"></i> {{ _('Material') }}</label>
@@ -114,8 +115,13 @@
                         <label class="form-label"><i class="bi bi-123"></i> {{ _('Model Count') }}</label>
                         <input type="number" name="cantidad_modelos" class="form-control" value="{{ orden.cantidad_modelos }}" min="1">
                     </div>
+                    <div class="col-md-6">
+                        <label class="form-label"><i class="bi bi-calendar-event"></i> {{ _('Creation Date') }}</label>
+                        <input type="datetime-local" name="fecha_creacion" class="form-control" value="{{ orden.fecha_creacion.strftime('%Y-%m-%dT%H:%M') }}" required>
+                    </div>
                     <div class="col-12 text-end">
                         <button type="submit" class="btn btn-primary"><i class="bi bi-save"></i> {{ _('Save Changes') }}</button>
+                        <a href="{{ url_for('ordenes.ordenes') }}" class="btn btn-outline-secondary ms-2"><i class="bi bi-x"></i> {{ _('Cancel') }}</a>
                     </div>
                 </form>
             </div>

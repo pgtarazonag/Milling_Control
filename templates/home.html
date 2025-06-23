@@ -8,36 +8,115 @@
 {% endblock %}
 {% block content %}
 <div class="row g-4">
-  <div class="col-md-6">
+  <!-- IZQUIERDA: Blocks by Shade y New Milling Tools Inventory -->
+  <div class="col-md-4">
+    <div class="card border-0 shadow-sm animate__animated animate__fadeInUp mb-4">
+      <div class="card-body">
+        <h6 class="card-title mb-3"><i class="bi bi-bar-chart"></i> {{ _('Blocks by Shade') }}</h6>
+        <div class="mb-2 d-flex flex-wrap gap-2 align-items-center">
+          <label class="form-label mb-0 me-2">{{ _('Filter:') }}</label>
+          <select id="filtro-material" class="form-select form-select-sm" style="min-width:90px;max-width:120px;">
+            <option value="">{{ _('All Materials') }}</option>
+            {% for mat in tipos_material %}
+              <option value="{{ mat }}" {% if mat == 'Zirconia' %}selected{% endif %}>{{ mat }}</option>
+            {% endfor %}
+          </select>
+          <select id="filtro-marca" class="form-select form-select-sm" style="min-width:90px;max-width:120px;">
+            <option value="">{{ _('All Brands') }}</option>
+            {% for m in marcas %}
+              <option value="{{ m }}">{{ m }}</option>
+            {% endfor %}
+          </select>
+          <select id="filtro-estado" class="form-select form-select-sm" style="min-width:90px;max-width:120px;">
+            <option value="">{{ _('All States') }}</option>
+            <option value="nuevo" selected>{{ _('New') }}</option>
+            <option value="usado">{{ _('Used') }}</option>
+          </select>
+          <select id="filtro-orden" class="form-select form-select-sm" style="min-width:90px;max-width:120px;">
+            <option value="cantidad_desc">{{ _('Most Blocks') }}</option>
+            <option value="cantidad_asc">{{ _('Fewest Blocks') }}</option>
+            <option value="alfabetico" selected>{{ _('A-Z') }}</option>
+          </select>
+        </div>
+        <canvas id="graficaBloquesShade" height="220"></canvas>
+      </div>
+    </div>
     <div class="card border-0 shadow-sm animate__animated animate__fadeInUp">
       <div class="card-body">
-        <h6 class="card-title mb-3"><i class="bi bi-bar-chart-line"></i> {{ _('Production Analysis by Machine (last weeks)') }}</h6>
+        <h6 class="card-title mb-3"><i class="bi bi-tools"></i> {{ _('New Milling Tools Inventory') }}</h6>
+        <div class="mb-2 d-flex flex-wrap gap-2 align-items-center">
+          <label class="form-label mb-0 me-2">{{ _('Order by:') }}</label>
+          <select id="filtro-fresa-orden" class="form-select form-select-sm" style="min-width:90px;max-width:120px;">
+            <option value="tipo">{{ _('Type (A-Z)') }}</option>
+            <option value="cantidad_desc">{{ _('Most Units') }}</option>
+            <option value="cantidad_asc">{{ _('Fewest Units') }}</option>
+          </select>
+          <label class="form-label mb-0 ms-2">{{ _('Machine:') }}</label>
+          <select id="filtro-fresa-maquina" class="form-select form-select-sm" style="min-width:90px;max-width:120px;">
+            <option value="">{{ _('All Machines') }}</option>
+            {% for m in maquinas %}
+              <option value="{{ m }}">{{ m }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <canvas id="graficaFresasNuevas" height="120"></canvas>
+      </div>
+    </div>
+  </div>
+  <!-- CENTRO: Production Analysis Daily y demás gráficas -->
+  <div class="col-md-4">
+    <div class="card border-0 shadow-sm animate__animated animate__fadeInUp mb-4">
+      <div class="card-body">
+        <h6 class="card-title mb-3"><i class="bi bi-bar-chart-line"></i> {{ _('Production Analysis Daily') }}</h6>
+        <div class="mb-2 d-flex flex-wrap gap-2 align-items-center">
+          <label class="form-label mb-0 me-2">{{ _('Group by:') }}</label>
+          <select id="filtro-prod-group" class="form-select form-select-sm" style="min-width:140px;max-width:180px;">
+            <option value="dia">{{ _('Day') }}</option>
+            <option value="maquina">{{ _('Machine') }}</option>
+            <option value="material">{{ _('Material') }}</option>
+            <option value="marca" selected>{{ _('Brand') }}</option>
+          </select>
+        </div>
         <canvas id="graficaModelosMaquina" height="120"></canvas>
       </div>
     </div>
-  </div>
-  <div class="col-md-6" style="max-width: 420px; min-width: 320px; margin: 0 auto;">
-    <div class="card border-0 shadow-sm animate__animated animate__fadeInUp">
+    <!-- OTRAS GRÁFICAS DEBAJO -->
+    <div class="card border-0 shadow-sm animate__animated animate__fadeInUp mb-4">
       <div class="card-body">
-        <h6 class="card-title mb-3"><i class="bi bi-pie-chart"></i> {{ _('Material Distribution (Pie Chart)') }}</h6>
-        <canvas id="graficaMateriales" height="60"></canvas>
+        <h6 class="card-title mb-3"><i class="bi bi-graph-up"></i> {{ _('Record of Cases') }}</h6>
+        <div class="mb-2 d-flex flex-wrap gap-2 align-items-center">
+          <label class="form-label mb-0 me-2">{{ _('Show:') }}</label>
+          <select id="filtro-record-tipo" class="form-select form-select-sm" style="min-width:120px;max-width:160px;">
+            <option value="casos">{{ _('Cases') }}</option>
+            <option value="ordenes">{{ _('Orders') }}</option>
+            <option value="modelos">{{ _('Models') }}</option>
+          </select>
+          <label class="form-label mb-0 ms-2">{{ _('Interval:') }}</label>
+          <select id="filtro-record-dias" class="form-select form-select-sm" style="min-width:80px;max-width:120px;">
+            <option value="1">1</option>
+            <option value="2">2</option>
+            <option value="5">5</option>
+            <option value="10" selected>10</option>
+            <option value="30">30</option>
+          </select>
+        </div>
+        <canvas id="graficaRecordCases" height="160"></canvas>
+      </div>
+    </div>
+    <div class="card border-0 shadow-sm animate__animated animate__fadeInUp mb-4">
+      <div class="card-body">
+        <h6 class="card-title mb-3"><i class="bi bi-bar-chart"></i> {{ _('Blocks by Shade (Filtered)') }}</h6>
+        <canvas id="graficaBloquesShadeFiltrada" height="120"></canvas>
       </div>
     </div>
   </div>
-  <div class="col-md-6">
-    <div class="card border-0 shadow-sm animate__animated animate__fadeInUp">
-      <div class="card-body">
-        <h6 class="card-title mb-3"><i class="bi bi-bar-chart"></i> {{ _('Blocks by Shade') }}</h6>
-        <canvas id="graficaBloquesShade" height="120"></canvas>
-      </div>
-    </div>
-  </div>
-  <div class="col-md-6" style="max-width: 420px; min-width: 320px; margin: 0 auto;">
-    <div class="card border-0 shadow-sm animate__animated animate__fadeInUp">
-      <div class="card-body">
-        <h6 class="card-title mb-3"><i class="bi bi-pie-chart"></i> {{ _('Models by Shade (Pie Chart)') }}</h6>
-        <canvas id="graficaModelosShadeSemana" height="60"></canvas>
-      </div>
+  <!-- DERECHA: Upcoming activities -->
+  <div class="col-md-4">
+    <div class="card shadow-sm mb-4 animate__animated animate__fadeInRight">
+      <div class="card-header bg-info text-white"><b><i class="bi bi-calendar-check"></i> {{ _('Upcoming activities') }}</b></div>
+      <ul class="list-group list-group-flush" id="upcoming-activities-list">
+        <li class="list-group-item text-muted">{{ _('Loading...') }}</li>
+      </ul>
     </div>
   </div>
 </div>
@@ -53,16 +132,17 @@ $(document).ready(function(){
   });
   // Cargar datos de las gráficas
   $.getJSON('/ordenes/api/graficas-inventario', function(data) {
-    // Modelos por máquina
+    // Modelos por día
     var ctx1 = document.getElementById('graficaModelosMaquina').getContext('2d');
+    const prodColors = ['#1976d2','#43a047','#fbc02d','#8e24aa','#e53935','#00838f','#ff9800','#90a4ae'];
     new Chart(ctx1, {
       type: 'bar',
       data: {
-        labels: data.modelos_maquina.map(x => x.semana + ' - ' + x.maquina),
+        labels: data.modelos_dia.map(x => x.dia),
         datasets: [{
           label: 'Modelos',
-          data: data.modelos_maquina.map(x => x.cantidad),
-          backgroundColor: '#1976d2',
+          data: data.modelos_dia.map(x => x.cantidad),
+          backgroundColor: data.modelos_dia.map((x,i) => prodColors[i % prodColors.length]),
         }]
       },
       options: {responsive:true, plugins:{legend:{display:false}}}
@@ -94,20 +174,264 @@ $(document).ready(function(){
       },
       options: {responsive:true, plugins:{legend:{display:false}}}
     });
-    // Pie chart: Models by Shade
-    var ctx4 = document.getElementById('graficaModelosShadeSemana').getContext('2d');
-    new Chart(ctx4, {
-      type: 'pie',
+  });
+  // Evitar que la gráfica se dibuje dos veces
+  let graficaInicializada = false;
+  function cargarGraficaBloquesShade() {
+    var material = $('#filtro-material').val();
+    var estado = $('#filtro-estado').val();
+    var order = $('#filtro-orden').val();
+    var marca = $('#filtro-marca').val();
+    $.getJSON('/ordenes/api/graficas-bloques-shade', {material, estado, order, marca}, function(data) {
+      var ctx3 = document.getElementById('graficaBloquesShade').getContext('2d');
+      if(window.graficaBloquesShade && typeof window.graficaBloquesShade.destroy === 'function') {
+        window.graficaBloquesShade.destroy();
+      }
+      // Paleta dental profesional para materiales
+      const materialColors = {
+        'Zirconia': '#1976d2', // azul dental
+        'Disilicato': '#43a047', // verde
+        'PMMA': '#fbc02d', // amarillo
+        'Cera': '#8e24aa', // violeta
+        'Wax': '#e53935', // rojo
+        'Composite': '#00838f', // teal
+        'Resina': '#ff9800', // naranja
+        // Default para otros
+        'default': '#90a4ae'
+      };
+      // Si hay filtro de material, usar color único, si no, asignar por shade (usando material de cada shade si se expande el endpoint)
+      let selectedMaterial = $('#filtro-material').val();
+      let barColors = [];
+      if(selectedMaterial && materialColors[selectedMaterial]) {
+        barColors = data.map(() => materialColors[selectedMaterial]);
+      } else {
+        // Si no hay filtro, alternar colores por shade (asumiendo shades de diferentes materiales)
+        // Si el endpoint no da material por shade, alternar colores de la paleta
+        const palette = Object.values(materialColors).filter(c => c !== materialColors['default']);
+        barColors = data.map((x,i) => palette[i % palette.length]);
+      }
+      window.graficaBloquesShade = new Chart(ctx3, {
+        type: 'bar',
+        data: {
+          labels: data.map(x => x.shade),
+          datasets: [{
+            label: 'Bloques',
+            data: data.map(x => x.cantidad),
+            backgroundColor: barColors,
+          }]
+        },
+        options: {responsive:true, plugins:{legend:{display:false}}}
+      });
+      graficaInicializada = true;
+    });
+  }
+  // Solo dibujar la gráfica filtrable, no la estática
+  cargarGraficaBloquesShade();
+  $('#filtro-material, #filtro-estado, #filtro-orden, #filtro-marca').on('change', cargarGraficaBloquesShade);
+});
+// Reemplazar renderizado de tabla de fresas nuevas por gráfica interactiva
+const fresasMaquinas = {{ fresas_maquinas|tojson|safe }};
+function renderGraficaFresasNuevas(orden) {
+  var maquina = $('#filtro-fresa-maquina').val();
+  $.getJSON('/fresas/api/fresas-nuevas', {orden}, function(data) {
+    // Filtrar por máquina si corresponde
+    if(maquina && fresasMaquinas) {
+      data = data.filter(function(fresa) {
+        // Si la máquina está asociada a ese tipo de fresa
+        return fresasMaquinas[fresa.tipo] && fresasMaquinas[fresa.tipo].includes(maquina);
+      });
+    }
+    var ctx = document.getElementById('graficaFresasNuevas').getContext('2d');
+    if(window.graficaFresasNuevas && typeof window.graficaFresasNuevas.destroy === 'function') {
+      window.graficaFresasNuevas.destroy();
+    }
+    // Colores dental-themed
+    const barColors = ['#1976d2','#43a047','#fbc02d','#8e24aa','#e53935','#00838f','#ff9800','#90a4ae'];
+    window.graficaFresasNuevas = new Chart(ctx, {
+      type: 'doughnut',
       data: {
-        labels: data.modelos_shade_semana.map(x => x.shade),
+        labels: data.map(x => x.tipo),
         datasets: [{
-          data: data.modelos_shade_semana.map(x => x.cantidad),
-          backgroundColor: ['#1976d2','#43a047','#fbc02d','#8e24aa','#e53935','#00838f']
+          label: "{{ _('Units') }}",
+          data: data.map(x => x.cantidad),
+          backgroundColor: data.map((x,i) => barColors[i % barColors.length]),
         }]
       },
-      options: {responsive:true, radius: '45%', plugins:{legend:{position:'bottom'}}}
+      options: {
+        responsive:true,
+        plugins:{
+          legend:{position:'bottom'},
+          tooltip:{
+            callbacks:{
+              afterBody: function(context) {
+                const idx = context[0].dataIndex;
+                const fresa = data[idx];
+                return [
+                  "{{ _('Materials') }}: " + fresa.materiales,
+                  "{{ _('Registration Date') }}: " + fresa.fecha
+                ];
+              }
+            }
+          }
+        },
+        cutout: '65%', // más anillo
+      }
     });
   });
+}
+$('#filtro-fresa-orden, #filtro-fresa-maquina').on('change', function() {
+  renderGraficaFresasNuevas($('#filtro-fresa-orden').val());
+});
+// Inicializar gráfica con orden por tipo
+renderGraficaFresasNuevas('tipo');
+
+// Dependencias de marcas en material seleccionado
+const materialesAvanzado = {{ materiales_avanzado|tojson|safe }};
+const allMarcas = {{ marcas|tojson|safe }};
+
+function actualizarDropdownMarcas() {
+  const material = $('#filtro-material').val();
+  const $marca = $('#filtro-marca');
+  $marca.empty();
+  $marca.append('<option value="">{{ _('All Brands') }}</option>');
+  if (material && materialesAvanzado[material] && materialesAvanzado[material].marcas && materialesAvanzado[material].marcas.length > 0) {
+    materialesAvanzado[material].marcas.forEach(function(marca) {
+      $marca.append('<option value="'+marca+'">'+marca+'</option>');
+    });
+  } else {
+    allMarcas.forEach(function(marca) {
+      $marca.append('<option value="'+marca+'">'+marca+'</option>');
+    });
+  }
+}
+
+$('#filtro-material').on('change', function() {
+  actualizarDropdownMarcas();
+  $('#filtro-marca').val(''); // Limpiar selección de marca al cambiar material
+  $('#filtro-marca').trigger('change'); // Actualizar gráfica
+});
+// Inicializar marcas dependientes al cargar
+$(document).ready(function(){
+  actualizarDropdownMarcas();
+  // Seleccionar por defecto 'marca' en el filtro de Production Analysis Daily
+  $('#filtro-prod-group').val('marca');
+  cargarGraficaProduccionAgrupada();
+});
+function cargarGraficaProduccionAgrupada() {
+  var group = $('#filtro-prod-group').val();
+  $.getJSON('/ordenes/api/graficas-inventario', {group}, function(data) {
+    var ctx1 = document.getElementById('graficaModelosMaquina').getContext('2d');
+    if(window.graficaModelosMaquina && typeof window.graficaModelosMaquina.destroy === 'function') {
+      window.graficaModelosMaquina.destroy();
+      window.graficaModelosMaquina = null;
+    }
+    let labels = [];
+    let values = [];
+    if(group === 'dia' && Array.isArray(data.modelos_dia)) {
+      labels = data.modelos_dia.map(x => x.dia);
+      values = data.modelos_dia.map(x => x.cantidad);
+    } else if(group === 'maquina' && Array.isArray(data.modelos_por_maquina)) {
+      labels = data.modelos_por_maquina.map(x => x.maquina);
+      values = data.modelos_por_maquina.map(x => x.cantidad);
+    } else if(group === 'material' && Array.isArray(data.modelos_por_material)) {
+      labels = data.modelos_por_material.map(x => x.material);
+      values = data.modelos_por_material.map(x => x.cantidad);
+    } else if(group === 'marca' && Array.isArray(data.modelos_por_marca)) {
+      labels = data.modelos_por_marca.map(x => x.marca);
+      values = data.modelos_por_marca.map(x => x.cantidad);
+    } else {
+      // Buscar la primera clave de datos válida
+      let key = Object.keys(data).find(k => Array.isArray(data[k]) && data[k].length > 0);
+      if(key) {
+        labels = data[key].map(x => Object.values(x)[0]);
+        values = data[key].map(x => Object.values(x)[1]);
+      }
+    }
+    if(labels.length === 0) {
+      labels = ['No data'];
+      values = [0];
+    }
+    const prodColors = ['#1976d2','#43a047','#fbc02d','#8e24aa','#e53935','#00838f','#ff9800','#90a4ae'];
+    window.graficaModelosMaquina = new Chart(ctx1, {
+      type: 'bar',
+      data: {
+        labels: labels,
+        datasets: [{
+          label: 'Modelos',
+          data: values,
+          backgroundColor: labels.map((x,i) => prodColors[i % prodColors.length]),
+        }]
+      },
+      options: {responsive:true, plugins:{legend:{display:false}}}
+    });
+  });
+}
+$('#filtro-prod-group').on('change', cargarGraficaProduccionAgrupada);
+// Inicializar gráfica de producción agrupada
+cargarGraficaProduccionAgrupada();
+
+// Cargar próximas actividades
+$(document).ready(function(){
+  $.getJSON('/mantenimiento/?api=1', function(data) {
+    var $list = $('#upcoming-activities-list');
+    $list.empty();
+    if (data.length === 0) {
+      $list.append('<li class="list-group-item text-muted">{{ _('No upcoming activities scheduled.') }}</li>');
+    } else {
+      data.forEach(function(prox) {
+        var fecha = prox.proxima_fecha ? new Date(prox.proxima_fecha) : null;
+        var fechaStr = fecha ? fecha.toLocaleString('es-CA', {year:'numeric', month:'2-digit', day:'2-digit', hour:'2-digit', minute:'2-digit'}) : '';
+        $list.append('<li class="list-group-item d-flex justify-content-between align-items-center">'
+          + '<div><b>' + prox.maquina + '</b> - ' + prox.actividad + '<br>'
+          + '<small class="text-muted">{{ _('Next') }}: <span class="fecha-tabla">' + fechaStr + '</span></small></div>'
+          + '</li>');
+      });
+    }
+  });
+});
+function renderGraficaRecordCases() {
+  var tipo = $('#filtro-record-tipo').val();
+  var dias = $('#filtro-record-dias').val();
+  $.getJSON('/ordenes/api/record-cases', {tipo, dias}, function(data) {
+    var ctx = document.getElementById('graficaRecordCases').getContext('2d');
+    if(window.graficaRecordCases && typeof window.graficaRecordCases.destroy === 'function') {
+      window.graficaRecordCases.destroy();
+    }
+    window.graficaRecordCases = new Chart(ctx, {
+      type: 'line',
+      data: {
+        labels: data.map(x => x.dia),
+        datasets: [{
+          label: tipo === 'casos' ? '{{ _('Cases') }}' : (tipo === 'ordenes' ? '{{ _('Orders') }}' : '{{ _('Models') }}'),
+          data: data.map(x => x.cantidad),
+          borderColor: '#1976d2',
+          backgroundColor: 'rgba(25, 118, 210, 0.1)',
+          tension: 0.3,
+          pointRadius: 4,
+          pointBackgroundColor: '#1976d2',
+          fill: true
+        }]
+      },
+      options: {
+        responsive:true,
+        plugins:{
+          legend:{display:true, position:'top'},
+          tooltip:{enabled:true}
+        },
+        scales: {
+          x: { title: { display: true, text: '{{ _('Day') }}' } },
+          y: { beginAtZero: true, title: { display: true, text: '{{ _('Quantity') }}' } }
+        }
+      }
+    });
+  });
+}
+$('#filtro-record-tipo, #filtro-record-dias').on('change', renderGraficaRecordCases);
+// Inicializar gráfica al cargar
+$(document).ready(function(){
+  // Seleccionar por defecto '10' en el filtro de intervalo de Record of Cases
+  $('#filtro-record-dias').val('10');
+  renderGraficaRecordCases();
 });
 </script>
 {% endblock %}

@@ -12,10 +12,13 @@ Este archivo organiza toda la lógica para el manejo de fresas en el sistema.
 """
 
 # Importamos los módulos necesarios y los modelos de datos
-from flask import Blueprint, render_template, request, redirect, url_for, flash
+from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify
 from models import FresaInventario, FresaInstalada, Configuracion
 from extensions import db
 from datetime import datetime
+import pytz
+import json
+VANCOUVER_TZ = pytz.timezone('America/Vancouver')
 
 # Definimos el blueprint para las rutas de fresas
 fresas_bp = Blueprint('fresas', __name__, url_prefix='/fresas')
@@ -27,6 +30,19 @@ def fresas():
     # Obtener materiales y máquinas desde configuración dinámica
     tipos_material = Configuracion.get_lista('materiales', default=['Zirconia', 'Disilicato', 'PMMA', 'Cera', 'Wax', 'Composite'])
     maquinas = Configuracion.get_lista('maquinas', default=['A', 'B', 'C', 'D'])
+
+    tipos_fresa = []
+    try:
+        fresas_maquinas = Configuracion.get_lista('fresas_maquinas')
+        if isinstance(fresas_maquinas, dict):
+            tipos_fresa = list(fresas_maquinas.keys())
+        elif fresas_maquinas and isinstance(fresas_maquinas, list) and isinstance(fresas_maquinas[0], str) and fresas_maquinas[0].startswith('{'):
+            tipos_fresa = list(json.loads(fresas_maquinas[0]).keys())
+    except Exception:
+        pass
+    # fallback: si no hay tipos_fresa definidos, usar los del inventario
+    if not tipos_fresa:
+        tipos_fresa = sorted(list(set(f.tipo for f in FresaInventario.query.all())))
 
     # Si se envía el formulario para agregar una fresa al inventario
     if request.method == 'POST' and 'agregar_inventario' in request.form:
@@ -55,7 +71,7 @@ def fresas():
                 tipo=tipo,
                 maquina=maquina,
                 materiales=inventario.materiales,
-                fecha_instalacion=datetime.utcnow(),
+                fecha_instalacion=datetime.now(VANCOUVER_TZ),
                 modelos_fresados=0
             )
             db.session.add(nueva_instalada)
@@ -73,7 +89,9 @@ def fresas():
         fresas_instaladas=fresas_instaladas,
         maquinas=maquinas,
         tipos_material=tipos_material,
-        error=error
+        error=error,
+        fresas_maquinas=fresas_maquinas,
+        tipos_fresa=tipos_fresa
     )
 
 # Ruta para eliminar una fresa instalada
@@ -95,7 +113,7 @@ def eliminar_instalada(fresa_id):
             diametro=diametro,
             maquina=fresa.maquina,
             materiales=materiales,
-            fecha_instalacion=datetime.utcnow(),
+            fecha_instalacion=datetime.now(VANCOUVER_TZ),
             modelos_fresados=0
         )
         db.session.add(nueva_instalada)
@@ -104,27 +122,79 @@ def eliminar_instalada(fresa_id):
     return redirect(url_for('fresas.fresas'))
 
 # Ruta para editar una fresa del inventario
-@fresas_bp.route('/editar_inventario/<int:fresa_id>', methods=['POST'])
+@fresas_bp.route('/editar_inventario/<int:fresa_id>', methods=['GET', 'POST'])
 def editar_inventario(fresa_id):
     fresa = FresaInventario.query.get_or_404(fresa_id)
-    fresa.tipo = request.form['tipo']
-    fresa.diametro = float(request.form['diametro'])
-    fresa.cantidad = int(request.form['cantidad'])
-    materiales = request.form.getlist('materiales')
-    fresa.materiales = ','.join(materiales)
-    db.session.commit()
-    flash('Fresa de inventario editada correctamente.')
-    return redirect(url_for('fresas.fresas'))
+    if request.method == 'POST':
+        fresa.tipo = request.form['tipo']
+        fresa.diametro = float(request.form['diametro']) if request.form.get('diametro') else None
+        fresa.cantidad = int(request.form['cantidad'])
+        materiales = request.form.get('materiales', '')
+        fresa.materiales = materiales
+        db.session.commit()
+        flash('Fresa de inventario editada correctamente.')
+        return redirect(url_for('fresas.fresas'))
+    tipos_fresa = []
+    try:
+        fresas_maquinas = Configuracion.get_lista('fresas_maquinas')
+        if isinstance(fresas_maquinas, dict):
+            tipos_fresa = list(fresas_maquinas.keys())
+        elif fresas_maquinas and isinstance(fresas_maquinas, list) and isinstance(fresas_maquinas[0], str) and fresas_maquinas[0].startswith('{'):
+            tipos_fresa = list(json.loads(fresas_maquinas[0]).keys())
+    except Exception:
+        pass
+    # fallback: si no hay tipos_fresa definidos, usar los del inventario
+    if not tipos_fresa:
+        tipos_fresa = sorted(list(set(f.tipo for f in FresaInventario.query.all())))
+    return render_template('editar_fresa.html', fresa=fresa, tipos_fresa=tipos_fresa)
 
 # Ruta para editar una fresa instalada
-@fresas_bp.route('/editar_instalada/<int:fresa_id>', methods=['POST'])
+@fresas_bp.route('/editar_instalada/<int:fresa_id>', methods=['GET', 'POST'])
 def editar_instalada(fresa_id):
     fresa = FresaInstalada.query.get_or_404(fresa_id)
-    fresa.tipo = request.form['tipo']
-    fresa.diametro = float(request.form['diametro'])
-    fresa.maquina = request.form['maquina']
-    materiales = request.form.getlist('materiales')
-    fresa.materiales = ','.join(materiales)
-    db.session.commit()
-    flash('Fresa instalada editada correctamente.')
-    return redirect(url_for('fresas.fresas'))
+    if request.method == 'POST':
+        fresa.tipo = request.form['tipo']
+        fresa.maquina = request.form['maquina']
+        materiales = request.form.get('materiales', '')
+        fresa.materiales = materiales
+        fresa.modelos_fresados = int(request.form.get('modelos_fresados', 0))
+        db.session.commit()
+        flash('Fresa instalada editada correctamente.')
+        return redirect(url_for('fresas.fresas'))
+    # Obtener tipos de fresa y máquinas definidos en configuración
+    tipos_fresa = []
+    try:
+        fresas_maquinas = Configuracion.get_lista('fresas_maquinas')
+        if isinstance(fresas_maquinas, dict):
+            tipos_fresa = list(fresas_maquinas.keys())
+        elif fresas_maquinas and isinstance(fresas_maquinas, list) and isinstance(fresas_maquinas[0], str) and fresas_maquinas[0].startswith('{'):
+            tipos_fresa = list(json.loads(fresas_maquinas[0]).keys())
+    except Exception:
+        pass
+    if not tipos_fresa:
+        tipos_fresa = sorted(list(set(f.tipo for f in FresaInventario.query.all())))
+    maquinas = Configuracion.get_lista('maquinas', default=['A', 'B', 'C', 'D'])
+    return render_template('editar_fresa_instalada.html', fresa=fresa, tipos_fresa=tipos_fresa, maquinas=maquinas)
+
+# Ruta API para obtener fresas nuevas (cantidad > 0)
+@fresas_bp.route('/api/fresas-nuevas')
+def api_fresas_nuevas():
+    orden = request.args.get('orden', 'tipo')
+    query = FresaInventario.query.filter(FresaInventario.cantidad > 0)
+    if orden == 'tipo':
+        query = query.order_by(FresaInventario.tipo)
+    elif orden == 'cantidad_desc':
+        query = query.order_by(FresaInventario.cantidad.desc())
+    elif orden == 'cantidad_asc':
+        query = query.order_by(FresaInventario.cantidad)
+    fresas = query.all()
+    data = []
+    for f in fresas:
+        data.append({
+            'tipo': f.tipo,
+            'diametro': f.diametro,
+            'materiales': f.materiales,
+            'cantidad': f.cantidad,
+            'fecha': f.fecha_registro.astimezone(VANCOUVER_TZ).strftime('%Y-%m-%d %H:%M') if f.fecha_registro else ''
+        })
+    return jsonify(data)
