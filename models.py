@@ -141,7 +141,11 @@ class Configuracion(db.Model):
             valor = c.valor.strip()
             if (valor.startswith('{') and valor.endswith('}')) or (valor.startswith('[') and valor.endswith(']')):
                 import json
-                return json.loads(valor)
+                try:
+                    return json.loads(valor)
+                except Exception:
+                    # Si falla el JSON, intentar como lista separada por comas
+                    return [x.strip() for x in valor.split(',') if x.strip()]
             return [x.strip() for x in valor.split(',') if x.strip()]
         return default or []
 

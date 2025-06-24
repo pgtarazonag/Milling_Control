@@ -38,14 +38,25 @@ ordenes_bp = Blueprint('ordenes', __name__, url_prefix='/ordenes')
 # Recibe el grosor y genera un código aleatorio que no exista en la base de datos
 # Se usa al crear un nuevo bloque usado
 
-def generar_codigo_bloque(grosor):
+def generar_codigo_bloque(grosor, marca=None, material=None):
     # 2 dígitos para grosor (rellenado con ceros a la izquierda)
     grosor_str = str(grosor).zfill(2)
-    # 4 caracteres aleatorios
+    # Obtener letra de marca desde configuración avanzada
+    letra = 'X'
+    if material and marca:
+        materiales_avanzado = Configuracion.get_lista('materiales_avanzado')
+        import json
+        if materiales_avanzado and isinstance(materiales_avanzado, list) and isinstance(materiales_avanzado[0], str):
+            materiales_avanzado = json.loads(materiales_avanzado[0])
+        if materiales_avanzado and material in materiales_avanzado:
+            props = materiales_avanzado[material].get('marcas_propiedades', {})
+            if props and marca in props and props[marca].get('letra'):
+                letra = props[marca]['letra'].upper()[:1]
+    # 3 caracteres aleatorios
+    import random, string
     while True:
-        aleatorio = ''.join(random.choices(string.ascii_uppercase + string.digits, k=4))
-        codigo = grosor_str + aleatorio
-        # Verifica que no exista en la base de datos
+        sufijo = ''.join(random.choices(string.ascii_uppercase + string.digits, k=3))
+        codigo = grosor_str + letra + sufijo
         if not Bloque.query.filter_by(codigo_barra=codigo).first():
             return codigo
 
@@ -55,16 +66,6 @@ def ordenes():
     error = None
     # Obtener todos los casos pendientes para mostrar en la interfaz de órdenes
     pendientes_orden = OrdenPendiente.query.order_by(OrdenPendiente.fecha_escaneo.asc()).all()
-    # Si el usuario agrega un código pendiente desde la pestaña órdenes
-    if request.method == 'POST' and 'codigo_orden_pendiente' in request.form:
-        codigo_orden_pendiente = request.form.get('codigo_orden_pendiente', '').strip()
-        if codigo_orden_pendiente and not OrdenPendiente.query.filter_by(codigo_orden=codigo_orden_pendiente).first():
-            nuevo = OrdenPendiente(codigo_orden=codigo_orden_pendiente)
-            db.session.add(nuevo)
-            db.session.commit()
-            flash('Código agregado a la lista de pendientes.')
-        return redirect(url_for('ordenes.ordenes'))
-
     # Obtenemos los filtros de material y shade desde la URL
     material = request.args.get('material')
     shade = request.args.get('shade')
@@ -78,19 +79,15 @@ def ordenes():
         if shade_post:
             shade = shade_post
 
-    # Obtener máquinas y materiales desde configuración
+    # Obtener máquinas y materiales desde configuración (asegura que estén definidas antes de cualquier render_template)
     maquinas = Configuracion.get_lista('maquinas')
     tipos_material = Configuracion.get_lista('materiales')
-
     # Obtenemos los tipos de material disponibles
-    tipos_material = db.session.query(Bloque.material).distinct().all()
-    tipos_material = [type[0] for type in tipos_material if type[0]]
-    if not tipos_material:
-        tipos_material = TIPOS_MATERIAL_FIJOS
-
+    tipos_material_db = db.session.query(Bloque.material).distinct().all()
+    tipos_material = [type[0] for type in tipos_material_db if type[0]] or tipos_material or TIPOS_MATERIAL_FIJOS
     # --- FILTRO ROBUSTO DE SHADES ---
     # Normaliza el material para evitar problemas de espacios o mayúsculas
-    material_normalizado = material.strip() if material else None
+    material_normalizado = (request.form.get('material') or request.args.get('material') or '').strip()
     if material_normalizado:
         # Busca shades para el material normalizado
         shades_disponibles = db.session.query(Bloque.shade).filter(
@@ -102,18 +99,49 @@ def ordenes():
             shades_disponibles = [s[0] for s in db.session.query(Bloque.shade).distinct().all() if s[0]]
     else:
         shades_disponibles = [s[0] for s in db.session.query(Bloque.shade).distinct().all() if s[0]]
-
     # Filtrar bloques usados y nuevos según material y shade seleccionados
     bloques_usados_query = Bloque.query.filter_by(estado='usado')
     bloques_nuevos_query = Bloque.query.filter_by(estado='nuevo')
     if material_normalizado:
         bloques_usados_query = bloques_usados_query.filter(Bloque.material == material_normalizado)
         bloques_nuevos_query = bloques_nuevos_query.filter(Bloque.material == material_normalizado)
-    if shade:
-        bloques_usados_query = bloques_usados_query.filter(Bloque.shade == shade)
-        bloques_nuevos_query = bloques_nuevos_query.filter(Bloque.shade == shade)
+    shade_keep = request.form.get('shade') or request.args.get('shade')
+    if shade_keep:
+        bloques_usados_query = bloques_usados_query.filter(Bloque.shade == shade_keep)
+        bloques_nuevos_query = bloques_nuevos_query.filter(Bloque.shade == shade_keep)
     bloques_usados = bloques_usados_query.all()
     bloques_nuevos = bloques_nuevos_query.all()
+    # Si el usuario agrega un código pendiente desde la pestaña órdenes
+    if request.method == 'POST' and 'codigo_orden_pendiente' in request.form:
+        codigo_orden_pendiente = request.form.get('codigo_orden_pendiente', '').strip()
+        # Guardar los valores actuales de material, shade y bloque
+        material_keep = request.form.get('material') or request.args.get('material')
+        shade_keep = request.form.get('shade') or request.args.get('shade')
+        bloque_usado_id_keep = request.form.get('bloque_usado_id') or request.args.get('bloque_usado_id')
+        bloque_nuevo_id_keep = request.form.get('bloque_nuevo_id') or request.args.get('bloque_nuevo_id')
+        if codigo_orden_pendiente and not OrdenPendiente.query.filter_by(codigo_orden=codigo_orden_pendiente).first():
+            nuevo = OrdenPendiente(codigo_orden=codigo_orden_pendiente)
+            db.session.add(nuevo)
+            db.session.commit()
+            flash('Código agregado a la lista de pendientes.')
+        # Redirigir con los valores actuales para mantener selección
+        # --- CAMBIO: Renderizar template con POST y los valores actuales ---
+        return render_template(
+            'ordenes.html',
+            error=None,
+            pendientes_orden=OrdenPendiente.query.order_by(OrdenPendiente.fecha_escaneo.asc()).all(),
+            tipos_material=tipos_material,
+            material=material_keep,
+            shade=shade_keep,
+            maquinas=maquinas,
+            shades_disponibles=shades_disponibles,
+            bloques_usados=bloques_usados,
+            bloques_nuevos=bloques_nuevos,
+            bloque_usado_id=bloque_usado_id_keep,
+            bloque_nuevo_id=bloque_nuevo_id_keep,
+            ordenes=Orden.query.order_by(Orden.fecha_creacion.desc()).all(),
+            request=request
+        )
 
     # Si el formulario viene de la selección de casos pendientes (fresado grupal)
     codigos_seleccionados = request.form.getlist('codigos_seleccionados')
@@ -143,7 +171,7 @@ def ordenes():
                     shade=bloque_nuevo.shade,
                     grosor=bloque_nuevo.grosor,
                     cantidad=1,
-                    codigo_barra=generar_codigo_bloque(bloque_nuevo.grosor),
+                    codigo_barra=generar_codigo_bloque(bloque_nuevo.grosor, bloque_nuevo.marca, bloque_nuevo.material),
                     estado='usado',
                     modelos_fresados=cantidad_modelos * len(codigos_seleccionados),
                     codigos_orden_fresados=','.join(codigos_seleccionados),
@@ -246,7 +274,7 @@ def ordenes():
                         shade=bloque_nuevo.shade,
                         grosor=bloque_nuevo.grosor,
                         cantidad=1,
-                        codigo_barra=generar_codigo_bloque(bloque_nuevo.grosor),
+                        codigo_barra=generar_codigo_bloque(bloque_nuevo.grosor, bloque_nuevo.marca, bloque_nuevo.material),
                         estado='usado',
                         modelos_fresados=sum(cantidades),
                         codigos_orden_fresados=','.join(codigos_lista),
@@ -516,3 +544,16 @@ def api_record_cases():
         for dia in sorted(resultados.keys())
     ]
     return jsonify(data)
+
+@ordenes_bp.route('/api/resumen-dia')
+def api_resumen_dia():
+    from datetime import datetime
+    import pytz
+    VANCOUVER_TZ = pytz.timezone('America/Vancouver')
+    hoy = datetime.now(VANCOUVER_TZ).replace(hour=0, minute=0, second=0, microsecond=0)
+    maniana = hoy.replace(hour=23, minute=59, second=59, microsecond=999999)
+    ordenes = Orden.query.filter(Orden.fecha_creacion >= hoy, Orden.fecha_creacion <= maniana).all()
+    num_ordenes = len(ordenes)
+    num_casos = sum(len(o.get_codigos_caso()) for o in ordenes)
+    num_modelos = sum(o.cantidad_modelos or 0 for o in ordenes)
+    return jsonify({'ordenes': num_ordenes, 'casos': num_casos, 'modelos': num_modelos})

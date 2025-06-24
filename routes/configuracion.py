@@ -79,7 +79,13 @@ def configuracion():
             shades_key = f'shades_{norm}'
             marcas_key = f'marcas_{norm}'
             shades_val = [s.strip() for s in request.form.get(shades_key, '').split(',') if s.strip()]
-            marcas_val = [s.strip() for s in request.form.get(marcas_key, '').split(',') if s.strip()]
+            # --- NUEVO: Soporte para letra y color por marca ---
+            marcas_val_raw = [s.strip() for s in request.form.get(marcas_key, '').split(',') if s.strip()]
+            marcas_val = []
+            for idx, marca_nombre in enumerate(marcas_val_raw):
+                letra = request.form.get(f'letra_{norm}_{idx}', 'X') or 'X'
+                color = request.form.get(f'color_{norm}_{idx}', '#000000') or '#000000'
+                marcas_val.append({'nombre': marca_nombre, 'letra': letra, 'color': color})
             materiales_avanzado_post[m] = {'shades': shades_val, 'marcas': marcas_val}
         # Asegurar que todos los materiales tengan shades y marcas aunque sean vacíos
         for m in nuevos_materiales:
@@ -101,6 +107,22 @@ def configuracion():
     for m in materiales:
         if m not in materiales_avanzado:
             materiales_avanzado[m] = {'shades': [], 'marcas': []}
+    # --- NUEVO: Backward compatibility y valores por defecto para marcas ---
+    for m in materiales:
+        marcas = materiales_avanzado[m].get('marcas', [])
+        # Si es lista de strings, migrar a objetos
+        if marcas and isinstance(marcas[0], str):
+            materiales_avanzado[m]['marcas'] = [
+                {'nombre': nombre, 'letra': 'X', 'color': '#000000'} for nombre in marcas
+            ]
+        # Si es lista de objetos, asegurar que cada marca tenga los campos correctos
+        for marca in materiales_avanzado[m]['marcas']:
+            if 'nombre' not in marca or not marca['nombre']:
+                marca['nombre'] = 'SinNombre'
+            if 'letra' not in marca or not marca['letra']:
+                marca['letra'] = 'X'
+            if 'color' not in marca or not marca['color']:
+                marca['color'] = '#000000'
     return render_template(
         'configuracion.html',
         maquinas=maquinas,

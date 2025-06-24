@@ -60,7 +60,18 @@
               </div>
               <div>
                 <label class="form-label mb-0">Marcas ({{ mat }})</label>
-                <input type="text" name="marcas_{{ norm }}" class="form-control form-control-sm" value="{{ (request.form.get('marcas_' ~ norm) if request.form.get('marcas_' ~ norm) is not none else (materiales_avanzado[mat]['marcas']|join(', ') if materiales_avanzado.get(mat) else '')) }}" placeholder="Ej: Vita, Aidite">
+                <input type="text" name="marcas_{{ norm }}" class="form-control form-control-sm mb-2" value="{{ (request.form.get('marcas_' ~ norm) if request.form.get('marcas_' ~ norm) is not none else (materiales_avanzado[mat]['marcas']|map(attribute='nombre')|join(', ') if materiales_avanzado.get(mat) else '')) }}" placeholder="Ej: Vita, Aidite">
+                {% set marcas = materiales_avanzado[mat]['marcas'] if materiales_avanzado.get(mat) else [] %}
+                {% for marca in marcas %}
+                  {% set idx = loop.index0 %}
+                  <div class="d-flex align-items-center mb-1 ms-2">
+                    <span class="me-2 small">{{ marca.nombre }}</span>
+                    <input type="text" name="letra_{{ norm }}_{{ idx }}" value="{{ marca.letra }}" maxlength="1" class="form-control form-control-sm me-2" style="width:40px;" title="Letra">
+                    <input type="color" name="color_{{ norm }}_{{ idx }}" value="{{ marca.color }}" class="form-control form-control-color form-control-sm me-2" style="width:40px;" title="Color">
+                    <span class="badge" style="background:{{ marca.color }};color:#fff;">{{ marca.letra }}</span>
+                  </div>
+                {% endfor %}
+                <div class="form-text">Define letra y color para cada marca. Si no se asigna, la letra será X y el color negro.</div>
               </div>
             </div>
           </div>

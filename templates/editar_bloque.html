@@ -25,7 +25,11 @@
         <select name="marca" class="form-select">
           <option value="">-- Selecciona --</option>
           {% for m in marcas %}
-            <option value="{{ m }}" {% if bloque.marca == m %}selected{% endif %}>{{ m }}</option>
+            {% if m is string %}
+              <option value="{{ m }}" {% if bloque.marca == m %}selected{% endif %}>{{ m }}</option>
+            {% elif m.nombre is defined %}
+              <option value="{{ m.nombre }}" {% if bloque.marca == m.nombre %}selected{% endif %}>{{ m.nombre }}</option>
+            {% endif %}
           {% endfor %}
         </select>
       </div>
@@ -47,23 +51,29 @@
           {% endfor %}
         </select>
       </div>
+      {% if bloque.estado == 'nuevo' %}
       <div class="col-md-6">
         <label class="form-label">Cantidad</label>
         <input type="number" name="cantidad" class="form-control" value="{{ bloque.cantidad }}" min="1">
       </div>
+      {% endif %}
+      {% if bloque.estado == 'usado' %}
       <div class="col-md-6">
         <label class="form-label">Código de Barra</label>
         <input type="text" name="codigo_barra" class="form-control" value="{{ bloque.codigo_barra }}">
       </div>
+      {% endif %}
       <div class="col-md-6">
         <label class="form-label">Estado</label>
-        <select name="estado" class="form-select" required>
+        <select name="estado" class="form-select" required disabled>
           <option value="nuevo" {% if bloque.estado == 'nuevo' %}selected{% endif %}>Nuevo</option>
           <option value="usado" {% if bloque.estado == 'usado' %}selected{% endif %}>Usado</option>
         </select>
+        <input type="hidden" name="estado" value="{{ bloque.estado }}">
       </div>
       <div class="col-12 text-end">
         <button type="submit" class="btn btn-success"><i class="bi bi-save"></i> Guardar Cambios</button>
+        <a href="{{ url_for('bloques.bloques') }}" class="btn btn-outline-secondary ms-2"><i class="bi bi-x"></i> Cancelar</a>
       </div>
     </form>
   </div>
@@ -95,9 +105,13 @@ $(document).ready(function() {
     $marca.empty();
     $marca.append('<option value="">-- Selecciona --</option>');
     marcas.forEach(function(m) {
-      $marca.append('<option value="'+m+'">'+m+'</option>');
+      if (typeof m === 'string') {
+        $marca.append('<option value="'+m+'">'+m+'</option>');
+      } else if (typeof m === 'object' && m.nombre) {
+        $marca.append('<option value="'+m.nombre+'">'+m.nombre+'</option>');
+      }
     });
-    if (marcaActual && marcas.includes(marcaActual)) {
+    if (marcaActual) {
       $marca.val(marcaActual);
     }
   }

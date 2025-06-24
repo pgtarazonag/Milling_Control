@@ -199,3 +199,54 @@ def eliminar_bloque(bloque_id):
     db.session.delete(bloque)
     db.session.commit()
     return redirect(url_for('bloques.bloques'))
+
+@bloques_bp.route('/usar_bloque_nuevo/<int:bloque_id>', methods=['POST'])
+def usar_bloque_nuevo(bloque_id):
+    """
+    Convierte un bloque nuevo en bloque usado, asignando un código único de 6 caracteres:
+    2 de grosor, 1 letra de marca (o X), 3 alfanuméricos únicos.
+    La fecha del bloque usado será la fecha actual.
+    """
+    bloque = Bloque.query.get_or_404(bloque_id)
+    if bloque.estado != 'nuevo' or bloque.cantidad < 1:
+        return redirect(url_for('bloques.bloques'))
+    from random import choices
+    import string
+    from datetime import datetime
+    import pytz
+    VANCOUVER_TZ = pytz.timezone('America/Vancouver')
+    grosor_str = str(bloque.grosor).zfill(2)
+    # Obtener letra de marca desde configuración avanzada (nueva estructura)
+    materiales_avanzado = Configuracion.get_lista('materiales_avanzado')
+    import json
+    if materiales_avanzado and isinstance(materiales_avanzado, list) and isinstance(materiales_avanzado[0], str):
+        materiales_avanzado = json.loads(materiales_avanzado[0])
+    letra = 'X'
+    if materiales_avanzado and bloque.material in materiales_avanzado:
+        marcas = materiales_avanzado[bloque.material].get('marcas', [])
+        for m in marcas:
+            if isinstance(m, dict) and m.get('nombre') == bloque.marca:
+                letra = (m.get('letra') or 'X').upper()[:1]
+                break
+    usados = set(b.codigo_barra for b in Bloque.query.filter_by(estado='usado').all())
+    while True:
+        sufijo = ''.join(choices(string.ascii_uppercase + string.digits, k=3))
+        codigo = grosor_str + letra + sufijo
+        if codigo not in usados:
+            break
+    bloque_usado = Bloque(
+        material=bloque.material,
+        marca=bloque.marca,
+        shade=bloque.shade,
+        grosor=bloque.grosor,
+        cantidad=1,
+        codigo_barra=codigo,
+        estado='usado',
+        fecha_creacion=datetime.now(VANCOUVER_TZ)
+    )
+    db.session.add(bloque_usado)
+    bloque.cantidad -= 1
+    if bloque.cantidad <= 0:
+        db.session.delete(bloque)
+    db.session.commit()
+    return redirect(url_for('bloques.bloques'))

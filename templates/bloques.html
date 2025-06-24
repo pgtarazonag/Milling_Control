@@ -133,6 +133,9 @@
                     <button type="submit" class="btn btn-outline-danger btn-sm"><i class="bi bi-trash"></i></button>
                   </form>
                   <a href="{{ url_for('bloques.editar_bloque', bloque_id=bloque.id) }}" class="btn btn-outline-warning btn-sm"><i class="bi bi-pencil"></i></a>
+                  <form method="post" action="{{ url_for('bloques.usar_bloque_nuevo', bloque_id=bloque.id) }}" style="display:inline;">
+                    <button type="submit" class="btn btn-outline-primary btn-sm" title="Convertir en bloque usado"><i class="bi bi-arrow-repeat"></i></button>
+                  </form>
                 </td>
               </tr>
               {% endfor %}
@@ -200,7 +203,11 @@ $(document).ready(function() {
     $marca.empty();
     $marca.append('<option value="">-- Select --</option>');
     marcas.forEach(function(m) {
-      $marca.append('<option value="'+m+'">'+m+'</option>');
+      if (typeof m === 'string') {
+        $marca.append('<option value="'+m+'">'+m+'</option>');
+      } else if (typeof m === 'object' && m.nombre) {
+        $marca.append('<option value="'+m.nombre+'">'+m.nombre+'</option>');
+      }
     });
   });
   // Si ya hay un material seleccionado (por validación fallida), disparar el evento para poblar shades/marcas
