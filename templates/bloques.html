@@ -133,9 +133,16 @@
                     <button type="submit" class="btn btn-outline-danger btn-sm"><i class="bi bi-trash"></i></button>
                   </form>
                   <a href="{{ url_for('bloques.editar_bloque', bloque_id=bloque.id) }}" class="btn btn-outline-warning btn-sm"><i class="bi bi-pencil"></i></a>
-                  <form method="post" action="{{ url_for('bloques.usar_bloque_nuevo', bloque_id=bloque.id) }}" style="display:inline;">
-                    <button type="submit" class="btn btn-outline-primary btn-sm" title="Convertir en bloque usado"><i class="bi bi-arrow-repeat"></i></button>
-                  </form>
+                  <button type="button" class="btn btn-outline-primary btn-sm btn-convertir-usado" 
+                    data-bloque-id="{{ bloque.id }}" 
+                    data-material="{{ bloque.material }}" 
+                    data-marca="{{ bloque.marca }}" 
+                    data-grosor="{{ bloque.grosor }}" 
+                    data-shade="{{ bloque.shade }}" 
+                    data-cantidad="{{ bloque.cantidad }}"
+                    title="Convertir en bloque usado">
+                    <i class="bi bi-arrow-repeat"></i>
+                  </button>
                 </td>
               </tr>
               {% endfor %}
@@ -143,6 +150,31 @@
           </table>
         </div>
       </div>
+    </div>
+  </div>
+</div>
+<!-- Modal para confirmar y editar código al convertir a usado -->
+<div class="modal fade" id="modalConvertirUsado" tabindex="-1" aria-labelledby="modalConvertirUsadoLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <form id="formConvertirUsado" method="post">
+        <div class="modal-header">
+          <h5 class="modal-title" id="modalConvertirUsadoLabel">{{ _('Convert New Block to Used') }}</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <div class="mb-3">
+            <label for="codigoUsado" class="form-label">{{ _('Code for Used Block') }}</label>
+            <input type="text" class="form-control" id="codigoUsado" name="codigo" required>
+            <div class="form-text">{{ _('You can edit the code before confirming.') }}</div>
+          </div>
+          <input type="hidden" id="bloqueIdUsar" name="bloque_id">
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{{ _('Cancel') }}</button>
+          <button type="submit" class="btn btn-primary">{{ _('Confirm') }}</button>
+        </div>
+      </form>
     </div>
   </div>
 </div>
@@ -234,6 +266,26 @@ $(document).ready(function(){
     language: { url: window.getDataTablesLangUrl() },
     "order": [[5, "desc"]],
     "dom": '<"datatable-top"f>t<"datatable-bottom d-flex justify-content-between align-items-center"lip>'
+  });
+});
+</script>
+<script>
+// Conversión de bloque nuevo a usado con confirmación y edición de código
+$(document).on('click', '.btn-convertir-usado', function() {
+  const bloqueId = $(this).data('bloque-id');
+  const material = $(this).data('material');
+  const marca = $(this).data('marca');
+  const grosor = $(this).data('grosor');
+  // Llamar a un endpoint para obtener el código sugerido (puede ser vía AJAX, aquí ejemplo simple)
+  $.getJSON('/bloques/api/generar-codigo-usado', {
+    bloque_id: bloqueId
+  }, function(data) {
+    $('#codigoUsado').val(data.codigo);
+    $('#bloqueIdUsar').val(bloqueId);
+    $('#formConvertirUsado').attr('action', '/bloques/usar/' + bloqueId);
+    var modal = new bootstrap.Modal(document.getElementById('modalConvertirUsado'));
+    modal.show();
+    setTimeout(function(){ $('#codigoUsado').focus(); }, 500);
   });
 });
 </script>

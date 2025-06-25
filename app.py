@@ -90,7 +90,7 @@ def create_app():
     @app.route('/')
     def home():
         # Obtener materiales, marcas y configuración avanzada para los filtros
-        from models import Bloque, FresaInventario, Configuracion
+        from models import Bloque, FresaInventario, Configuracion, Orden
         tipos_material = db.session.query(Bloque.material).distinct().all()
         tipos_material = [m[0] for m in tipos_material if m[0]]
         marcas = db.session.query(Bloque.marca).distinct().all()
@@ -121,7 +121,26 @@ def create_app():
             fresas_maquinas = {}
         maquinas = Configuracion.get_lista('maquinas', default=['A','B','C','D'])
         fresas_nuevas = db.session.query(FresaInventario).all()
-        return render_template('home.html', tipos_material=tipos_material, marcas=marcas, fresas_nuevas=fresas_nuevas, materiales_avanzado=materiales_avanzado, maquinas=maquinas, fresas_maquinas=fresas_maquinas)
+        # Calcular resumen del día (zona horaria Vancouver)
+        tz = pytz.timezone('America/Vancouver')
+        hoy = datetime.now(tz).date()
+        from sqlalchemy import or_
+        def to_vancouver(dt):
+            if dt is None:
+                return None
+            if dt.tzinfo:
+                return dt.astimezone(tz)
+            else:
+                return dt.replace(tzinfo=pytz.UTC).astimezone(tz)
+        ordenes_hoy = []
+        for o in db.session.query(Orden).all():
+            dt = to_vancouver(o.fecha_creacion)
+            if dt and dt.date() == hoy:
+                ordenes_hoy.append(o)
+        total_ordenes = len(ordenes_hoy)
+        total_casos = sum(len(o.get_codigos_caso()) for o in ordenes_hoy)
+        total_modelos = sum(o.cantidad_modelos or 0 for o in ordenes_hoy)
+        return render_template('home.html', tipos_material=tipos_material, marcas=marcas, fresas_nuevas=fresas_nuevas, materiales_avanzado=materiales_avanzado, maquinas=maquinas, fresas_maquinas=fresas_maquinas, total_ordenes=total_ordenes, total_casos=total_casos, total_modelos=total_modelos)
 
     # Ruta para obtener la hora actual de Vancouver
     @app.route('/api/hora-vancouver')

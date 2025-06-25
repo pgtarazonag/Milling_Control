@@ -384,6 +384,18 @@ def editar_orden(orden_id):
     marcas = Configuracion.get_lista('marcas')
     shades = Configuracion.get_lista('shades')
     maquinas = Configuracion.get_lista('maquinas')
+    # Obtener configuración avanzada de materiales para marcas dependientes
+    import json
+    try:
+        materiales_avanzado = Configuracion.get_lista('materiales_avanzado')
+        if isinstance(materiales_avanzado, dict):
+            pass
+        elif materiales_avanzado and isinstance(materiales_avanzado, list) and isinstance(materiales_avanzado[0], str) and materiales_avanzado[0].startswith('{'):
+            materiales_avanzado = json.loads(materiales_avanzado[0])
+        else:
+            materiales_avanzado = {}
+    except Exception:
+        materiales_avanzado = {}
     if request.method == 'POST':
         orden.codigos_caso = request.form['codigos_caso']
         orden.material = request.form['material']
@@ -405,7 +417,7 @@ def editar_orden(orden_id):
         db.session.commit()
         flash('Orden actualizada correctamente.')
         return redirect(url_for('ordenes.ordenes'))
-    return render_template('editar_orden.html', orden=orden, materiales=materiales, marcas=marcas, shades=shades, maquinas=maquinas)
+    return render_template('editar_orden.html', orden=orden, materiales=materiales, marcas=marcas, shades=shades, maquinas=maquinas, materiales_avanzado=materiales_avanzado)
 
 @ordenes_bp.route('/editar_pendiente/<int:pendiente_id>', methods=['POST'])
 def editar_pendiente(pendiente_id):
@@ -423,32 +435,43 @@ def editar_pendiente(pendiente_id):
 def api_graficas_inventario():
     from models import Bloque, Orden
     group = request.args.get('group', 'dia')
-    # Bloques por shade (solo inventario actual)
+    fecha = request.args.get('fecha')
+    if not fecha:
+        ahora_van = datetime.now(VANCOUVER_TZ)
+        fecha = ahora_van.strftime('%Y-%m-%d')
     bloques_shade = (
         db.session.query(Bloque.shade, func.sum(Bloque.cantidad))
         .group_by(Bloque.shade)
         .all()
     )
     result = {'bloques_shade': [{'shade': s, 'cantidad': int(c or 0)} for s, c in bloques_shade]}
+    # Forzar conversión UTC -> Vancouver para la fecha de la orden
+    # Esto es: fecha_creacion AT TIME ZONE 'UTC' AT TIME ZONE 'America/Vancouver'
+    from sqlalchemy import text
+    fecha_expr = text(f"to_char(fecha_creacion AT TIME ZONE 'UTC' AT TIME ZONE 'America/Vancouver', 'YYYY-MM-DD')")
     if group == 'dia':
         modelos = db.session.query(
-            func.to_char(Orden.fecha_creacion, 'YYYY-MM-DD'), func.sum(Orden.cantidad_modelos)
-        ).group_by(func.to_char(Orden.fecha_creacion, 'YYYY-MM-DD')).order_by(func.to_char(Orden.fecha_creacion, 'YYYY-MM-DD').desc()).limit(14).all()
+            fecha_expr, func.sum(Orden.cantidad_modelos)
+        ).filter(text(f"to_char(fecha_creacion AT TIME ZONE 'UTC' AT TIME ZONE 'America/Vancouver', 'YYYY-MM-DD') = :fecha")).params(fecha=fecha)
+        modelos = modelos.group_by(fecha_expr).all()
         result['modelos_dia'] = [{'dia': d, 'cantidad': int(c or 0)} for d, c in modelos]
     elif group == 'maquina':
         modelos = db.session.query(
             Orden.maquina, func.sum(Orden.cantidad_modelos)
-        ).group_by(Orden.maquina).all()
+        ).filter(text(f"to_char(fecha_creacion AT TIME ZONE 'UTC' AT TIME ZONE 'America/Vancouver', 'YYYY-MM-DD') = :fecha")).params(fecha=fecha)
+        modelos = modelos.group_by(Orden.maquina).all()
         result['modelos_por_maquina'] = [{'maquina': m if m else '-', 'cantidad': int(c or 0)} for m, c in modelos]
     elif group == 'material':
         modelos = db.session.query(
             Orden.material, func.sum(Orden.cantidad_modelos)
-        ).group_by(Orden.material).all()
+        ).filter(text(f"to_char(fecha_creacion AT TIME ZONE 'UTC' AT TIME ZONE 'America/Vancouver', 'YYYY-MM-DD') = :fecha")).params(fecha=fecha)
+        modelos = modelos.group_by(Orden.material).all()
         result['modelos_por_material'] = [{'material': m if m else '-', 'cantidad': int(c or 0)} for m, c in modelos]
     elif group == 'marca':
         modelos = db.session.query(
             Orden.marca, func.sum(Orden.cantidad_modelos)
-        ).group_by(Orden.marca).all()
+        ).filter(text(f"to_char(fecha_creacion AT TIME ZONE 'UTC' AT TIME ZONE 'America/Vancouver', 'YYYY-MM-DD') = :fecha")).params(fecha=fecha)
+        modelos = modelos.group_by(Orden.marca).all()
         result['modelos_por_marca'] = [{'marca': m if m else '-', 'cantidad': int(c or 0)} for m, c in modelos]
     return jsonify(result)
 

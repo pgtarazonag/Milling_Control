@@ -1,42 +1,46 @@
 {% extends "base.html" %}
-{% block title %}{{ _('Documentation for Machines') }} | Fresado Pro{% endblock %}
+{% block title %}{{ _('Digital Documentation Library') }} | Fresado Pro{% endblock %}
 {% block content %}
 <div class="container py-4">
-  <h2 class="mb-4"><i class="bi bi-journal-text"></i> {{ _('Documentation for Machines') }}</h2>
-  <div class="alert alert-info mb-4">{{ _('Edit model, serial, and link for each machine. The link should point to the manufacturer page.') }}</div>
+  <h2 class="mb-4 text-primary"><i class="bi bi-journal-text"></i> {{ _('Digital Documentation Library') }}</h2>
+  <div class="alert alert-info mb-4">
+    {{ _('Edit the reference, model, serial, and documentation link for each machine. Click the machine name to open the documentation if available.') }}
+  </div>
   <form method="post">
     <div class="table-responsive mb-4">
-      <table class="table table-bordered align-middle">
+      <table class="table table-sm table-hover align-middle border rounded shadow-sm" style="background:#fff;">
         <thead class="table-light">
           <tr>
             <th>{{ _('Type') }}</th>
-            <th>{{ _('Name') }}</th>
+            <th>{{ _('Machine') }}</th>
+            <th>{{ _('Reference') }}</th>
             <th>{{ _('Model') }}</th>
             <th>{{ _('Serial') }}</th>
             <th>{{ _('Link') }}</th>
-            <th>{{ _('Actions') }}</th>
           </tr>
         </thead>
         <tbody>
           {% for m in maquinas %}
           <tr>
-            <td>{{ _(m.tipo) }}</td>
-            <td>{{ m.nombre }}</td>
-            <td><input type="text" name="modelo_{{ m.id }}" value="{{ m.modelo }}" class="form-control form-control-sm"></td>
-            <td><input type="text" name="serie_{{ m.id }}" value="{{ m.serie }}" class="form-control form-control-sm"></td>
-            <td><input type="url" name="link_{{ m.id }}" value="{{ m.link }}" class="form-control form-control-sm"></td>
+            <td class="text-muted small">{{ _(m.tipo) }}</td>
             <td>
               {% if m.link %}
-                <a href="{{ m.link }}" target="_blank" class="btn btn-outline-primary btn-sm">{{ _('Open') }}</a>
+                <a href="{{ m.link }}" target="_blank" class="fw-semibold text-primary text-decoration-underline" title="{{ _('Open Documentation') }}">{{ m.nombre }}</a>
+              {% else %}
+                <span class="fw-semibold">{{ m.nombre }}</span>
               {% endif %}
             </td>
+            <td><input type="text" name="referencia_{{ m.id }}" value="{{ m.referencia or '' }}" class="form-control form-control-sm" style="min-width:110px;max-width:180px;"></td>
+            <td><input type="text" name="modelo_{{ m.id }}" value="{{ m.modelo }}" class="form-control form-control-sm" style="min-width:80px;max-width:120px;"></td>
+            <td><input type="text" name="serie_{{ m.id }}" value="{{ m.serie }}" class="form-control form-control-sm" style="min-width:80px;max-width:120px;"></td>
+            <td><input type="url" name="link_{{ m.id }}" value="{{ m.link }}" class="form-control form-control-sm" style="min-width:120px;max-width:220px;" placeholder="https://..."></td>
           </tr>
           {% endfor %}
         </tbody>
       </table>
     </div>
-    <div class="text-end">
-      <button type="submit" class="btn btn-success"><i class="bi bi-save"></i> {{ _('Save') }}</button>
+    <div class="text-end mt-3">
+      <button type="submit" class="btn btn-success"><i class="bi bi-save"></i> {{ _('Save All') }}</button>
     </div>
   </form>
 </div>

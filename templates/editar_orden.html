@@ -86,11 +86,9 @@
                     </div>
                     <div class="col-md-6">
                         <label class="form-label"><i class="bi bi-award"></i> {{ _('Brand') }}</label>
-                        <select name="marca" class="form-select">
+                        <select name="marca" class="form-select" id="marca-select">
                             <option value="">-- {{ _('Select') }} --</option>
-                            {% for m in marcas %}
-                                <option value="{{ m }}" {% if orden.marca == m %}selected{% endif %}>{{ m }}</option>
-                            {% endfor %}
+                            {# The options will be filled by JS #}
                         </select>
                     </div>
                     <div class="col-md-6">
@@ -133,6 +131,36 @@
         </div>
         <div style="font-size:0.93em; margin-top:0.3em;">{{ _('Optimized for data analysis, productivity, and user experience.') }}</div>
     </footer>
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+    const materialesAvanzado = {{ materiales_avanzado|default({})|tojson|safe }};
+    const marcasGlobales = {{ marcas|tojson|safe }};
+    $(document).ready(function() {
+      function actualizarDropdownMarcas() {
+        const mat = $('select[name=material]').val();
+        let marcas = (materialesAvanzado[mat] && materialesAvanzado[mat]['marcas'] && materialesAvanzado[mat]['marcas'].length > 0)
+          ? materialesAvanzado[mat]['marcas'] : marcasGlobales;
+        let $marca = $('#marca-select');
+        let marcaActual = "{{ orden.marca|e }}";
+        $marca.empty();
+        $marca.append('<option value="">-- {{ _('Select') }} --</option>');
+        marcas.forEach(function(m) {
+          if (typeof m === 'string') {
+            $marca.append('<option value="'+m+'"'+(marcaActual===m?' selected':'')+'>'+m+'</option>');
+          } else if (typeof m === 'object' && m.nombre) {
+            $marca.append('<option value="'+m.nombre+'"'+(marcaActual===m.nombre?' selected':'')+'>'+m.nombre+'</option>');
+          }
+        });
+        // Si la marca actual no está en la lista, agregarla para que no se pierda
+        if (marcaActual && $marca.find('option[value="'+marcaActual+'"]').length === 0) {
+          $marca.append('<option value="'+marcaActual+'" selected>'+marcaActual+'</option>');
+        }
+      }
+      $('select[name=material]').on('change', actualizarDropdownMarcas);
+      // Inicializar al cargar
+      actualizarDropdownMarcas();
+    });
+    </script>
 </body>
 </html>

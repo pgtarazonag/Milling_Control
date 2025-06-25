@@ -95,14 +95,14 @@ def bloques():
         query_nuevos = query_nuevos.filter_by(shade=shade)
 
     if estado == 'usado':
-        bloques_usados = query_usados.all()
+        bloques_usados = query_usados.order_by(Bloque.fecha_creacion.desc()).all()
         bloques_nuevos = []
     elif estado == 'nuevo':
         bloques_usados = []
-        bloques_nuevos = query_nuevos.all()
+        bloques_nuevos = query_nuevos.order_by(Bloque.fecha_creacion.desc()).all()
     else:
-        bloques_usados = query_usados.all()
-        bloques_nuevos = query_nuevos.all()
+        bloques_usados = query_usados.order_by(Bloque.fecha_creacion.desc()).all()
+        bloques_nuevos = query_nuevos.order_by(Bloque.fecha_creacion.desc()).all()
 
     # Convertir fechas a Vancouver para mostrar en la tabla
     from pytz import timezone, UTC
@@ -156,7 +156,9 @@ def editar_bloque(bloque_id):
         bloque.shade = request.form['shade']
         bloque.grosor = int(request.form['grosor'])
         bloque.marca = request.form.get('marca') if bloque.material == "Zirconia" else None
-        bloque.cantidad = int(request.form['cantidad'])
+        # Solo actualizar cantidad si el bloque es nuevo y el campo existe en el form
+        if bloque.estado == 'nuevo' and 'cantidad' in request.form:
+            bloque.cantidad = int(request.form['cantidad'])
         bloque.estado = request.form['estado']
         bloque.codigo_barra = request.form.get('codigo_barra') if bloque.estado == 'usado' else None
         bloque.modelos_fresados = int(request.form.get('modelos_fresados', bloque.modelos_fresados or 0))
@@ -166,6 +168,11 @@ def editar_bloque(bloque_id):
             bloque.codigos_orden_fresados = codigos_orden
         db.session.commit()
         return redirect(url_for('bloques.bloques'))
+
+    # Asegura que la marca del bloque esté en la lista de marcas para cualquier material
+    if bloque.marca and bloque.marca not in marcas and bloque.marca.strip():
+        marcas = list(marcas) + [bloque.marca]
+
     return render_template(
         'editar_bloque.html',
         bloque=bloque,
@@ -207,6 +214,7 @@ def usar_bloque_nuevo(bloque_id):
     2 de grosor, 1 letra de marca (o X), 3 alfanuméricos únicos.
     La fecha del bloque usado será la fecha actual.
     """
+    from flask import request
     bloque = Bloque.query.get_or_404(bloque_id)
     if bloque.estado != 'nuevo' or bloque.cantidad < 1:
         return redirect(url_for('bloques.bloques'))
@@ -215,8 +223,57 @@ def usar_bloque_nuevo(bloque_id):
     from datetime import datetime
     import pytz
     VANCOUVER_TZ = pytz.timezone('America/Vancouver')
+    # Permitir código personalizado desde el formulario
+    codigo = request.form.get('codigo')
+    usados = set(b.codigo_barra for b in Bloque.query.filter_by(estado='usado').all())
+    if not codigo or codigo in usados:
+        grosor_str = str(bloque.grosor).zfill(2)
+        materiales_avanzado = Configuracion.get_lista('materiales_avanzado')
+        import json
+        if materiales_avanzado and isinstance(materiales_avanzado, list) and isinstance(materiales_avanzado[0], str):
+            materiales_avanzado = json.loads(materiales_avanzado[0])
+        letra = 'X'
+        if materiales_avanzado and bloque.material in materiales_avanzado:
+            marcas = materiales_avanzado[bloque.material].get('marcas', [])
+            for m in marcas:
+                if isinstance(m, dict) and m.get('nombre') == bloque.marca:
+                    letra = (m.get('letra') or 'X').upper()[:1]
+                    break
+        while True:
+            sufijo = ''.join(choices(string.ascii_uppercase + string.digits, k=3))
+            codigo = grosor_str + letra + sufijo
+            if codigo not in usados:
+                break
+    bloque_usado = Bloque(
+        material=bloque.material,
+        marca=bloque.marca,
+        shade=bloque.shade,
+        grosor=bloque.grosor,
+        cantidad=1,
+        codigo_barra=codigo,
+        estado='usado',
+        fecha_creacion=datetime.now(VANCOUVER_TZ)
+    )
+    db.session.add(bloque_usado)
+    bloque.cantidad -= 1
+    if bloque.cantidad <= 0:
+        db.session.delete(bloque)
+    db.session.commit()
+    return redirect(url_for('bloques.bloques'))
+
+@bloques_bp.route('/api/generar-codigo-usado')
+def api_generar_codigo_usado():
+    """
+    API para sugerir un código de bloque usado, dado un bloque_id.
+    """
+    from flask import request, jsonify
+    bloque_id = request.args.get('bloque_id', type=int)
+    bloque = Bloque.query.get_or_404(bloque_id)
+    from random import choices
+    import string
+    import pytz
+    VANCOUVER_TZ = pytz.timezone('America/Vancouver')
     grosor_str = str(bloque.grosor).zfill(2)
-    # Obtener letra de marca desde configuración avanzada (nueva estructura)
     materiales_avanzado = Configuracion.get_lista('materiales_avanzado')
     import json
     if materiales_avanzado and isinstance(materiales_avanzado, list) and isinstance(materiales_avanzado[0], str):
@@ -234,19 +291,4 @@ def usar_bloque_nuevo(bloque_id):
         codigo = grosor_str + letra + sufijo
         if codigo not in usados:
             break
-    bloque_usado = Bloque(
-        material=bloque.material,
-        marca=bloque.marca,
-        shade=bloque.shade,
-        grosor=bloque.grosor,
-        cantidad=1,
-        codigo_barra=codigo,
-        estado='usado',
-        fecha_creacion=datetime.now(VANCOUVER_TZ)
-    )
-    db.session.add(bloque_usado)
-    bloque.cantidad -= 1
-    if bloque.cantidad <= 0:
-        db.session.delete(bloque)
-    db.session.commit()
-    return redirect(url_for('bloques.bloques'))
+    return jsonify({'codigo': codigo})

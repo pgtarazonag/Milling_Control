@@ -230,11 +230,12 @@ def documentacion():
     for tipo, lista in [('Milling Machines', fresadoras), ('Furnaces', hornos), ('Vacuum Cleaners', aspiradoras)]:
         for nombre in lista:
             key = f"{tipo}:{nombre}"
-            datos = doc_maquinas.get(key, {'modelo': '', 'serie': '', 'link': ''})
+            datos = doc_maquinas.get(key, {'modelo': '', 'serie': '', 'link': '', 'referencia': ''})
             maquinas.append({
                 'id': id_counter,
                 'tipo': tipo,
                 'nombre': nombre,
+                'referencia': datos.get('referencia', ''),
                 'modelo': datos.get('modelo', ''),
                 'serie': datos.get('serie', ''),
                 'link': datos.get('link', '')
@@ -243,11 +244,12 @@ def documentacion():
     if request.method == 'POST':
         # Actualizar datos
         for m in maquinas:
+            referencia = request.form.get(f"referencia_{m['id']}", '')
             modelo = request.form.get(f"modelo_{m['id']}", '')
             serie = request.form.get(f"serie_{m['id']}", '')
             link = request.form.get(f"link_{m['id']}", '')
             key = f"{m['tipo']}:{m['nombre']}"
-            doc_maquinas[key] = {'modelo': modelo, 'serie': serie, 'link': link}
+            doc_maquinas[key] = {'referencia': referencia, 'modelo': modelo, 'serie': serie, 'link': link}
         # Guardar en la base de datos
         if not doc_data:
             doc_data = Configuracion(clave='doc_maquinas', valor=json.dumps(doc_maquinas))
