@@ -126,7 +126,19 @@
                 <td>{{ bloque.shade }}</td>
                 <td>{{ bloque.marca }}</td>
                 <td>{{ bloque.grosor }}</td>
-                <td>{{ bloque.cantidad }}</td>
+                <td>
+                  <div class="d-flex align-items-center gap-1">
+                    <form method="post" action="{{ url_for('bloques.modificar_cantidad', bloque_id=bloque.id) }}" style="display:inline;">
+                      <input type="hidden" name="accion" value="-1">
+                      <button type="submit" class="btn btn-outline-danger btn-sm fw-bold" style="background:linear-gradient(90deg,#fff 0%,#f8d7da 100%);color:#c82333;border:1px solid #f5c6cb;" title="Restar 1" {% if bloque.cantidad <= 1 %}disabled{% endif %}>-1</button>
+                    </form>
+                    <span class="mx-1">{{ bloque.cantidad }}</span>
+                    <form method="post" action="{{ url_for('bloques.modificar_cantidad', bloque_id=bloque.id) }}" style="display:inline;">
+                      <input type="hidden" name="accion" value="+1">
+                      <button type="submit" class="btn btn-outline-success btn-sm fw-bold" style="background:linear-gradient(90deg,#fff 0%,#d4edda 100%);color:#218838;border:1px solid #c3e6cb;" title="Sumar 1">+1</button>
+                    </form>
+                  </div>
+                </td>
                 <td><span class="fecha-tabla">{{ bloque.fecha_creacion|vancouver }}</span></td>
                 <td>
                   <form method="post" action="{{ url_for('bloques.eliminar_bloque', bloque_id=bloque.id) }}" style="display:inline;" class="form-eliminar-bloque" data-codigo="{{ bloque.codigo_barra }}" data-material="{{ bloque.material }}" data-marca="{{ bloque.marca }}" data-shade="{{ bloque.shade }}" data-grosor="{{ bloque.grosor }}">
@@ -255,16 +267,16 @@ $(document).ready(function() {
 </script>
 <script>
 $(document).ready(function(){
-  // Para bloques nuevos: columna 4 (cantidad)
+  // Para bloques nuevos: columna 5 (fecha)
   $('#tabla-bloques-nuevos').DataTable({
     language: { url: window.getDataTablesLangUrl() },
-    "order": [[4, "desc"]],
+    "order": [[5, "desc"]],
     "dom": '<"datatable-top"f>t<"datatable-bottom d-flex justify-content-between align-items-center"lip>'
   });
-  // Para bloques usados: columna 5 (modelos fresados)
+  // Para bloques usados: columna 6 (fecha)
   $('#tabla-bloques-usados').DataTable({
     language: { url: window.getDataTablesLangUrl() },
-    "order": [[5, "desc"]],
+    "order": [[6, "desc"]],
     "dom": '<"datatable-top"f>t<"datatable-bottom d-flex justify-content-between align-items-center"lip>'
   });
 });
@@ -282,7 +294,8 @@ $(document).on('click', '.btn-convertir-usado', function() {
   }, function(data) {
     $('#codigoUsado').val(data.codigo);
     $('#bloqueIdUsar').val(bloqueId);
-    $('#formConvertirUsado').attr('action', '/bloques/usar/' + bloqueId);
+    // CORREGIDO: usar la ruta correcta
+    $('#formConvertirUsado').attr('action', '/bloques/usar_bloque_nuevo/' + bloqueId);
     var modal = new bootstrap.Modal(document.getElementById('modalConvertirUsado'));
     modal.show();
     setTimeout(function(){ $('#codigoUsado').focus(); }, 500);

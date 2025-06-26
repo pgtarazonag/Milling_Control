@@ -13,7 +13,7 @@ Este archivo organiza toda la lógica para el manejo de bloques en el sistema.
 """
 
 # Importamos los módulos necesarios y los modelos de datos
-from flask import Blueprint, render_template, request, redirect, url_for
+from flask import Blueprint, render_template, request, redirect, url_for, flash
 from models import Bloque, BloqueHistorial, Configuracion
 from extensions import db
 from datetime import datetime
@@ -232,15 +232,15 @@ def usar_bloque_nuevo(bloque_id):
         import json
         if materiales_avanzado and isinstance(materiales_avanzado, list) and isinstance(materiales_avanzado[0], str):
             materiales_avanzado = json.loads(materiales_avanzado[0])
-        letra = 'X'
+        letra = 'XX'
         if materiales_avanzado and bloque.material in materiales_avanzado:
             marcas = materiales_avanzado[bloque.material].get('marcas', [])
             for m in marcas:
                 if isinstance(m, dict) and m.get('nombre') == bloque.marca:
-                    letra = (m.get('letra') or 'X').upper()[:1]
+                    letra = (m.get('letra') or 'XX').upper()[:2].ljust(2, 'X')
                     break
         while True:
-            sufijo = ''.join(choices(string.ascii_uppercase + string.digits, k=3))
+            sufijo = ''.join(choices(string.ascii_uppercase + string.digits, k=2))
             codigo = grosor_str + letra + sufijo
             if codigo not in usados:
                 break
@@ -278,17 +278,34 @@ def api_generar_codigo_usado():
     import json
     if materiales_avanzado and isinstance(materiales_avanzado, list) and isinstance(materiales_avanzado[0], str):
         materiales_avanzado = json.loads(materiales_avanzado[0])
-    letra = 'X'
+    letra = 'XX'
     if materiales_avanzado and bloque.material in materiales_avanzado:
         marcas = materiales_avanzado[bloque.material].get('marcas', [])
         for m in marcas:
             if isinstance(m, dict) and m.get('nombre') == bloque.marca:
-                letra = (m.get('letra') or 'X').upper()[:1]
+                letra = (m.get('letra') or 'XX').upper()[:2].ljust(2, 'X')
                 break
     usados = set(b.codigo_barra for b in Bloque.query.filter_by(estado='usado').all())
     while True:
-        sufijo = ''.join(choices(string.ascii_uppercase + string.digits, k=3))
+        sufijo = ''.join(choices(string.ascii_uppercase + string.digits, k=2))
         codigo = grosor_str + letra + sufijo
         if codigo not in usados:
             break
     return jsonify({'codigo': codigo})
+
+@bloques_bp.route('/modificar_cantidad/<int:bloque_id>', methods=['POST'])
+def modificar_cantidad(bloque_id):
+    from flask import request, redirect, url_for, flash
+    bloque = Bloque.query.get_or_404(bloque_id)
+    accion = request.form.get('accion')
+    if accion == '+1':
+        bloque.cantidad += 1
+        db.session.commit()
+        flash('Cantidad aumentada.', 'success')
+    elif accion == '-1' and bloque.cantidad > 1:
+        bloque.cantidad -= 1
+        db.session.commit()
+        flash('Cantidad reducida.', 'success')
+    else:
+        flash('No se puede reducir más.', 'warning')
+    return redirect(url_for('bloques.bloques'))

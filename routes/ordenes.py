@@ -21,7 +21,7 @@ from extensions import db
 from datetime import datetime, timedelta
 import random
 import string
-from sqlalchemy import func, text
+from sqlalchemy import func, text, literal_column
 import pytz
 
 VANCOUVER_TZ = pytz.timezone('America/Vancouver')
@@ -305,12 +305,13 @@ def ordenes():
                     pendiente = OrdenPendiente.query.filter_by(codigo_orden=codigo_orden).first()
                     if pendiente:
                         db.session.delete(pendiente)
-                fresa_instalada = FresaInstalada.query.filter(
+                # --- ACTUALIZAR TODAS LAS FRESAS INSTALADAS COMPATIBLES ---
+                fresas_compatibles = FresaInstalada.query.filter(
                     FresaInstalada.maquina == maquina,
                     FresaInstalada.materiales.like(f"%{bloque.material}%")
-                ).order_by(FresaInstalada.fecha_instalacion.desc()).first()
-                if fresa_instalada:
-                    fresa_instalada.modelos_fresados += sum(cantidades)
+                ).all()
+                for fresa in fresas_compatibles:
+                    fresa.modelos_fresados += sum(cantidades)
                 db.session.commit()
                 flash('Orden creada correctamente.')
                 return redirect(url_for('ordenes.ordenes', material=material_form, shade=shade_form))
@@ -397,12 +398,35 @@ def editar_orden(orden_id):
     except Exception:
         materiales_avanzado = {}
     if request.method == 'POST':
+        # --- GUARDAR CAMBIOS Y AJUSTAR FRESAS INSTALADAS ---
+        # Guardar valores anteriores para ajustar el conteo de fresas
+        old_maquina = orden.maquina
+        old_material = orden.material
+        old_cantidad = orden.cantidad_modelos
+        # Actualizar datos de la orden
         orden.codigos_caso = request.form['codigos_caso']
         orden.material = request.form['material']
         orden.marca = request.form['marca']
         orden.shade = request.form['shade']
         orden.maquina = request.form['maquina']
-        orden.cantidad_modelos = request.form['cantidad_modelos']
+        orden.cantidad_modelos = int(request.form['cantidad_modelos'])
+        # Ajustar modelos_fresados en fresas instaladas (restar a las viejas, sumar a las nuevas)
+        from models import FresaInstalada
+        # Restar a fresas viejas (si cambió máquina/material/cantidad)
+        if old_maquina and old_material and old_cantidad:
+            fresas_compatibles_antes = FresaInstalada.query.filter(
+                FresaInstalada.maquina == old_maquina,
+                FresaInstalada.materiales.like(f"%{old_material}%")
+            ).all()
+            for fresa in fresas_compatibles_antes:
+                fresa.modelos_fresados = max(0, fresa.modelos_fresados - old_cantidad)
+        # Sumar a fresas nuevas (si hay)
+        nuevas_fresas = FresaInstalada.query.filter(
+            FresaInstalada.maquina == orden.maquina,
+            FresaInstalada.materiales.like(f"%{orden.material}%")
+        ).all()
+        for fresa in nuevas_fresas:
+            fresa.modelos_fresados += orden.cantidad_modelos
         # Actualizar fecha si se edita
         if 'fecha_creacion' in request.form:
             try:
@@ -549,7 +573,7 @@ def api_record_cases():
     VANCOUVER_TZ = pytz.timezone('America/Vancouver')
     hoy = datetime.now(VANCOUVER_TZ).replace(hour=0, minute=0, second=0, microsecond=0)
     desde = hoy - timedelta(days=dias-1)
-    fecha_expr = text("to_char(fecha_creacion AT TIME ZONE 'UTC' AT TIME ZONE 'America/Vancouver', 'YYYY-MM-DD')")
+    fecha_expr = literal_column("to_char(fecha_creacion AT TIME ZONE 'UTC' AT TIME ZONE 'America/Vancouver', 'YYYY-MM-DD')")
     # Query base agrupada por día
     if tipo == 'casos':
         # Sumar la cantidad de códigos de caso por día

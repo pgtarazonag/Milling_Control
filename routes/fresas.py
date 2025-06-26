@@ -198,3 +198,21 @@ def api_fresas_nuevas():
             'fecha': f.fecha_registro.astimezone(VANCOUVER_TZ).strftime('%Y-%m-%d %H:%M') if f.fecha_registro else ''
         })
     return jsonify(data)
+
+@fresas_bp.route('/modificar_cantidad/<int:fresa_id>/<accion>', methods=['POST'])
+def modificar_cantidad(fresa_id, accion):
+    fresa = FresaInventario.query.get_or_404(fresa_id)
+    if accion == 'incrementar':
+        fresa.cantidad += 1
+        db.session.commit()
+        flash('Cantidad incrementada.', 'success')
+    elif accion == 'decrementar':
+        if fresa.cantidad > 0:
+            fresa.cantidad -= 1
+            db.session.commit()
+            flash('Cantidad decrementada.', 'success')
+        else:
+            flash('No se puede decrementar más.', 'warning')
+    else:
+        flash('Acción no válida.', 'danger')
+    return redirect(url_for('fresas.fresas'))

@@ -31,21 +31,14 @@
             min-height: 100vh;
             padding-top: 2rem;
             transition: background 0.2s, color 0.2s, width 0.3s, min-width 0.3s, left 0.3s, opacity 0.3s;
-            width: 64px; /* Más grueso cuando está oculto */
+            width: 64px; /* Siempre colapsada */
             min-width: 64px;
             left: 0;
             position: fixed;
             z-index: 1040;
-            opacity: 0.7;
+            opacity: 1;
             pointer-events: auto;
         }
-        .sidebar.sidebar-open,
-        .sidebar:hover, .sidebar:focus-within {
-            width: 200px;
-            min-width: 200px;
-            opacity: 1;
-        }
-        /* --- Sidebar icon visibility fix --- */
         .sidebar .nav-link {
             color: #3a4a5d;
             font-size: 0.95rem;
@@ -54,22 +47,11 @@
             gap: 0.6em;
             transition: color 0.2s, background 0.2s, opacity 0.2s;
             white-space: nowrap;
-            opacity: 1; /* Always visible, even when collapsed */
+            opacity: 1;
             justify-content: center;
         }
-        .sidebar.sidebar-open .nav-link,
-        .sidebar:hover .nav-link,
-        .sidebar:focus-within .nav-link {
-            justify-content: flex-start;
-        }
         .sidebar .nav-link span.menu-text {
-            display: none;
-        }
-        .sidebar.sidebar-open .nav-link span.menu-text,
-        .sidebar:hover .nav-link span.menu-text,
-        .sidebar:focus-within .nav-link span.menu-text {
-            display: inline;
-            margin-left: 0.5em;
+            display: none !important;
         }
         .sidebar .nav-link .bi {
             display: inline-block;
@@ -86,24 +68,15 @@
             margin-bottom: 0.2em;
         }
         @media (max-width: 991px) {
-            .sidebar { min-height: auto; padding-top: 1rem; width: 100vw; min-width: 0; position: static; opacity: 1; }
-            .sidebar .nav-link { opacity: 1; }
+            .sidebar { display: none !important; }
+            .content { margin-left: 0 !important; width: 100% !important; }
         }
         .content {
             padding: 2.5rem 2rem 1rem 2rem;
             animation: fadeIn 0.7s;
-            margin-left: 40px; /* Ajuste para sidebar más delgada */
+            margin-left: 64px; /* Ajuste para sidebar colapsada */
             transition: margin-left 0.3s, width 0.3s;
-            width: calc(100% - 40px);
-        }
-        .sidebar.sidebar-open ~ .content,
-        .sidebar:hover ~ .content,
-        .sidebar:focus-within ~ .content {
-            margin-left: 200px;
-            width: calc(100% - 200px);
-        }
-        @media (max-width: 991px) {
-            .content { margin-left: 0; padding: 1.2rem 0.5rem; width: 100%; }
+            width: calc(100% - 64px);
         }
         @keyframes fadeIn {
             from { opacity: 0; transform: translateY(20px); }
@@ -291,30 +264,9 @@
       };
     </script>
     <script>
-    // --- Sidebar despliegue sólo al acercarse mucho al borde izquierdo ---
-    $(function(){
-      var $sidebar = $('.sidebar');
-      var $zone = $('.sidebar-proximity-zone');
-      var openSidebar = function(){ $sidebar.addClass('sidebar-open'); };
-      var closeSidebar = function(){ $sidebar.removeClass('sidebar-open'); };
-      $zone.on('mouseenter focusin', openSidebar);
-      $zone.on('mouseleave focusout', closeSidebar);
-      $sidebar.on('mouseleave focusout', closeSidebar);
-      $sidebar.on('mouseenter focusin', openSidebar);
-      // Cierra si el mouse sale de ambos, pero ignora clicks y movimientos fuera de la zona y la sidebar
-      $(document).on('mousemove', function(e){
-        // Solo abre si el mouse está sobre la zona o la sidebar
-        if (!$(e.target).closest('.sidebar, .sidebar-proximity-zone').length) {
-          closeSidebar();
-        }
-      });
-      // Evita que la sidebar se abra por hover accidental sobre otros elementos
-      $sidebar.on('mouseover', function(e){
-        if (!$sidebar.hasClass('sidebar-open') && !$(e.relatedTarget).hasClass('sidebar-proximity-zone')) {
-          closeSidebar();
-        }
-      });
-    });
+    // --- Sidebar SIEMPRE colapsada: desactiva cualquier despliegue ---
+    // Elimina cualquier lógica de hover/despliegue
+    // No hacer nada aquí
     </script>
     {% block scripts %}{% endblock %}
 </body>

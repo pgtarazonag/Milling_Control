@@ -73,6 +73,7 @@
                 <td>
                   <a href="{{ url_for('fresas.editar_instalada', fresa_id=fresa.id) }}" class="btn btn-outline-warning btn-sm"><i class="bi bi-pencil"></i></a>
                   <form method="post" action="{{ url_for('fresas.eliminar_instalada', fresa_id=fresa.id) }}" style="display:inline;" class="form-eliminar-fresa" data-id="{{ fresa.id }}" data-tipo="{{ fresa.tipo }}" data-maquina="{{ fresa.maquina }}" data-materiales="{{ fresa.materiales }}">
+                    <input type="hidden" name="reinstalar" value="no">
                     <button type="submit" class="btn btn-outline-danger btn-sm"><i class="bi bi-trash"></i></button>
                   </form>
                 </td>
@@ -149,7 +150,15 @@
               {% for fresa in fresas_inventario %}
               <tr>
                 <td>{{ fresa.tipo }}</td>
-                <td>{{ fresa.cantidad }}</td>
+                <td>
+                  <form method="post" action="{{ url_for('fresas.modificar_cantidad', fresa_id=fresa.id, accion='decrementar') }}" style="display:inline;">
+                    <button type="submit" class="btn btn-outline-danger btn-sm" title="-1" {% if fresa.cantidad <= 0 %}disabled{% endif %}>-1</button>
+                  </form>
+                  <span class="mx-2">{{ fresa.cantidad }}</span>
+                  <form method="post" action="{{ url_for('fresas.modificar_cantidad', fresa_id=fresa.id, accion='incrementar') }}" style="display:inline;">
+                    <button type="submit" class="btn btn-outline-success btn-sm" title="+1">+1</button>
+                  </form>
+                </td>
                 <td>{{ fresa.materiales }}</td>
                 <td><span class="fecha-tabla">{{ fresa.fecha_registro.strftime('%Y-%m-%d %H:%M') }}</span></td>
                 <td>
@@ -212,8 +221,18 @@ $(document).on('submit', '.form-eliminar-fresa', function(e) {
   const tipo = $(this).data('tipo');
   const maquina = $(this).data('maquina');
   const materiales = $(this).data('materiales');
-  const msg = `¿Está seguro de eliminar esta fresa instalada?\n\nID: ${id}\nTipo: ${tipo}\nMáquina: ${maquina}\nMateriales: ${materiales}`;
-  if(!confirm(msg)) e.preventDefault();
+  let msg = `¿Está seguro de eliminar esta fresa instalada?\n\nID: ${id}\nTipo: ${tipo}\nMáquina: ${maquina}\nMateriales: ${materiales}`;
+  if(!confirm(msg)) {
+    e.preventDefault();
+    return;
+  }
+  // Solo si confirma eliminar, preguntar si desea reemplazar
+  let msg2 = "¿Desea reemplazarla por una igual del inventario? (Se descontará una unidad y el contador de modelos se reiniciará)";
+  if(confirm(msg2)) {
+    $(this).find('input[name="reinstalar"]').val('si');
+  } else {
+    $(this).find('input[name="reinstalar"]').val('no');
+  }
 });
 </script>
 <script>
