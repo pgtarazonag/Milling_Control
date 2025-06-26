@@ -540,32 +540,38 @@ def api_record_cases():
       - tipo: 'casos', 'ordenes' o 'modelos'
       - dias: número de días hacia atrás (int)
     """
+    from sqlalchemy import text, func
     tipo = request.args.get('tipo', 'casos')
     try:
         dias = int(request.args.get('dias', 5))
     except Exception:
         dias = 5
+    VANCOUVER_TZ = pytz.timezone('America/Vancouver')
     hoy = datetime.now(VANCOUVER_TZ).replace(hour=0, minute=0, second=0, microsecond=0)
     desde = hoy - timedelta(days=dias-1)
-    # Query base
-    query = db.session.query(Orden).filter(Orden.fecha_creacion >= desde)
-    # Agrupar por día
-    resultados = {}
-    for orden in query:
-        dia = orden.fecha_creacion.astimezone(VANCOUVER_TZ).strftime('%Y-%m-%d')
-        if dia not in resultados:
-            resultados[dia] = 0
-        if tipo == 'casos':
-            resultados[dia] += len(orden.get_codigos_caso())
-        elif tipo == 'ordenes':
-            resultados[dia] += 1
-        elif tipo == 'modelos':
-            resultados[dia] += orden.cantidad_modelos or 0
-    # Ordenar por fecha ascendente y omitir días sin datos
-    data = [
-        {'dia': dia, 'cantidad': resultados[dia]}
-        for dia in sorted(resultados.keys())
-    ]
+    fecha_expr = text("to_char(fecha_creacion AT TIME ZONE 'UTC' AT TIME ZONE 'America/Vancouver', 'YYYY-MM-DD')")
+    # Query base agrupada por día
+    if tipo == 'casos':
+        # Sumar la cantidad de códigos de caso por día
+        subq = db.session.query(
+            Orden.id,
+            func.array_length(func.string_to_array(Orden.codigos_caso, ','), 1).label('num_casos'),
+            fecha_expr.label('dia')
+        ).filter(Orden.fecha_creacion >= desde).subquery()
+        res = db.session.query(subq.c.dia, func.sum(subq.c.num_casos)).group_by(subq.c.dia).order_by(subq.c.dia).all()
+        data = [{'dia': d, 'cantidad': int(c or 0)} for d, c in res]
+    elif tipo == 'ordenes':
+        res = db.session.query(
+            fecha_expr.label('dia'), func.count(Orden.id)
+        ).filter(Orden.fecha_creacion >= desde).group_by(fecha_expr).order_by(fecha_expr).all()
+        data = [{'dia': d, 'cantidad': int(c or 0)} for d, c in res]
+    elif tipo == 'modelos':
+        res = db.session.query(
+            fecha_expr.label('dia'), func.sum(Orden.cantidad_modelos)
+        ).filter(Orden.fecha_creacion >= desde).group_by(fecha_expr).order_by(fecha_expr).all()
+        data = [{'dia': d, 'cantidad': int(c or 0)} for d, c in res]
+    else:
+        data = []
     return jsonify(data)
 
 @ordenes_bp.route('/api/resumen-dia')
