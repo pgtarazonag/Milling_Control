@@ -31,7 +31,7 @@ El usuario puede seleccionar uno o varios códigos para crear una orden grupal, 
             <td><span class="fecha-tabla">{{ pendiente.fecha_escaneo.strftime('%Y-%m-%d %H:%M') }}</span></td>
             <td>
               <form method="post" action="{{ url_for('pendientes.eliminar_pendiente', pendiente_id=pendiente.id) }}" style="display:inline;">
-                <button type="submit" class="btn btn-outline-danger btn-sm"><i class="bi bi-trash"></i></button>
+                <button type="submit" class="btn btn-outline-danger btn-sm" title="{{ _('Delete') }}"><i class="bi bi-trash"></i></button>
               </form>
             </td>
           </tr>

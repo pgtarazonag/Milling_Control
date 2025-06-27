@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="{{ session.get('lang', 'es') }}">
+<html lang="{{ session.get('lang', 'en') }}">
 <head>
     <meta charset="UTF-8">
     <title>{% block title %}{{ _('Dashboard') }}{% endblock %}</title>
@@ -10,157 +10,134 @@
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css">
     <!-- DataTables CSS -->
     <link rel="stylesheet" href="https://cdn.datatables.net/1.13.7/css/dataTables.bootstrap5.min.css">
+    <!-- Dental Lab Elegant & Sober Theme -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
     <style>
-        body { background: #f7fafc; font-family: 'Inter', 'Segoe UI', Arial, sans-serif; }
-        /* --- Sidebar despliegue sólo al acercarse mucho al borde izquierdo --- */
-        .sidebar-proximity-zone {
-            position: fixed;
-            left: 0;
-            top: 0;
-            width: 14px; /* Más ancho para facilitar el hover */
-            height: 100vh;
-            z-index: 1050;
-            background: transparent;
-            pointer-events: auto;
+        /* --- RESET Y FIXES PARA LAYOUT --- */
+        body, html {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            height: 100%;
+            width: 100%;
         }
-        @media (max-width: 991px) {
-            .sidebar-proximity-zone { display: none; }
+        .container-fluid {
+            margin: 0;
+            padding: 0;
+            padding-top: 56px !important;
+            width: 100vw;
         }
-        .sidebar {
-            background: #e3eaf1;
-            min-height: 100vh;
-            padding-top: 2rem;
-            transition: background 0.2s, color 0.2s, width 0.3s, min-width 0.3s, left 0.3s, opacity 0.3s;
-            width: 64px; /* Siempre colapsada */
-            min-width: 64px;
-            left: 0;
-            position: fixed;
-            z-index: 1040;
-            opacity: 1;
-            pointer-events: auto;
-        }
-        .sidebar .nav-link {
-            color: #3a4a5d;
-            font-size: 0.95rem;
-            display: flex;
-            align-items: center;
-            gap: 0.6em;
-            transition: color 0.2s, background 0.2s, opacity 0.2s;
-            white-space: nowrap;
-            opacity: 1;
-            justify-content: center;
-        }
-        .sidebar .nav-link span.menu-text {
-            display: none !important;
-        }
-        .sidebar .nav-link .bi {
-            display: inline-block;
-            vertical-align: middle;
-        }
-        .sidebar .nav-link.active, .sidebar .nav-link:hover {
-            background: #b3d8e6;
-            color: #0077b6;
-        }
-        .sidebar .bi {
-            font-size: 1.2em;
-        }
-        .sidebar .nav-item {
-            margin-bottom: 0.2em;
-        }
-        @media (max-width: 991px) {
-            .sidebar { display: none !important; }
-            .content { margin-left: 0 !important; width: 100% !important; }
-        }
-        .content {
-            padding: 0.7rem 1rem 0.5rem 1rem;
-            animation: fadeIn 0.7s;
-            margin-left: 64px; /* Ajuste para sidebar colapsada */
-            transition: margin-left 0.3s, width 0.3s;
-            width: calc(100% - 64px);
-        }
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(20px); }
-            to { opacity: 1; transform: none; }
-        }
+        /* --- TOPBAR --- */
         .topbar {
-            background: #0077b6;
-            color: #fff;
-            padding: 0.7rem 2rem;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            z-index: 2000;
+            height: 56px;
             display: flex;
             align-items: center;
-            justify-content: space-between;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+            background: linear-gradient(90deg, #1565c0 0%, #26a69a 100%);
+            box-shadow: 0 2px 12px rgba(21,101,192,0.10);
+            border-bottom: 2px solid #e0e4ea;
+            padding: 0 1.2rem;
         }
         .topbar .logo {
+            color: #fff !important;
             font-weight: 700;
-            font-size: 1.3rem;
+            font-size: 1.25rem;
             letter-spacing: 1px;
             display: flex;
             align-items: center;
             gap: 0.5em;
-            color: #fff;
+            min-width: 160px;
+        }
+        .topbar .nav-pills {
+            flex: 1 1 auto;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 1.2em;
         }
         .topbar .nav-pills .nav-link {
             color: #fff !important;
-            background: transparent;
+            background: transparent !important;
+            font-weight: 500;
+            border-radius: 1.5em;
             transition: background 0.2s, color 0.2s;
+            font-size: 1.08em;
+            padding: 0.35em 1em;
+            border: none;
         }
         .topbar .nav-pills .nav-link.active, .topbar .nav-pills .nav-link:hover {
-            background: #1976d2;
+            background: rgba(255,255,255,0.18) !important;
             color: #fff !important;
         }
-        .footer {
-            background: #e3eaf1;
-            color: #3a4a5d;
-            text-align: center;
-            padding: 1.2rem 0 0.5rem 0;
-            font-size: 0.98rem;
-            margin-top: 2rem;
-            border-top: 1px solid #2d323c;
+        .topbar .nav-pills .nav-link:focus {
+            outline: 2px solid #fff;
+        }
+        .topbar .nav-pills .bi {
+            color: #fff !important;
+            font-size: 1.25em;
+        }
+        .topbar .topbar-right {
+            min-width: 180px;
+            text-align: right;
+            color: #e0e4ea;
+            font-size: 1.01em;
+            font-weight: 500;
             letter-spacing: 0.02em;
         }
-        .card {
-            background: #fafdff;
-            border-radius: 1.2rem;
-            box-shadow: 0 2px 12px #b3d8e633;
-            border: none;
+        /* --- SIDEBAR --- */
+        .sidebar {
+            position: fixed !important;
+            top: 56px;
+            left: 0;
+            height: calc(100vh - 56px);
+            width: 50px !important;
+            min-width: 50px !important;
+            max-width: 50px !important;
+            z-index: 1030;
+            background: #212b36 !important;
+            color: #fff !important;
+            border-right: 1px solid #1a2229;
+            box-shadow: 2px 0 8px rgba(21,101,192,0.04);
+            padding-top: 0;
         }
-        .btn-primary, .btn-success {
-            background: linear-gradient(90deg, #00b4d8 0%, #48cae4 100%);
-            color: #fff;
-            border: none;
+        .sidebar .nav-link {
+            color: #b0bec5 !important;
+            font-size: 1em;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 1em 0;
+            border-radius: 0.7em;
+            margin: 0.15em 0;
+            background: none;
+            transition: background 0.18s, color 0.18s;
+            gap: 0;
         }
-        .btn-primary:hover, .btn-success:hover {
-            background: linear-gradient(90deg, #0077b6 0%, #00b4d8 100%);
+        .sidebar .nav-link.active, .sidebar .nav-link:hover {
+            background: #263238 !important;
+            color: #fff !important;
         }
-        .form-label {
-            color: #0077b6;
-            font-weight: 500;
+        .sidebar .nav-link span.menu-text {
+            display: none !important;
         }
-        .table-primary, .table-info, .table-secondary, .table-warning {
-            background: #e3f2fd !important;
-            color: #0077b6 !important;
+        .sidebar .bi {
+            font-size: 0.95em !important;
         }
-        .table-striped > tbody > tr:nth-of-type(odd) {
-            background-color: #f1f8fb;
+        /* --- CONTENIDO --- */
+        .content {
+            margin-left: 60px !important;
+            width: calc(100% - 60px) !important;
+            transition: margin-left 0.3s, width 0.3s;
         }
-        .table-striped > tbody > tr:nth-of-type(even) {
-            background-color: #fafdff;
-        }
-        .alert-primary, .alert-success, .alert-info, .alert-warning, .alert-secondary, .alert-dark {
-            background: #e3f2fd;
-            color: #0077b6;
-            border: none;
-        }
-        .form-control:focus, .form-select:focus {
-            border-color: #00b4d8;
-            box-shadow: 0 0 0 0.2rem #b3d8e655;
-        }
-        .fecha-tabla {
-            font-size: 0.93em;
-            color: #607d8b;
-            letter-spacing: 0.01em;
-            white-space: nowrap;
+        @media (max-width: 991px) {
+            .sidebar { display: none !important; }
+            .content { margin-left: 0 !important; width: 100% !important; }
+            .topbar { position: static; width: 100%; }
+            .container-fluid { padding-top: 0 !important; }
         }
     </style>
     {% block head %}{% endblock %}
@@ -169,24 +146,24 @@
 <!-- NAVBAR ELIMINADA -->
     <div class="sidebar-proximity-zone" tabindex="-1"></div>
     <div class="topbar">
-        <span class="logo"><i class="bi bi-cpu"></i> Fresado Pro</span>
-        <nav class="d-none d-md-block">
+        <span class="logo"><i class="bi bi-cpu"></i> Milling Shanto</span>
+        <nav style="flex:1;display:flex;justify-content:center;align-items:center;">
           <ul class="nav nav-pills">
-            <li class="nav-item"><a class="nav-link {% if request.endpoint == 'home' %}active{% endif %}" href="{{ url_for('home') }}"><i class="bi bi-house-door"></i> {{ _('Home') }}</a></li>
-            <li class="nav-item"><a class="nav-link {% if request.endpoint == 'ordenes.ordenes' %}active{% endif %}" href="{{ url_for('ordenes.ordenes') }}"><i class="bi bi-list-check"></i> {{ _('Orders') }}</a></li>
-            <li class="nav-item"><a class="nav-link {% if request.endpoint == 'bloques.bloques' %}active{% endif %}" href="{{ url_for('bloques.bloques') }}"><i class="bi bi-box"></i> {{ _('Blocks') }}</a></li>
-            <li class="nav-item"><a class="nav-link {% if request.endpoint == 'fresas.fresas' %}active{% endif %}" href="{{ url_for('fresas.fresas') }}"><i class="bi bi-tools"></i> {{ _('Milling') }}</a></li>
-            <li class="nav-item"><a class="nav-link {% if request.endpoint == 'mantenimiento.mantenimiento' %}active{% endif %}" href="{{ url_for('mantenimiento.mantenimiento') }}"><i class="bi bi-gear"></i> {{ _('Maintenance') }}</a></li>
-            <li class="nav-item"><a class="nav-link {% if request.endpoint == 'historial.historial_bloques' %}active{% endif %}" href="{{ url_for('historial.historial_bloques') }}"><i class="bi bi-clock-history"></i> {{ _('History') }}</a></li>
-            <li class="nav-item"><a class="nav-link {% if request.endpoint == 'configuracion.configuracion' %}active{% endif %}" href="{{ url_for('configuracion.configuracion') }}"><i class="bi bi-sliders"></i> {{ _('Settings') }}</a></li>
+            <li class="nav-item"><a class="nav-link {% if request.endpoint == 'home' %}active{% endif %}" href="{{ url_for('home') }}"><i class="bi bi-house-door"></i> <span class="menu-text">{{ _('Home') }}</span></a></li>
+            <li class="nav-item"><a class="nav-link {% if request.endpoint == 'ordenes.ordenes' %}active{% endif %}" href="{{ url_for('ordenes.ordenes') }}"><i class="bi bi-list-check"></i> <span class="menu-text">{{ _('Orders') }}</span></a></li>
+            <li class="nav-item"><a class="nav-link {% if request.endpoint == 'bloques.bloques' %}active{% endif %}" href="{{ url_for('bloques.bloques') }}"><i class="bi bi-box"></i> <span class="menu-text">{{ _('Blocks') }}</span></a></li>
+            <li class="nav-item"><a class="nav-link {% if request.endpoint == 'fresas.fresas' %}active{% endif %}" href="{{ url_for('fresas.fresas') }}"><i class="bi bi-tools"></i> <span class="menu-text">{{ _('Milling') }}</span></a></li>
+            <li class="nav-item"><a class="nav-link {% if request.endpoint == 'mantenimiento.mantenimiento' %}active{% endif %}" href="{{ url_for('mantenimiento.mantenimiento') }}"><i class="bi bi-gear"></i> <span class="menu-text">{{ _('Maintenance') }}</span></a></li>
+            <li class="nav-item"><a class="nav-link {% if request.endpoint == 'historial.historial_bloques' %}active{% endif %}" href="{{ url_for('historial.historial_bloques') }}"><i class="bi bi-clock-history"></i> <span class="menu-text">{{ _('History') }}</span></a></li>
+            <li class="nav-item"><a class="nav-link {% if request.endpoint == 'configuracion.configuracion' %}active{% endif %}" href="{{ url_for('configuracion.configuracion') }}"><i class="bi bi-sliders"></i> <span class="menu-text">{{ _('Settings') }}</span></a></li>
           </ul>
         </nav>
-        <span class="d-none d-md-block">{{ _('Advanced dental lab management') }}</span>
+        <span class="topbar-right">Pat  Advanced management</span>
     </div>
     <div class="container-fluid">
         <div class="row">
             <!-- Menú lateral -->
-            <nav class="col-md-2 d-none d-md-block sidebar" tabindex="0">
+            <nav class="sidebar" tabindex="0">
                 <ul class="nav flex-column">
                     <li class="nav-item">
                         <a class="nav-link {% if request.endpoint == 'home' %}active{% endif %}" href="{{ url_for('home') }}">
@@ -226,7 +203,7 @@
                 </ul>
             </nav>
             <!-- Contenido principal -->
-            <main class="col-md-9 ms-sm-auto col-lg-10 content">
+            <main class="content">
                 {% block content %}{% endblock %}
             </main>
         </div>
@@ -253,10 +230,10 @@
       });
     </script>
     <script>
-      // DataTables language URLs
+      // DataTables language URLs (local para evitar CORS)
       var datatablesLangUrl = {
-        es: '//cdn.datatables.net/plug-ins/1.13.7/i18n/es-ES.json',
-        en: '//cdn.datatables.net/plug-ins/1.13.7/i18n/en-GB.json'
+        es: '/static/es-ES.json',
+        en: '/static/en-GB.json'
       };
       var currentLang = "{{ session.get('lang', 'es') }}";
       window.getDataTablesLangUrl = function() {

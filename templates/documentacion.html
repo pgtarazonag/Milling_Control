@@ -33,7 +33,8 @@
             <td><input type="text" name="referencia_{{ m.id }}" value="{{ m.referencia or '' }}" class="form-control form-control-sm" style="min-width:110px;max-width:180px;"></td>
             <td><input type="text" name="modelo_{{ m.id }}" value="{{ m.modelo }}" class="form-control form-control-sm" style="min-width:80px;max-width:120px;"></td>
             <td><input type="text" name="serie_{{ m.id }}" value="{{ m.serie }}" class="form-control form-control-sm" style="min-width:80px;max-width:120px;"></td>
-            <td><input type="url" name="link_{{ m.id }}" value="{{ m.link }}" class="form-control form-control-sm" style="min-width:120px;max-width:220px;" placeholder="https://..."></td>
+            <td><input type="url" name="link_{{ m.id }}" value="{{ m.link }}" class="form-control form-control-sm" style="min-width:120px;max-width:220px;" placeholder="https://...">
+            </td>
           </tr>
           {% endfor %}
         </tbody>

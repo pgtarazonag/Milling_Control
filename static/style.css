@@ -1,0 +1,261 @@
+/* Dental Lab Elegant & Sober Theme */
+:root {
+  --primary: #1565c0; /* deep dental blue */
+  --secondary: #26a69a; /* elegant teal */
+  --accent: #6d4c41; /* soft brown for subtle accents */
+  --danger: #c62828; /* sober red */
+  --background: #f4f7fa; /* off-white */
+  --surface: #fff; /* white */
+  --text: #263238; /* dark blue-gray */
+  --muted: #b0bec5; /* muted gray */
+  --border: #e0e4ea;
+  --shadow: 0 2px 8px rgba(21, 101, 192, 0.07);
+  --radius: 1.1rem;
+}
+
+body {
+  background: var(--background);
+  color: var(--text);
+  font-family: 'Segoe UI', 'Roboto', Arial, sans-serif;
+}
+
+.card, .modal-content {
+  border-radius: var(--radius) !important;
+  box-shadow: var(--shadow) !important;
+  border: none !important;
+  background: var(--surface);
+}
+
+.table {
+  background: var(--surface);
+  border-radius: var(--radius);
+  overflow: hidden;
+  box-shadow: var(--shadow);
+  margin-bottom: 1.5rem;
+}
+.table th {
+  background: var(--primary);
+  color: #fff;
+  font-weight: 600;
+  border: none;
+  letter-spacing: 0.02em;
+}
+.table td {
+  border-top: 1px solid var(--border);
+  vertical-align: middle;
+}
+.table-striped > tbody > tr:nth-of-type(odd) {
+  background-color: #f4f7fa;
+}
+.table-hover tbody tr:hover {
+  background: #e3f2fd;
+}
+
+.btn, .btn-action {
+  border-radius: 2rem;
+  font-weight: 500;
+  transition: background 0.2s, color 0.2s, box-shadow 0.2s;
+  box-shadow: 0 1px 4px rgba(21, 101, 192, 0.08);
+  border: none;
+}
+.btn-primary, .btn-action {
+  background: var(--primary);
+  color: #fff;
+}
+.btn-primary:hover, .btn-action:hover {
+  background: var(--secondary);
+  color: #fff;
+}
+.btn-danger {
+  background: var(--danger);
+  color: #fff;
+}
+.btn-danger:hover {
+  background: #8e0000;
+}
+.btn-outline-primary {
+  border: 1.5px solid var(--primary);
+  color: var(--primary);
+  background: transparent;
+}
+.btn-outline-primary:hover {
+  background: var(--primary);
+  color: #fff;
+}
+
+.form-select, .form-control {
+  border-radius: 1.5rem;
+  border: 1px solid var(--border);
+  background: #f4f7fa;
+  color: var(--text);
+}
+
+input[type="date"]::-webkit-calendar-picker-indicator {
+  filter: invert(0.4) sepia(1) saturate(5) hue-rotate(180deg);
+}
+
+.list-group-item {
+  border: none;
+  border-radius: var(--radius);
+  margin-bottom: 0.25rem;
+  background: var(--surface);
+}
+
+.alert-info {
+  background: var(--primary);
+  color: #fff;
+  border: none;
+  border-radius: var(--radius);
+}
+
+/* Icon style for table headers */
+th .bi {
+  margin-right: 0.4em;
+  vertical-align: -0.15em;
+}
+
+/* Accessibility: focus ring */
+:focus {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+}
+
+/* Subtle shadow for hoverable cards */
+.card:hover {
+  box-shadow: 0 4px 16px rgba(21, 101, 192, 0.13);
+  transition: box-shadow 0.2s;
+}
+
+/* Custom badge for status */
+.badge-status {
+  border-radius: 1rem;
+  padding: 0.3em 0.8em;
+  font-size: 0.95em;
+  font-weight: 500;
+  background: var(--secondary);
+  color: #fff;
+}
+
+/* Table action icons */
+.table .btn-action {
+  padding: 0.25em 0.7em;
+  font-size: 1.1em;
+  margin-right: 0.2em;
+  background: var(--primary);
+  color: #fff;
+  border: none;
+  border-radius: 1.5em;
+  box-shadow: 0 1px 4px rgba(21, 101, 192, 0.08);
+}
+.table .btn-action:hover {
+  background: var(--secondary);
+  color: #fff;
+}
+
+::-webkit-scrollbar {
+  width: 10px;
+  background: #e0e4ea;
+}
+::-webkit-scrollbar-thumb {
+  background: #b0bec5;
+  border-radius: 6px;
+}
+
+/* Sidebar: only icons, no text, no expand */
+.sidebar {
+  background: #212b36 !important;
+  min-width: 24px !important;
+  width: 24px !important;
+  max-width: 24px !important;
+  color: #fff !important;
+  border-right: 1px solid #1a2229;
+  box-shadow: 2px 0 8px rgba(21,101,192,0.04);
+}
+.sidebar .nav-link {
+  color: #b0bec5 !important;
+  font-size: 0.7em;
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  padding: 0.25em 0.05em 0.25em 0.05em;
+  border-radius: 0.3em;
+  margin: 0.2em 0;
+  background: none;
+  transition: background 0.18s, color 0.18s;
+  gap: 0.1em;
+}
+.sidebar .nav-link.active, .sidebar .nav-link:hover {
+  background: linear-gradient(90deg, #1565c0 0%, #26a69a 100%) !important;
+  color: #fff !important;
+}
+.sidebar .nav-link .menu-text {
+  display: inline !important;
+  color: #b0bec5;
+  font-size: 0.55em;
+  font-weight: 500;
+  letter-spacing: 0.01em;
+  transition: color 0.18s;
+}
+.sidebar .nav-link.active .menu-text, .sidebar .nav-link:hover .menu-text {
+  color: #fff !important;
+}
+.sidebar .bi {
+  font-size: 0.55em;
+  color: inherit !important;
+}
+@media (max-width: 991px) {
+  .sidebar .menu-text { display: none !important; }
+}
+
+/* Topbar: strong contrast, elegant */
+.topbar {
+  border-bottom: 1.5px solid #e0e4ea;
+  box-shadow: 0 2px 8px rgba(21,101,192,0.04);
+}
+.topbar .logo {
+  color: #fff !important;
+  font-weight: 700;
+  font-size: 1.3rem;
+  letter-spacing: 1px;
+  display: flex;
+  align-items: center;
+  gap: 0.5em;
+}
+.topbar .nav-pills .nav-link {
+  color: #fff !important;
+  background: transparent;
+  font-weight: 500;
+  border-radius: 1.5em;
+  transition: background 0.2s, color 0.2s;
+}
+.topbar .nav-pills .nav-link.active, .topbar .nav-pills .nav-link:hover {
+  background: rgba(255,255,255,0.18) !important;
+  color: #fff !important;
+}
+.topbar .nav-pills .bi {
+  color: #fff !important;
+}
+.topbar .topbar-right {
+  color: #e0e4ea;
+}
+
+.footer {
+  background: #212b36;
+  color: #b0bec5;
+  text-align: center;
+  padding: 1.2rem 0 0.5rem 0;
+  font-size: 0.98rem;
+  margin-top: 2rem;
+  border-top: 1px solid #1a2229;
+  letter-spacing: 0.02em;
+}
+
+/* Responsive tweaks */
+@media (max-width: 768px) {
+  .card, .table {
+    border-radius: 1.2rem !important;
+  }
+  .sidebar {
+    display: none !important;
+  }
+}
