@@ -28,10 +28,11 @@ historial_bp = Blueprint('historial', __name__, url_prefix='/historial')
 # Definimos la ruta '/bloques' dentro del blueprint
 @historial_bp.route('/bloques')
 def historial_bloques():
-    # Consultamos todos los registros del historial de bloques, ordenados por fecha de eliminación descendente
-    historial = BloqueHistorial.query.order_by(BloqueHistorial.fecha_eliminacion.desc()).all()
-    # Renderizamos la plantilla HTML y le pasamos la lista de bloques del historial
-    return render_template('historial_bloques.html', historial=historial)
+    # Historial de bloques eliminados/modificados
+    bloques_historial = BloqueHistorial.query.order_by(BloqueHistorial.fecha_eliminacion.desc()).all()
+    # Bloques usados actuales, ordenados por modelos fresados (mayor a menor)
+    bloques_usados_ordenados = Bloque.query.filter_by(estado='usado').order_by(Bloque.modelos_fresados.desc()).all()
+    return render_template('historial_bloques.html', bloques_historial=bloques_historial, bloques_usados_ordenados=bloques_usados_ordenados)
 
 @historial_bp.route('/descargar', methods=['GET'])
 def descargar_historial():

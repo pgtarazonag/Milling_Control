@@ -29,35 +29,90 @@
         </div>
       </form>
     </div>
-    <div class="table-responsive animate__animated animate__fadeIn">
-      <table class="table table-striped table-hover" id="tabla-historial">
-        <thead class="table-secondary">
-          <tr>
-            <th><i class="bi bi-hash"></i> {{ _('Code') }}</th>
-            <th><i class="bi bi-box"></i> {{ _('Material') }}</th>
-            <th><i class="bi bi-palette"></i> {{ _('Shade') }}</th>
-            <th><i class="bi bi-award"></i> {{ _('Brand') }}</th>
-            <th><i class="bi bi-rulers"></i> {{ _('Thickness') }}</th>
-            <th><i class="bi bi-cube"></i> {{ _('Quantity') }}</th>
-            <th><i class="bi bi-calendar"></i> {{ _('Creation Date') }}</th>
-            <th><i class="bi bi-calendar-x"></i> {{ _('Deletion Date') }}</th>
-          </tr>
-        </thead>
-        <tbody>
-          {% for bloque in bloques_historial %}
-          <tr>
-            <td>{{ bloque.codigo_barra }}</td>
-            <td>{{ bloque.material }}</td>
-            <td>{{ bloque.shade }}</td>
-            <td>{{ bloque.marca }}</td>
-            <td>{{ bloque.grosor }}</td>
-            <td>{{ bloque.cantidad }}</td>
-            <td><span class="fecha-tabla">{{ bloque.fecha_creacion|vancouver }}</span></td>
-            <td><span class="fecha-tabla">{{ bloque.fecha_eliminacion|vancouver }}</span></td>
-          </tr>
-          {% endfor %}
-        </tbody>
-      </table>
+    <div class="row g-0">
+      <div class="col-md-6 pe-md-2 mb-3 mb-md-0">
+        <div class="table-responsive animate__animated animate__fadeIn mb-4 h-100">
+          <table class="table table-striped table-hover align-middle" id="tabla-historial" style="font-size:0.93em;">
+            <thead class="table-secondary">
+              <tr>
+                <th style="width:80px;"> <i class="bi bi-hash"></i> {{ _('Code') }}</th>
+                <th style="width:70px;"> <i class="bi bi-box"></i> {{ _('Material') }}</th>
+                <th style="width:55px;"> <i class="bi bi-palette"></i> {{ _('Shade') }}</th>
+                <th style="width:60px;"> <i class="bi bi-award"></i> {{ _('Brand') }}</th>
+                <th style="width:55px;"> <i class="bi bi-rulers"></i> {{ _('Thickness') }}</th>
+                <th style="width:90px;"> <i class="bi bi-calendar"></i> {{ _('Creation Date') }}</th>
+                <th style="width:90px;"> <i class="bi bi-calendar-x"></i> {{ _('Deletion Date') }}</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for bloque in bloques_historial %}
+              <tr>
+                <td class="text-truncate" style="max-width:80px;">{{ bloque.codigo_barra }}</td>
+                <td class="text-truncate" style="max-width:70px;">{{ bloque.material }}</td>
+                <td class="text-truncate" style="max-width:55px;">{{ bloque.shade }}</td>
+                <td class="text-truncate" style="max-width:60px;">{{ bloque.marca }}</td>
+                <td class="text-truncate" style="max-width:55px;">{{ bloque.grosor }}</td>
+                <td class="text-truncate" style="max-width:90px;"><span class="fecha-tabla">{{ bloque.fecha_creacion|vancouver }}</span></td>
+                <td class="text-truncate" style="max-width:90px;"><span class="fecha-tabla">{{ bloque.fecha_eliminacion|vancouver }}</span></td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+      <div class="col-md-6 ps-md-2">
+        <form method="post" id="form-eliminar-bloques-usados" action="{{ url_for('bloques.eliminar_varios_bloques_usados') }}">
+          <div class="table-responsive animate__animated animate__fadeIn mb-4 h-100">
+            <h5 class="mb-2"><i class="bi bi-cpu"></i> {{ _('Used Blocks (by Models)') }}</h5>
+            <div class="d-flex align-items-center mb-2 gap-2">
+              <label class="form-label mb-0">{{ _('Material:') }}</label>
+              <select id="filtro-material-usados" class="form-select form-select-sm" style="width:120px;">
+                {% set materiales = bloques_usados_ordenados|map(attribute='material')|list|unique %}
+                {% for mat in materiales %}
+                  <option value="{{ mat }}" {% if mat == 'Zirconia' %}selected{% endif %}>{{ mat }}</option>
+                {% endfor %}
+              </select>
+              <label class="form-label mb-0 ms-2">{{ _('Highlight limit:') }}</label>
+              <input type="number" id="limite-modelos" class="form-control form-control-sm" style="width:70px;" min="1" value="{{ limite_modelos or 17 }}">
+              <span class="text-muted small">{{ _('Rows with models above this value will be highlighted.') }}</span>
+            </div>
+            <table class="table table-bordered table-hover" id="tabla-usados-modelos">
+              <thead class="table-info">
+                <tr>
+                  <th><i class="bi bi-check-square"></i></th>
+                  <th><i class="bi bi-hash"></i> {{ _('Code') }}</th>
+                  <th><i class="bi bi-box"></i> {{ _('Material') }}</th>
+                  <th><i class="bi bi-award"></i> {{ _('Brand') }}</th>
+                  <th><i class="bi bi-palette"></i> {{ _('Shade') }}</th>
+                  <th><i class="bi bi-rulers"></i> {{ _('Thickness') }}</th>
+                  <th><i class="bi bi-bar-chart"></i> {{ _('Models') }}</th>
+                  <th><i class="bi bi-gear"></i> {{ _('Action') }}</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for bloque in bloques_usados_ordenados %}
+                <tr data-modelos="{{ bloque.modelos_fresados }}" data-material="{{ bloque.material }}">
+                  <td><input type="checkbox" name="bloques_ids" value="{{ bloque.id }}"></td>
+                  <td>{{ bloque.codigo_barra }}</td>
+                  <td>{{ bloque.material }}</td>
+                  <td>{{ bloque.marca }}</td>
+                  <td>{{ bloque.shade }}</td>
+                  <td>{{ bloque.grosor }}</td>
+                  <td>{{ bloque.modelos_fresados }}</td>
+                  <td>
+                    <form method="post" action="{{ url_for('bloques.eliminar_bloque_usado', bloque_id=bloque.id) }}" style="display:inline;">
+                      <button type="submit" class="btn btn-outline-danger btn-sm" onclick="return confirm('¿Eliminar este bloque usado?');"><i class="bi bi-trash"></i></button>
+                    </form>
+                  </td>
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+            <button type="submit" class="btn btn-danger btn-sm mt-2" onclick="return confirm('¿Eliminar los bloques seleccionados?');"><i class="bi bi-trash"></i> {{ _('Delete Selected') }}</button>
+            <div class="small text-muted mt-2">{{ _('Rows highlighted mean the block should be replaced soon.') }}</div>
+          </div>
+        </form>
+      </div>
     </div>
   </div>
 </div>
@@ -66,9 +121,48 @@
 {{ super() }}
 <script>
 $(document).ready(function(){
+  // DataTable para tabla de historial
   $('#tabla-historial').DataTable({
     language: { url: window.getDataTablesLangUrl() }
   });
+  // DataTable para tabla de usados por modelos
+  var limiteModelos = parseInt($('#limite-modelos').val()) || 17;
+  var tablaUsados = $('#tabla-usados-modelos').DataTable({
+    language: { url: window.getDataTablesLangUrl() },
+    order: [[6, 'desc']]
+  });
+  function resaltarFilas() {
+    $('#tabla-usados-modelos tbody tr').each(function(){
+      var modelos = parseInt($(this).data('modelos')) || 0;
+      if(modelos > limiteModelos) {
+        $(this).addClass('table-warning fw-bold');
+      } else {
+        $(this).removeClass('table-warning fw-bold');
+      }
+    });
+  }
+  resaltarFilas();
+  $('#limite-modelos').on('input change', function(){
+    limiteModelos = parseInt($(this).val()) || 17;
+    resaltarFilas();
+  });
+  // Check all
+  $('#check-all-bloques').on('change', function(){
+    $('input[name="bloques_ids"]').prop('checked', this.checked);
+  });
+  // Filtro de material para usados
+  $('#filtro-material-usados').on('change', function(){
+    var mat = $(this).val();
+    $('#tabla-usados-modelos tbody tr').each(function(){
+      if(mat === '' || $(this).data('material') === mat) {
+        $(this).show();
+      } else {
+        $(this).hide();
+      }
+    });
+  });
+  // Disparar filtro al cargar (Zirconia por defecto)
+  $('#filtro-material-usados').trigger('change');
 });
 </script>
 {% endblock %}

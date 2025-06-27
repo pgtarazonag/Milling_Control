@@ -67,7 +67,7 @@
               <option value="">-- {{ _('Select') }} --</option>
               {% for bloque in bloques_usados %}
                 <option value="{{ bloque.id }}" {% if (request.form.get('bloque_usado_id') and request.form.get('bloque_usado_id')|int == bloque.id) or (not request.form.get('bloque_usado_id') and request.args.get('bloque_usado_id') and request.args.get('bloque_usado_id')|int == bloque.id) %}selected{% endif %}>
-                  {{ bloque.codigo_barra }} | {{ bloque.material }} | Marca: {{ bloque.marca if bloque.marca else '-' }} | {{ bloque.shade }} | Modelos: {{ bloque.modelos_fresados }}
+                  {{ bloque.codigo_barra }} | {{ bloque.material }} | Marca: {{ bloque.marca if bloque.marca else '-' }} | {{ bloque.shade }} | Grosor: {{ bloque.grosor if bloque.grosor else '-' }} | Modelos: {{ bloque.modelos_fresados }}
                 </option>
               {% endfor %}
             </select>
@@ -86,7 +86,7 @@
           <!-- Tercera fila: Código de Orden, Cantidad de Modelos, Botón -->
           <div class="col-md-5">
             <label class="form-label">{{ _('Order Codes') }}</label>
-            <input type="text" name="codigo_orden" class="form-control" required placeholder="ABC123, DEF456, GHI789">
+            <input type="text" name="codigo_orden" class="form-control" required placeholder="ABC123, DEF456, GHI789" id="codigo-orden-input">
             <small class="text-muted">{{ _('Enter one or more case codes separated by commas.') }}</small>
           </div>
           <div class="col-md-4">
@@ -389,5 +389,24 @@ $(function(){
       $('.pendiente-checkbox').prop('checked', false);
     });
   });
+</script>
+<script>
+// Evitar submit del form al presionar Enter en el input de Order Codes
+$(document).ready(function(){
+  $('#codigo-orden-input').on('keydown', function(e) {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      let val = $(this).val();
+      if (val && !val.trim().endsWith(',')) {
+        // Si ya termina en coma, solo agrega espacio si falta
+        if (val.trim().endsWith(',')) {
+          $(this).val(val + ' ');
+        } else {
+          $(this).val(val + ', ');
+        }
+      }
+    }
+  });
+});
 </script>
 {% endblock %}

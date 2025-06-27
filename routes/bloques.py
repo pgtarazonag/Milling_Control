@@ -309,3 +309,63 @@ def modificar_cantidad(bloque_id):
     else:
         flash('No se puede reducir más.', 'warning')
     return redirect(url_for('bloques.bloques'))
+
+@bloques_bp.route('/eliminar_usado/<int:bloque_id>', methods=['POST'])
+def eliminar_bloque_usado(bloque_id):
+    """
+    Elimina un bloque usado, moviéndolo al historial antes de borrar.
+    """
+    bloque = Bloque.query.get_or_404(bloque_id)
+    if bloque.estado != 'usado':
+        flash('Solo se pueden eliminar bloques usados.', 'warning')
+        return redirect(url_for('historial.historial_bloques'))
+    historial = BloqueHistorial(
+        bloque_id=bloque.id,
+        material=bloque.material,
+        marca=bloque.marca,
+        shade=bloque.shade,
+        grosor=bloque.grosor,
+        cantidad=bloque.cantidad,
+        codigo_barra=bloque.codigo_barra,
+        estado=bloque.estado,
+        modelos_fresados=bloque.modelos_fresados,
+        codigos_orden_fresados=bloque.codigos_orden_fresados,
+        fecha_creacion=bloque.fecha_creacion,
+        fecha_eliminacion=datetime.now(VANCOUVER_TZ)
+    )
+    db.session.add(historial)
+    db.session.delete(bloque)
+    db.session.commit()
+    flash('Bloque usado eliminado correctamente.', 'success')
+    return redirect(url_for('historial.historial_bloques'))
+
+@bloques_bp.route('/eliminar_varios_usados', methods=['POST'])
+def eliminar_varios_bloques_usados():
+    """
+    Elimina varios bloques usados seleccionados, moviéndolos al historial antes de borrar.
+    """
+    ids = request.form.getlist('bloques_ids')
+    count = 0
+    for bloque_id in ids:
+        bloque = Bloque.query.get(bloque_id)
+        if bloque and bloque.estado == 'usado':
+            historial = BloqueHistorial(
+                bloque_id=bloque.id,
+                material=bloque.material,
+                marca=bloque.marca,
+                shade=bloque.shade,
+                grosor=bloque.grosor,
+                cantidad=bloque.cantidad,
+                codigo_barra=bloque.codigo_barra,
+                estado=bloque.estado,
+                modelos_fresados=bloque.modelos_fresados,
+                codigos_orden_fresados=bloque.codigos_orden_fresados,
+                fecha_creacion=bloque.fecha_creacion,
+                fecha_eliminacion=datetime.now(VANCOUVER_TZ)
+            )
+            db.session.add(historial)
+            db.session.delete(bloque)
+            count += 1
+    db.session.commit()
+    flash(f'Se eliminaron {count} bloques usados.', 'success')
+    return redirect(url_for('historial.historial_bloques'))

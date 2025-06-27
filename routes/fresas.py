@@ -216,3 +216,12 @@ def modificar_cantidad(fresa_id, accion):
     else:
         flash('Acción no válida.', 'danger')
     return redirect(url_for('fresas.fresas'))
+
+# Ruta para eliminar una fresa del inventario
+@fresas_bp.route('/eliminar_inventario/<int:fresa_id>', methods=['POST'])
+def eliminar_inventario(fresa_id):
+    fresa = FresaInventario.query.get_or_404(fresa_id)
+    db.session.delete(fresa)
+    db.session.commit()
+    flash('Fresa eliminada del inventario correctamente.', 'success')
+    return redirect(url_for('fresas.fresas'))

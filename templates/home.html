@@ -1,16 +1,16 @@
 {% extends "base.html" %}
 {% block title %}{{ _('Home') }} | Fresado Pro{% endblock %}
 {% block instructions %}
-<div class="alert alert-info d-flex align-items-center" role="alert">
+<div class="alert alert-info d-flex align-items-center mt-2 mb-2" role="alert" style="margin-top:0.5rem !important; margin-bottom:0.5rem !important;">
   <i class="bi bi-info-circle me-2"></i>
   {{ _('Welcome to') }} <b>Fresado Pro</b>. {{ _('Use the sidebar to navigate between main functions. Here you can analyze data, manage orders, blocks, milling tools, and more. Optimize your dental lab!') }}
 </div>
 {% endblock %}
 {% block content %}
-<div class="row g-4">
+<div class="row g-2">
   <!-- IZQUIERDA: Blocks by Shade y New Milling Tools Inventory -->
   <div class="col-md-5">
-    <div class="card border-0 shadow-sm animate__animated animate__fadeInUp mb-4">
+    <div class="card border-0 shadow-sm animate__animated animate__fadeInUp mb-3">
       <div class="card-body">
         <h6 class="card-title mb-3"><i class="bi bi-bar-chart"></i> {{ _('Blocks by Shade') }}</h6>
         <div class="mb-2 d-flex flex-wrap gap-2 align-items-center">
@@ -111,6 +111,12 @@
         <canvas id="graficaBloquesShadeFiltrada" height="120"></canvas>
       </div>
     </div>
+    <div class="card border-0 shadow-sm animate__animated animate__fadeInUp mb-4">
+      <div class="card-body">
+        <h6 class="card-title mb-3"><i class="bi bi-pie-chart"></i> {{ _('Material Distribution') }}</h6>
+        <canvas id="graficaMateriales" height="120"></canvas>
+      </div>
+    </div>
   </div>
   <!-- DERECHA: Upcoming activities -->
   <div class="col-md-3">
@@ -148,14 +154,16 @@
 <script>
 // Animaciones de cards
 $(document).ready(function(){
+  console.log('[DEBUG] Document ready - inicializando cards y gráficas');
   $('.card').css({opacity:0, transform:'translateY(30px)'}).each(function(i,el){
     setTimeout(function(){$(el).animate({opacity:1, transform:'none'}, 700);}, 200*i);
   });
   // Cargar datos de las gráficas
   $.getJSON('/ordenes/api/graficas-inventario', function(data) {
+    console.log('[DEBUG] /ordenes/api/graficas-inventario data:', data);
     // Modelos por día
     var ctx1 = document.getElementById('graficaModelosMaquina');
-    if (!ctx1) return; // Si el canvas no existe, no hacer nada
+    if (!ctx1) { console.warn('[DEBUG] Canvas graficaModelosMaquina no encontrado'); return; }
     ctx1 = ctx1.getContext('2d');
     if(window.graficaModelosMaquina && typeof window.graficaModelosMaquina.destroy === 'function') {
       window.graficaModelosMaquina.destroy();
@@ -175,32 +183,38 @@ $(document).ready(function(){
       options: {responsive:true, plugins:{legend:{display:false}}}
     });
     // Pie chart: Material Distribution
-    var ctx2 = document.getElementById('graficaMateriales').getContext('2d');
-    new Chart(ctx2, {
-      type: 'pie',
-      data: {
-        labels: data.modelos_material_semana.map(x => x.material),
-        datasets: [{
-          data: data.modelos_material_semana.map(x => x.cantidad),
-          backgroundColor: ['#1976d2','#43a047','#fbc02d','#8e24aa','#e53935','#00838f']
-        }]
-      },
-      options: {responsive:true, radius: '45%', plugins:{legend:{position:'bottom'}}}
-    });
+    try {
+      var ctx2 = document.getElementById('graficaMateriales').getContext('2d');
+      new Chart(ctx2, {
+        type: 'pie',
+        data: {
+          labels: data.modelos_material_semana.map(x => x.material),
+          datasets: [{
+            data: data.modelos_material_semana.map(x => x.cantidad),
+            backgroundColor: ['#1976d2','#43a047','#fbc02d','#8e24aa','#e53935','#00838f']
+          }]
+        },
+        options: {responsive:true, radius: '45%', plugins:{legend:{position:'bottom'}}}
+      });
+    } catch(e) { console.error('[DEBUG] Error dibujando graficaMateriales', e); }
     // Bloques por shade
-    var ctx3 = document.getElementById('graficaBloquesShade').getContext('2d');
-    new Chart(ctx3, {
-      type: 'bar',
-      data: {
-        labels: data.bloques_shade.map(x => x.shade),
-        datasets: [{
-          label: 'Bloques',
-          data: data.bloques_shade.map(x => x.cantidad),
-          backgroundColor: '#8e24aa',
-        }]
-      },
-      options: {responsive:true, plugins:{legend:{display:false}}}
-    });
+    try {
+      var ctx3 = document.getElementById('graficaBloquesShade').getContext('2d');
+      new Chart(ctx3, {
+        type: 'bar',
+        data: {
+          labels: data.bloques_shade.map(x => x.shade),
+          datasets: [{
+            label: 'Bloques',
+            data: data.bloques_shade.map(x => x.cantidad),
+            backgroundColor: '#8e24aa',
+          }]
+        },
+        options: {responsive:true, plugins:{legend:{display:false}}}
+      });
+    } catch(e) { console.error('[DEBUG] Error dibujando graficaBloquesShade', e); }
+  }).fail(function(jqXHR, textStatus, errorThrown) {
+    console.error('[DEBUG] Error en /ordenes/api/graficas-inventario:', textStatus, errorThrown, jqXHR.responseText);
   });
   // Evitar que la gráfica se dibuje dos veces
   let graficaInicializada = false;
@@ -209,7 +223,9 @@ $(document).ready(function(){
     var estado = $('#filtro-estado').val();
     var order = $('#filtro-orden').val();
     var marca = $('#filtro-marca').val();
+    console.log('[DEBUG] Llamando /ordenes/api/graficas-bloques-shade', {material, estado, order, marca});
     $.getJSON('/ordenes/api/graficas-bloques-shade', {material, estado, order, marca}, function(data) {
+      console.log('[DEBUG] /ordenes/api/graficas-bloques-shade data:', data);
       var ctx3 = document.getElementById('graficaBloquesShade').getContext('2d');
       if(window.graficaBloquesShade && typeof window.graficaBloquesShade.destroy === 'function') {
         window.graficaBloquesShade.destroy();
@@ -262,6 +278,8 @@ $(document).ready(function(){
         }
       });
       graficaInicializada = true;
+    }).fail(function(jqXHR, textStatus, errorThrown) {
+      console.error('[DEBUG] Error en /ordenes/api/graficas-bloques-shade:', textStatus, errorThrown, jqXHR.responseText);
     });
   }
   // Solo dibujar la gráfica filtrable, no la estática
@@ -325,21 +343,39 @@ $('#filtro-fresa-orden, #filtro-fresa-maquina').on('change', function() {
 renderGraficaFresasNuevas('tipo');
 
 // Dependencias de marcas en material seleccionado
-const materialesAvanzado = {{ materiales_avanzado|tojson|safe }};
-const allMarcas = {{ marcas|tojson|safe }};
+const materialesAvanzado = {{ (materiales_avanzado or {})|tojson|safe }};
+const allMarcas = {{ (marcas or [])|tojson|safe }};
 
 function actualizarDropdownMarcas() {
   const material = $('#filtro-material').val();
   const $marca = $('#filtro-marca');
   $marca.empty();
-  $marca.append('<option value="">{{ _('All Brands') }}</option>');
-  if (material && materialesAvanzado[material] && materialesAvanzado[material].marcas && materialesAvanzado[material].marcas.length > 0) {
-    materialesAvanzado[material].marcas.forEach(function(marca) {
-      $marca.append('<option value="'+marca+'">'+marca+'</option>');
-    });
-  } else {
-    allMarcas.forEach(function(marca) {
-      $marca.append('<option value="'+marca+'">'+marca+'</option>');
+  $marca.append('<option value="">'+"{{ _('All Brands') }}"+'</option>');
+  function getMarcaString(marca) {
+    try {
+      if (typeof marca === 'string') return marca;
+      if (typeof marca === 'object' && marca !== null) {
+        if (marca.nombre) return String(marca.nombre);
+        if (marca.name) return String(marca.name);
+        for (const key in marca) {
+          if (typeof marca[key] === 'string') return marca[key];
+        }
+      }
+    } catch (e) { return ''; }
+    return '';
+  }
+  let marcasArr = [];
+  if (material && materialesAvanzado[material] && Array.isArray(materialesAvanzado[material].marcas) && materialesAvanzado[material].marcas.length > 0) {
+    marcasArr = materialesAvanzado[material].marcas;
+  }
+  // Si hay marcas asociadas al material, solo muestra esas. Si no, solo la opción All Brands.
+  if (marcasArr.length > 0) {
+    marcasArr.forEach(function(marca) {
+      try {
+        const marcaStr = getMarcaString(marca);
+        if (marcaStr)
+          $marca.append('<option value="'+marcaStr+'">'+marcaStr+'</option>');
+      } catch (e) {}
     });
   }
 }
@@ -423,7 +459,9 @@ $(document).ready(function(){
 
 // Cargar próximas actividades
 $(document).ready(function(){
+  console.log('[DEBUG] Llamando /mantenimiento/?api=1 para upcoming activities');
   $.getJSON('/mantenimiento/?api=1', function(data) {
+    console.log('[DEBUG] /mantenimiento/?api=1 data:', data);
     var $list = $('#upcoming-activities-list');
     $list.empty();
     if (data.length === 0) {
@@ -438,6 +476,8 @@ $(document).ready(function(){
           + '</li>');
       });
     }
+  }).fail(function(jqXHR, textStatus, errorThrown) {
+    console.error('[DEBUG] Error en /mantenimiento/?api=1:', textStatus, errorThrown, jqXHR.responseText);
   });
 });
 function renderGraficaRecordCases() {
