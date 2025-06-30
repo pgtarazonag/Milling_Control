@@ -247,6 +247,16 @@ $(document).on('submit', '.form-eliminar-inventario-fresa', function(e) {
     return;
   }
 });
+// Delegación segura para botones de inventario (+1 y -1)
+$(document).on('submit', 'form[action*="modificar_cantidad"]', function(e){
+  var $btn = $(this).find('button[type="submit"]');
+  if ($btn.prop('disabled')) {
+    e.preventDefault();
+    return false;
+  }
+  $btn.prop('disabled', true);
+  setTimeout(function(){ $btn.prop('disabled', false); }, 800);
+});
 </script>
 <script>
 $(document).ready(function(){

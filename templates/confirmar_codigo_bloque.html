@@ -1,0 +1,49 @@
+{% if request.headers.get('X-Requested-With') == 'XMLHttpRequest' %}
+<form id="formConfirmarCodigoBloque" method="post" action="">
+  <div class="modal-header">
+    <h5 class="modal-title">{{ _('Confirm Block Code') }}</h5>
+    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+  </div>
+  <div class="modal-body">
+    <div class="mb-3">
+      <label for="codigo_barra" class="form-label">{{ _('Block Code') }}</label>
+      <input type="text" class="form-control" id="codigo_barra" name="codigo_barra" value="{{ bloque.codigo_barra }}" required maxlength="20">
+      <input type="hidden" name="orden_data" value="{{ orden_data }}">
+    </div>
+  </div>
+  <div class="modal-footer">
+    <button type="submit" class="btn btn-primary">{{ _('Confirm') }}</button>
+    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{{ _('Cancel') }}</button>
+  </div>
+</form>
+{% else %}
+{% extends "base.html" %}
+{% block title %}{{ _('Convert New Block to Used') }} | Fresado Pro{% endblock %}
+{% block instructions %}
+<div class="alert alert-warning d-flex align-items-center" role="alert" style="font-size:1.15em; font-weight:600;">
+  <i class="bi bi-arrow-repeat me-2" style="font-size:1.7em;"></i>
+  {{ _('Convert New Block to Used') }}<br>
+  <span class="ms-2" style="font-weight:400; font-size:1em;">{{ _('You can edit the code before confirming.') }}</span>
+</div>
+{% endblock %}
+{% block content %}
+<div class="card border-0 shadow-sm animate__animated animate__fadeInUp">
+  <div class="card-body">
+    <h3 class="mb-3 text-primary"><i class="bi bi-upc-scan"></i> {{ _('Code for Used Block') }}</h3>
+    <form method="post" class="row g-3">
+      <div class="col-md-8">
+        <label class="form-label" style="font-size:1.1em;font-weight:500;">{{ _('Block Code') }}</label>
+        <input type="text" name="codigo_barra" class="form-control form-control-lg border-primary" value="{{ bloque.codigo_barra }}" required maxlength="100" autofocus>
+        <input type="hidden" name="bloque_id" value="{{ bloque.id }}">
+        <input type="hidden" name="orden_data" value="{{ orden_data }}">
+        <div class="form-text text-info mt-1" style="font-size:1em;">{{ _('You can edit the code before confirming.') }}</div>
+      </div>
+      <div class="col-12 text-end mt-3">
+        <a href="{{ url_for('ordenes.ordenes') }}" class="btn btn-secondary btn-lg">{{ _('Cancel') }}</a>
+        <button type="submit" class="btn btn-primary btn-lg ms-2">{{ _('Confirm and Continue') }}</button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}
+{% endif %}

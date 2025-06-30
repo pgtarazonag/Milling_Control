@@ -15,7 +15,7 @@
         {% if error %}
           <div class="alert alert-danger">{{ error }}</div>
         {% endif %}
-        <form method="post" class="row g-2 align-items-end" id="orden-form" onsubmit="return validarBloquesSeleccionados();">
+        <form method="post" class="row g-2 align-items-end" id="orden-form">
           <input type="hidden" name="modelos_por_caso" id="modelos-por-caso-hidden" value="{{ request.form.get('modelos_por_caso', '') }}">
           <input type="hidden" name="pendientes_seleccionados" id="pendientes-seleccionados-hidden" value="{{ request.form.get('pendientes_seleccionados', pendientes_seleccionados|default('')) }}">
           <!-- Primera fila: Material, Shade, Máquina -->
@@ -98,15 +98,31 @@
           </div>
         </form>
         <script>
-        function validarBloquesSeleccionados() {
-          var usado = document.querySelector('select[name=\'bloque_usado_id\']').value;
-          var nuevo = document.querySelector('select[name=\'bloque_nuevo_id\']').value;
-          if(usado && nuevo) {
-            alert('No puedes seleccionar un bloque nuevo y uno usado al mismo tiempo. Elige solo uno.');
-            return false;
-          }
-          return true;
-        }
+        // Validar solo al submit, no al cambiar selects
+        $(function() {
+          $('#orden-form').off('submit').on('submit', function(e) {
+            var usado = document.querySelector('[name="bloque_usado_id"]').value;
+            var nuevo = document.querySelector('[name="bloque_nuevo_id"]').value;
+            if (!usado && !nuevo) {
+              alert("{{ _('You must select a block (used or new) to continue.') }}");
+              e.preventDefault();
+              return false;
+            }
+            return true;
+          });
+          // Actualizar shades disponibles al cambiar material
+          $('#material').on('change', function() {
+            var material = $(this).val();
+            $.getJSON('/ordenes/api/shades', {material: material}, function(data) {
+              var $shade = $('#shade');
+              $shade.empty();
+              $shade.append('<option value="">-- {{ _('Select') }} --</option>');
+              data.shades.forEach(function(s) {
+                $shade.append('<option value="'+s+'">'+s+'</option>');
+              });
+            });
+          });
+        });
         </script>
       </div>
     </div>
@@ -222,9 +238,49 @@
   font-size: 0.89em !important;
 }
 </style>
+
+<!-- Modal para confirmar código de bloque -->
+<div class="modal fade" id="modalConfirmarCodigo" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content" id="modalConfirmarCodigoContent">
+      <!-- Aquí se cargará el contenido por AJAX -->
+    </div>
+  </div>
+</div>
+
 {% endblock %}
 {% block scripts %}
 {{ super() }}
+<script>
+// Función para abrir el modal de confirmación de código de bloque
+function abrirModalConfirmarCodigo(bloqueId, ordenData) {
+  $.get('/ordenes/confirmar-codigo-bloque/' + bloqueId + '?orden_data=' + encodeURIComponent(ordenData), function(html) {
+    $('#modalConfirmarCodigoContent').html(html);
+    $('#modalConfirmarCodigo').modal('show');
+  });
+}
+// Intercepta el submit del formulario de confirmación para enviarlo por AJAX
+$(document).on('submit', '#formConfirmarCodigoBloque', function(e) {
+  e.preventDefault();
+  var $form = $(this);
+  $.post($form.attr('action'), $form.serialize(), function(response) {
+    $('#modalConfirmarCodigo').modal('hide');
+    // Opcional: recargar la tabla/lista de órdenes o mostrar mensaje de éxito
+    location.reload();
+  });
+});
+// Intercepta redirección a confirmar-codigo-bloque y abre el modal en vez de navegar
+$(document).on('click', 'a[data-confirmar-codigo-bloque], button[data-confirmar-codigo-bloque]', function(e) {
+  e.preventDefault();
+  var bloqueId = $(this).data('bloque-id');
+  var ordenData = $(this).data('orden-data');
+  abrirModalConfirmarCodigo(bloqueId, ordenData);
+});
+// Si usas location.href o window.location para redirigir, reemplázalo por esta función:
+function redirigirAConfirmarCodigoBloque(bloqueId, ordenData) {
+  abrirModalConfirmarCodigo(bloqueId, ordenData);
+}
+</script>
 <script>
 // Confirmación al eliminar orden
 $(document).on('submit', '.form-eliminar-orden', function(e) {
@@ -407,6 +463,18 @@ $(document).ready(function(){
       }
     }
   });
+});
+</script>
+<script>
+// Delegación segura para botones de inventario (+1 y -1)
+$(document).on('submit', 'form[action*="modificar_cantidad"]', function(e){
+  var $btn = $(this).find('button[type="submit"]');
+  if ($btn.prop('disabled')) {
+    e.preventDefault();
+    return false;
+  }
+  $btn.prop('disabled', true);
+  setTimeout(function(){ $btn.prop('disabled', false); }, 800);
 });
 </script>
 {% endblock %}

@@ -39,31 +39,35 @@ ordenes_bp = Blueprint('ordenes', __name__, url_prefix='/ordenes')
 # Se usa al crear un nuevo bloque usado
 
 def generar_codigo_bloque(grosor, marca=None, material=None):
-    # 2 dígitos para grosor (rellenado con ceros a la izquierda)
     grosor_str = str(grosor).zfill(2)
-    # Obtener letra de marca desde configuración avanzada
-    letra = 'X'
+    letras_marca = 'XX'
     if material and marca:
         materiales_avanzado = Configuracion.get_lista('materiales_avanzado')
         import json
         if materiales_avanzado and isinstance(materiales_avanzado, list) and isinstance(materiales_avanzado[0], str):
             materiales_avanzado = json.loads(materiales_avanzado[0])
         if materiales_avanzado and material in materiales_avanzado:
-            props = materiales_avanzado[material].get('marcas_propiedades', {})
-            if props and marca in props and props[marca].get('letra'):
-                letra = props[marca]['letra'].upper()[:1]
-    # 3 caracteres aleatorios
+            marcas = materiales_avanzado[material].get('marcas', [])
+            for m in marcas:
+                if isinstance(m, dict) and m.get('nombre') == marca:
+                    letras_marca = (m.get('letra') or 'XX').upper()[:2].ljust(2, 'X')
+                    break
     import random, string
     while True:
-        sufijo = ''.join(random.choices(string.ascii_uppercase + string.digits, k=3))
-        codigo = grosor_str + letra + sufijo
-        if not Bloque.query.filter_by(codigo_barra=codigo).first():
+        sufijo = ''.join(random.choices(string.ascii_uppercase + string.digits, k=2))
+        codigo = grosor_str + letras_marca + sufijo
+        if len(codigo) == 6 and not Bloque.query.filter_by(codigo_barra=codigo).first():
             return codigo
 
 # Ruta principal para ver y crear órdenes
 @ordenes_bp.route('/', methods=['GET', 'POST'])
 def ordenes():
+    material_form = None
+    shade_form = None
     error = None
+    bloque = None
+    maquina = None
+    cantidades = []
     # Obtener todos los casos pendientes para mostrar en la interfaz de órdenes
     pendientes_orden = OrdenPendiente.query.order_by(OrdenPendiente.fecha_escaneo.asc()).all()
     # Obtenemos los filtros de material y shade desde la URL
@@ -161,10 +165,43 @@ def ordenes():
                 codigos = bloque.get_codigos_orden_fresados()
                 codigos.extend(codigos_seleccionados)
                 bloque.codigos_orden_fresados = ','.join(codigos)
+                # Creamos una orden para cada código seleccionado
+                for codigo_orden in codigos_seleccionados:
+                    nueva_orden = Orden(
+                        codigos_caso=codigo_orden,
+                        material=bloque.material,
+                        marca=bloque.marca if hasattr(bloque, 'marca') else None,
+                        shade=bloque.shade,
+                        codigo_barra=bloque.codigo_barra,
+                        maquina=maquina,
+                        cantidad_modelos=cantidad_modelos,
+                        fecha_creacion=datetime.now(VANCOUVER_TZ)
+                    )
+                    db.session.add(nueva_orden)
+                    pendiente = OrdenPendiente.query.filter_by(codigo_orden=codigo_orden).first()
+                    if pendiente:
+                        db.session.delete(pendiente)
+                # Actualizamos la fresa instalada solo si maquina está definida
+                if maquina:
+                    fresa_instalada = FresaInstalada.query.filter(
+                        FresaInstalada.maquina == maquina,
+                        FresaInstalada.materiales.like(f"%{bloque.material}%")
+                    ).order_by(FresaInstalada.fecha_instalacion.desc()).first()
+                    if fresa_instalada:
+                        fresa_instalada.modelos_fresados += cantidad_modelos * len(codigos_seleccionados)
+                db.session.commit()
+                flash('Órdenes grupales creadas correctamente.')
+                return redirect(url_for('ordenes.ordenes', material=material_form, shade=shade_form))
         elif bloque_nuevo_id:
             bloque_nuevo = Bloque.query.get(int(bloque_nuevo_id))
             if bloque_nuevo and bloque_nuevo.cantidad > 0:
                 bloque_nuevo.cantidad -= 1
+                # Si el bloque nuevo sigue en inventario, actualizar su fecha de creacion
+                if bloque_nuevo.cantidad > 0:
+                    from datetime import datetime
+                    import pytz
+                    VANCOUVER_TZ = pytz.timezone('America/Vancouver')
+                    bloque_nuevo.fecha_creacion = datetime.now(VANCOUVER_TZ)
                 nuevo_bloque_usado = Bloque(
                     material=bloque_nuevo.material,
                     marca=bloque_nuevo.marca,
@@ -178,42 +215,62 @@ def ordenes():
                     fecha_creacion=datetime.now(VANCOUVER_TZ)
                 )
                 db.session.add(nuevo_bloque_usado)
+                db.session.flush()  # Para obtener el ID
                 bloque = nuevo_bloque_usado
                 if bloque_nuevo.cantidad == 0:
                     db.session.delete(bloque_nuevo)
+                db.session.commit()
+                # Redirigir a la pantalla de confirmación de código de bloque
+                import json
+                orden_data = json.dumps({
+                    'codigos_seleccionados': codigos_seleccionados,
+                    'maquina': maquina,
+                    'cantidad_modelos': cantidad_modelos,
+                    'material_form': material_form,
+                    'shade_form': shade_form
+                })
+                return redirect(url_for('ordenes.confirmar_codigo_bloque', bloque_id=bloque.id, orden_data=orden_data))
             else:
                 error = "No hay bloques nuevos disponibles."
-        if not bloque:
+        elif bloque_usado_id:
+            bloque = Bloque.query.get(int(bloque_usado_id))
+            if bloque:
+                bloque.modelos_fresados += cantidad_modelos * len(codigos_seleccionados)
+                codigos = bloque.get_codigos_orden_fresados()
+                codigos.extend(codigos_seleccionados)
+                bloque.codigos_orden_fresados = ','.join(codigos)
+                # Creamos una orden para cada código seleccionado
+                for codigo_orden in codigos_seleccionados:
+                    nueva_orden = Orden(
+                        codigos_caso=codigo_orden,
+                        material=bloque.material,
+                        marca=bloque.marca if hasattr(bloque, 'marca') else None,
+                        shade=bloque.shade,
+                        codigo_barra=bloque.codigo_barra,
+                        maquina=maquina,
+                        cantidad_modelos=cantidad_modelos,
+                        fecha_creacion=datetime.now(VANCOUVER_TZ)
+                    )
+                    db.session.add(nueva_orden)
+                    pendiente = OrdenPendiente.query.filter_by(codigo_orden=codigo_orden).first()
+                    if pendiente:
+                        db.session.delete(pendiente)
+                # Actualizamos la fresa instalada solo si maquina está definida
+                if maquina:
+                    fresa_instalada = FresaInstalada.query.filter(
+                        FresaInstalada.maquina == maquina,
+                        FresaInstalada.materiales.like(f"%{bloque.material}%")
+                    ).order_by(FresaInstalada.fecha_instalacion.desc()).first()
+                    if fresa_instalada:
+                        fresa_instalada.modelos_fresados += cantidad_modelos * len(codigos_seleccionados)
+                db.session.commit()
+                flash('Órdenes grupales creadas correctamente.')
+                return redirect(url_for('ordenes.ordenes', material=material_form, shade=shade_form))
+        else:
             if codigos_seleccionados:  # Solo mostrar error si hay pendientes seleccionados
                 error = "Debes seleccionar un bloque usado o nuevo."
-        else:
-            # Creamos una orden para cada código seleccionado
-            for codigo_orden in codigos_seleccionados:
-                nueva_orden = Orden(
-                    codigo_orden=codigo_orden,
-                    material=bloque.material,
-                    marca=bloque.marca if hasattr(bloque, 'marca') else None,
-                    shade=bloque.shade,
-                    codigo_barra=bloque.codigo_barra,
-                    maquina=maquina,
-                    cantidad_modelos=cantidad_modelos,
-                    fecha_creacion=datetime.now(VANCOUVER_TZ)
-                )
-                db.session.add(nueva_orden)
-                # Eliminamos el código de la lista de pendientes
-                pendiente = OrdenPendiente.query.filter_by(codigo_orden=codigo_orden).first()
-                if pendiente:
-                    db.session.delete(pendiente)
-            # Actualizamos la fresa instalada
-            fresa_instalada = FresaInstalada.query.filter(
-                FresaInstalada.maquina == maquina,
-                FresaInstalada.materiales.like(f"%{bloque.material}%")
-            ).order_by(FresaInstalada.fecha_instalacion.desc()).first()
-            if fresa_instalada:
-                fresa_instalada.modelos_fresados += cantidad_modelos * len(codigos_seleccionados)
-            db.session.commit()
-            flash('Órdenes grupales creadas correctamente.')
-            return redirect(url_for('ordenes.ordenes', material=material_form, shade=shade_form))
+            # Renderiza la plantilla con el error en vez de redirigir
+            return render_template('ordenes.html', error=error, material_form=material_form, shade_form=shade_form)
 
     # Si el formulario es para crear una orden individual o múltiple (códigos separados por coma)
     if request.method == 'POST' and 'codigo_orden' in request.form:
@@ -222,35 +279,6 @@ def ordenes():
             codigos_lista = [c.strip() for c in codigos_orden.split(',') if c.strip()]
             modelos_por_caso_str = request.form.get('modelos_por_caso', '').strip()
             cantidad_modelos_total = int(request.form.get('cantidad_modelos', 1))
-            # Procesar modelos por caso desde el input interactivo
-            if modelos_por_caso_str:
-                cantidades = []
-                for x in modelos_por_caso_str.split(','):
-                    try:
-                        cantidades.append(int(x.strip()))
-                    except ValueError:
-                        cantidades.append(None)
-                # Si hay valores vacíos o None, se completan con la división automática
-                faltantes = [i for i, v in enumerate(cantidades) if not v]
-                if faltantes:
-                    # Calcular cuántos modelos quedan por repartir
-                    suma_definidos = sum([v for v in cantidades if v])
-                    restantes = max(cantidad_modelos_total - suma_definidos, 0)
-                    base = restantes // len(faltantes) if faltantes else 0
-                    resto = restantes % len(faltantes) if faltantes else 0
-                    for idx, i in enumerate(faltantes):
-                        cantidades[i] = base + (1 if idx < resto else 0)
-                # Si la cantidad de cantidades no coincide con la de códigos, advertimos y usamos la división automática
-                if len(cantidades) != len(codigos_lista):
-                    error = 'La cantidad de modelos por caso no coincide con la cantidad de códigos. Se usará la división automática.'
-                    base = cantidad_modelos_total // len(codigos_lista)
-                    resto = cantidad_modelos_total % len(codigos_lista)
-                    cantidades = [base + 1 if i < resto else base for i in range(len(codigos_lista))]
-            else:
-                # División automática si no se especifica nada
-                base = cantidad_modelos_total // len(codigos_lista)
-                resto = cantidad_modelos_total % len(codigos_lista)
-                cantidades = [base + 1 if i < resto else base for i in range(len(codigos_lista))]
             material_form = request.form.get('material')
             shade_form = request.form.get('shade')
             maquina = request.form.get('maquina')
@@ -264,10 +292,43 @@ def ordenes():
                     codigos = bloque.get_codigos_orden_fresados()
                     codigos.extend(codigos_lista)
                     bloque.codigos_orden_fresados = ','.join(codigos)
+                    # --- CAMBIO: crear la orden solo si es bloque usado (flujo normal) ---
+                    nueva_orden = Orden(
+                        codigos_caso=','.join(codigos_lista),
+                        material=bloque.material,
+                        marca=bloque.marca if hasattr(bloque, 'marca') else None,
+                        shade=bloque.shade,
+                        codigo_barra=bloque.codigo_barra,
+                        maquina=maquina,
+                        cantidad_modelos=sum(cantidades),
+                        fecha_creacion=datetime.now(VANCOUVER_TZ)
+                    )
+                    db.session.add(nueva_orden)
+                    for codigo_orden in codigos_lista:
+                        pendiente = OrdenPendiente.query.filter_by(codigo_orden=codigo_orden).first()
+                        if pendiente:
+                            db.session.delete(pendiente)
+                    # --- ACTUALIZAR TODAS LAS FRESAS INSTALADAS COMPATIBLES ---
+                    if maquina:
+                        fresas_compatibles = FresaInstalada.query.filter(
+                            FresaInstalada.maquina == maquina,
+                            FresaInstalada.materiales.like(f"%{bloque.material}%")
+                        ).all()
+                        for fresa in fresas_compatibles:
+                            fresa.modelos_fresados += sum(cantidades)
+                    db.session.commit()
+                    flash('Orden creada correctamente.')
+                    return redirect(url_for('ordenes.ordenes', material=material_form, shade=shade_form))
             elif bloque_nuevo_id:
                 bloque_nuevo = Bloque.query.get(int(bloque_nuevo_id))
                 if bloque_nuevo and bloque_nuevo.cantidad > 0:
                     bloque_nuevo.cantidad -= 1
+                    # Si el bloque nuevo sigue en inventario, actualizar su fecha de creacion
+                    if bloque_nuevo.cantidad > 0:
+                        from datetime import datetime
+                        import pytz
+                        VANCOUVER_TZ = pytz.timezone('America/Vancouver')
+                        bloque_nuevo.fecha_creacion = datetime.now(VANCOUVER_TZ)
                     nuevo_bloque_usado = Bloque(
                         material=bloque_nuevo.material,
                         marca=bloque_nuevo.marca,
@@ -284,11 +345,22 @@ def ordenes():
                     bloque = nuevo_bloque_usado
                     if bloque_nuevo.cantidad == 0:
                         db.session.delete(bloque_nuevo)
+                    db.session.commit()
+                    # Redirigir a la pantalla de confirmación de código de bloque
+                    import json
+                    orden_data = json.dumps({
+                        'codigos_seleccionados': codigos_lista,
+                        'maquina': maquina,
+                        'cantidad_modelos': cantidad_modelos_total,
+                        'material_form': material_form,
+                        'shade_form': shade_form
+                    })
+                    return redirect(url_for('ordenes.confirmar_codigo_bloque', bloque_id=bloque.id, orden_data=orden_data))
                 else:
                     error = "No hay bloques nuevos disponibles."
             if not bloque:
                 error = "Debes seleccionar un bloque usado o nuevo."
-            else:
+            elif bloque:
                 # --- CAMBIO: crear una sola orden con todos los códigos de caso ---
                 nueva_orden = Orden(
                     codigos_caso=','.join(codigos_lista),
@@ -306,12 +378,13 @@ def ordenes():
                     if pendiente:
                         db.session.delete(pendiente)
                 # --- ACTUALIZAR TODAS LAS FRESAS INSTALADAS COMPATIBLES ---
-                fresas_compatibles = FresaInstalada.query.filter(
-                    FresaInstalada.maquina == maquina,
-                    FresaInstalada.materiales.like(f"%{bloque.material}%")
-                ).all()
-                for fresa in fresas_compatibles:
-                    fresa.modelos_fresados += sum(cantidades)
+                if maquina:
+                    fresas_compatibles = FresaInstalada.query.filter(
+                        FresaInstalada.maquina == maquina,
+                        FresaInstalada.materiales.like(f"%{bloque.material}%")
+                    ).all()
+                    for fresa in fresas_compatibles:
+                        fresa.modelos_fresados += sum(cantidades)
                 db.session.commit()
                 flash('Orden creada correctamente.')
                 return redirect(url_for('ordenes.ordenes', material=material_form, shade=shade_form))
@@ -610,3 +683,128 @@ def api_resumen_dia():
     num_casos = sum(len(o.get_codigos_caso()) for o in ordenes)
     num_modelos = sum(o.cantidad_modelos or 0 for o in ordenes)
     return jsonify({'ordenes': num_ordenes, 'casos': num_casos, 'modelos': num_modelos})
+
+# Nueva ruta para confirmar/editar el código de bloque antes de crear la orden
+@ordenes_bp.route('/confirmar-codigo-bloque/<int:bloque_id>', methods=['GET', 'POST'])
+def confirmar_codigo_bloque(bloque_id):
+    from flask import request, redirect, url_for, render_template, flash
+    import json
+    from datetime import datetime
+    import pytz
+    VANCOUVER_TZ = pytz.timezone('America/Vancouver')
+    bloque = Bloque.query.get_or_404(bloque_id)
+    orden_data = request.args.get('orden_data') or request.form.get('orden_data')
+    is_ajax = request.headers.get('X-Requested-With') == 'XMLHttpRequest'
+    material_form = None
+    shade_form = None
+    if request.method == 'POST':
+        codigo_barra = request.form.get('codigo_barra', '').strip()
+        if codigo_barra:
+            bloque.codigo_barra = codigo_barra
+            db.session.commit()
+            # Recuperar datos de la orden y continuar
+            if orden_data:
+                try:
+                    datos = json.loads(orden_data)
+                except Exception:
+                    datos = {}
+                codigos_seleccionados = datos.get('codigos_seleccionados', [])
+                maquina = datos.get('maquina')
+                cantidad_modelos = datos.get('cantidad_modelos', 1)
+                material_form = datos.get('material_form') or ''
+                shade_form = datos.get('shade_form') or ''
+                for codigo_orden in codigos_seleccionados:
+                    nueva_orden = Orden(
+                        codigos_caso=codigo_orden,
+                        material=bloque.material,
+                        marca=bloque.marca if hasattr(bloque, 'marca') else None,
+                        shade=bloque.shade,
+                        codigo_barra=bloque.codigo_barra,
+                        maquina=maquina,
+                        cantidad_modelos=cantidad_modelos,
+                        fecha_creacion=datetime.now(VANCOUVER_TZ)
+                    )
+                    db.session.add(nueva_orden)
+                    pendiente = OrdenPendiente.query.filter_by(codigo_orden=codigo_orden).first()
+                    if pendiente:
+                        db.session.delete(pendiente)
+                db.session.commit()
+            # Si es AJAX, responde con un simple 'ok', si no, redirige
+            if is_ajax:
+                return 'ok'
+            return redirect(url_for('ordenes.ordenes', material=material_form or '', shade=shade_form or ''))
+    # GET: Renderiza solo el contenido del modal si es AJAX
+    if is_ajax:
+        return render_template('confirmar_codigo_bloque.html', bloque=bloque, orden_data=orden_data)
+    # Si no es AJAX, renderiza con layout normal
+    return render_template('confirmar_codigo_bloque.html', bloque=bloque, orden_data=orden_data)
+
+# --- UNIFICACIÓN: Si hay bloque_nuevo_id, crear bloque usado y redirigir a confirmación antes de cualquier orden ---
+    if request.method == 'POST':
+        bloque_nuevo_id = request.form.get('bloque_nuevo_id')
+        if bloque_nuevo_id:
+            bloque_nuevo = Bloque.query.get(int(bloque_nuevo_id))
+            if bloque_nuevo and bloque_nuevo.cantidad > 0:
+                # Obtener datos de la orden
+                codigos_orden = request.form.get('codigo_orden', '').strip()
+                codigos_lista = [c.strip() for c in codigos_orden.split(',') if c.strip()] if codigos_orden else []
+                codigos_seleccionados = request.form.getlist('codigos_seleccionados')
+                if codigos_seleccionados:
+                    codigos = codigos_seleccionados
+                else:
+                    codigos = codigos_lista
+                modelos_por_caso_str = request.form.get('modelos_por_caso', '').strip()
+                cantidad_modelos_total = int(request.form.get('cantidad_modelos', 1))
+                if modelos_por_caso_str:
+                    cantidades = []
+                    for x in modelos_por_caso_str.split(','):
+                        try:
+                            cantidades.append(int(x.strip()))
+                        except ValueError:
+                            cantidades.append(None)
+                    faltantes = [i for i, v in enumerate(cantidades) if not v]
+                    if faltantes:
+                        suma_definidos = sum([v for v in cantidades if v])
+                        restantes = max(cantidad_modelos_total - suma_definidos, 0)
+                        base = restantes // len(faltantes) if faltantes else 0
+                        resto = restantes % len(faltantes) if faltantes else 0
+                        for idx, i in enumerate(faltantes):
+                            cantidades[i] = base + (1 if idx < resto else 0)
+                if len(cantidades) != len(codigos):
+                    base = cantidad_modelos_total // len(codigos)
+                    resto = cantidad_modelos_total % len(codigos)
+                    cantidades = [base + 1 if i < resto else base for i in range(len(codigos))]
+                cantidad_modelos = sum(cantidades)
+                bloque_nuevo.cantidad -= 1
+                # Si el bloque nuevo sigue en inventario, actualizar su fecha de creacion
+                if bloque_nuevo.cantidad > 0:
+                    from datetime import datetime
+                    import pytz
+                    VANCOUVER_TZ = pytz.timezone('America/Vancouver')
+                    bloque_nuevo.fecha_creacion = datetime.now(VANCOUVER_TZ)
+                nuevo_bloque_usado = Bloque(
+                    material=bloque_nuevo.material,
+                    marca=bloque_nuevo.marca,
+                    shade=bloque_nuevo.shade,
+                    grosor=bloque_nuevo.grosor,
+                    cantidad=1,
+                    codigo_barra=generar_codigo_bloque(bloque_nuevo.grosor, bloque_nuevo.marca, bloque_nuevo.material),
+                    estado='usado',
+                    modelos_fresados=cantidad_modelos,
+                    codigos_orden_fresados=','.join(codigos),
+                    fecha_creacion=datetime.now(VANCOUVER_TZ)
+                )
+                db.session.add(nuevo_bloque_usado)
+                db.session.flush()
+                if bloque_nuevo.cantidad == 0:
+                    db.session.delete(bloque_nuevo)
+                db.session.commit()
+                import json
+                orden_data = json.dumps({
+                    'codigos_seleccionados': codigos,
+                    'maquina': request.form.get('maquina'),
+                    'cantidad_modelos': cantidad_modelos,
+                    'material_form': request.form.get('material'),
+                    'shade_form': request.form.get('shade')
+                })
+                return redirect(url_for('ordenes.confirmar_codigo_bloque', bloque_id=nuevo_bloque_usado.id, orden_data=orden_data))

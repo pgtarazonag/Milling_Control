@@ -140,7 +140,18 @@ def create_app():
         total_ordenes = len(ordenes_hoy)
         total_casos = sum(len(o.get_codigos_caso()) for o in ordenes_hoy)
         total_modelos = sum(o.cantidad_modelos or 0 for o in ordenes_hoy)
-        return render_template('home.html', tipos_material=tipos_material, marcas=marcas, fresas_nuevas=fresas_nuevas, materiales_avanzado=materiales_avanzado, maquinas=maquinas, fresas_maquinas=fresas_maquinas, total_ordenes=total_ordenes, total_casos=total_casos, total_modelos=total_modelos)
+        return render_template(
+            'home.html',
+            tipos_material=tipos_material,
+            marcas=marcas or [],
+            fresas_nuevas=fresas_nuevas,
+            materiales_avanzado=materiales_avanzado or {},
+            maquinas=maquinas,
+            fresas_maquinas=fresas_maquinas or {},
+            total_ordenes=total_ordenes,
+            total_casos=total_casos,
+            total_modelos=total_modelos
+        )
 
     # Ruta para obtener la hora actual de Vancouver
     @app.route('/api/hora-vancouver')

@@ -184,24 +184,78 @@ def realizar_proxima(mant_id):
     flash('Actividad marcada como realizada y próxima programada.')
     return redirect(url_for('mantenimiento.mantenimiento'))
 
-@mantenimiento_bp.route('/editar_mantenimiento/<int:mant_id>', methods=['POST'])
+@mantenimiento_bp.route('/editar_mantenimiento/<int:mant_id>', methods=['GET', 'POST'])
 def editar_mantenimiento(mant_id):
     mant = Mantenimiento.query.get_or_404(mant_id)
+    error = None
+    # Obtener listas de máquinas y actividades por grupo
+    FRESADORAS = Configuracion.get_lista('maquinas', default=['A', 'B', 'C', 'D'])
+    hornos = Configuracion.get_lista('hornos', default=['Horno 1', 'Horno 2', 'Horno 3', 'Horno 4'])
+    aspiradoras = Configuracion.get_lista('aspiradoras', default=['Aspiradora 1', 'Aspiradora 2', 'Aspiradora 3', 'Aspiradora 4', 'Aspiradora 5'])
+    actividades_mant = Configuracion.get_lista('actividades_mantenimiento', default={
+        'fresadoras': ['limpieza_general'],
+        'hornos': ['calibracion_temperatura'],
+        'aspiradoras': ['cambio_filtro']
+    })
+    if isinstance(actividades_mant, list) and actividades_mant and isinstance(actividades_mant[0], str) and actividades_mant[0].startswith('{'):
+        import json
+        actividades_mant = json.loads(actividades_mant[0])
+    elif not isinstance(actividades_mant, dict):
+        actividades_mant = {'fresadoras': [], 'hornos': [], 'aspiradoras': []}
+    # Detectar grupo por máquina actual
+    grupo = 'fresadoras'
+    if mant.maquina in hornos:
+        grupo = 'hornos'
+    elif mant.maquina in aspiradoras:
+        grupo = 'aspiradoras'
+    # Pre-fill frequency fields from activity string
+    match = re.search(r'cada (\d+) (semana|mes|año)', mant.actividad or '')
+    if match:
+        intervalo_edit = int(match.group(1))
+        unidad_edit = match.group(2)
+    else:
+        intervalo_edit = 1
+        unidad_edit = 'semana'
+    if request.method == 'GET':
+        actividad_edit = re.sub(r' \(cada .+\)$', '', mant.actividad or '')
+        return render_template(
+            'editar_mantenimiento.html',
+            mant={
+                'id': mant.id,
+                'maquina': mant.maquina,
+                'actividad_edit': actividad_edit,
+                'descripcion': mant.descripcion,
+                'fecha': mant.fecha,
+                'intervalo_edit': intervalo_edit,
+                'unidad_edit': unidad_edit
+            },
+            grupo=grupo,
+            maquinas_dict={'fresadoras': FRESADORAS, 'hornos': hornos, 'aspiradoras': aspiradoras},
+            actividades_dict=actividades_mant,
+            error=error
+        )
+    # For POST: update fields and save
+    grupo = request.form.get('grupo')
     maquina = request.form.get('maquina')
     actividad = request.form.get('actividad')
     intervalo = request.form.get('intervalo')
     unidad = request.form.get('unidad')
     descripcion = request.form.get('descripcion')
-    # Actualizar campos
+    fecha_str = request.form.get('fecha')
+    # Parse date
+    try:
+        fecha = datetime.strptime(fecha_str, '%Y-%m-%dT%H:%M')
+    except Exception:
+        fecha = mant.fecha
     mant.maquina = maquina
-    # Guardar actividad con formato: "nombre (cada X unidad)"
     if intervalo and unidad:
         mant.actividad = f"{actividad} (cada {intervalo} {unidad})"
     else:
         mant.actividad = actividad
     mant.descripcion = descripcion
+    mant.fecha = fecha
     db.session.commit()
-    flash('Mantenimiento editado correctamente.')
+    flash(_('Maintenance activity updated successfully.'))
     return redirect(url_for('mantenimiento.mantenimiento'))
 
 @mantenimiento_bp.route('/eliminar_mantenimiento/<int:mant_id>', methods=['POST'])

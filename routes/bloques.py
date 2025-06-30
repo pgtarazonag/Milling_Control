@@ -155,7 +155,7 @@ def editar_bloque(bloque_id):
         bloque.material = request.form['material']
         bloque.shade = request.form['shade']
         bloque.grosor = int(request.form['grosor'])
-        bloque.marca = request.form.get('marca') if bloque.material == "Zirconia" else None
+        bloque.marca = request.form.get('marca')  # Siempre guardar marca
         # Solo actualizar cantidad si el bloque es nuevo y el campo existe en el form
         if bloque.estado == 'nuevo' and 'cantidad' in request.form:
             bloque.cantidad = int(request.form['cantidad'])
@@ -166,6 +166,11 @@ def editar_bloque(bloque_id):
         codigos_orden = request.form.get('codigos_orden_fresados')
         if codigos_orden is not None:
             bloque.codigos_orden_fresados = codigos_orden
+        # Actualizar la fecha de edición
+        from datetime import datetime
+        import pytz
+        VANCOUVER_TZ = pytz.timezone('America/Vancouver')
+        bloque.fecha_creacion = datetime.now(VANCOUVER_TZ)
         db.session.commit()
         return redirect(url_for('bloques.bloques'))
 
@@ -211,10 +216,10 @@ def eliminar_bloque(bloque_id):
 def usar_bloque_nuevo(bloque_id):
     """
     Convierte un bloque nuevo en bloque usado, asignando un código único de 6 caracteres:
-    2 de grosor, 1 letra de marca (o X), 3 alfanuméricos únicos.
+    2 de grosor, 2 letras de marca, 2 alfanuméricos únicos.
     La fecha del bloque usado será la fecha actual.
     """
-    from flask import request
+    from flask import request, redirect, url_for
     bloque = Bloque.query.get_or_404(bloque_id)
     if bloque.estado != 'nuevo' or bloque.cantidad < 1:
         return redirect(url_for('bloques.bloques'))
@@ -256,10 +261,14 @@ def usar_bloque_nuevo(bloque_id):
     )
     db.session.add(bloque_usado)
     bloque.cantidad -= 1
-    if bloque.cantidad <= 0:
+    # ACTUALIZAR FECHA DE CREACIÓN DEL BLOQUE NUEVO SI SIGUE EN INVENTARIO
+    if bloque.cantidad > 0:
+        bloque.fecha_creacion = datetime.now(VANCOUVER_TZ)
+    else:
         db.session.delete(bloque)
     db.session.commit()
-    return redirect(url_for('bloques.bloques'))
+    # Redirigir a la pantalla de confirmación de código de bloque (sin orden_data)
+    return redirect(url_for('ordenes.confirmar_codigo_bloque', bloque_id=bloque_usado.id))
 
 @bloques_bp.route('/api/generar-codigo-usado')
 def api_generar_codigo_usado():
@@ -300,10 +309,20 @@ def modificar_cantidad(bloque_id):
     accion = request.form.get('accion')
     if accion == '+1':
         bloque.cantidad += 1
+        # Actualizar la fecha de edición
+        from datetime import datetime
+        import pytz
+        VANCOUVER_TZ = pytz.timezone('America/Vancouver')
+        bloque.fecha_creacion = datetime.now(VANCOUVER_TZ)
         db.session.commit()
         flash('Cantidad aumentada.', 'success')
     elif accion == '-1' and bloque.cantidad > 1:
         bloque.cantidad -= 1
+        # Actualizar la fecha de edición
+        from datetime import datetime
+        import pytz
+        VANCOUVER_TZ = pytz.timezone('America/Vancouver')
+        bloque.fecha_creacion = datetime.now(VANCOUVER_TZ)
         db.session.commit()
         flash('Cantidad reducida.', 'success')
     else:

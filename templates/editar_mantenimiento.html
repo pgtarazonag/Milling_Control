@@ -1,0 +1,101 @@
+{% extends "base.html" %}
+{% block title %}{{ _('Edit Maintenance Activity') }} | Fresado Pro{% endblock %}
+{% block instructions %}
+<div class="alert alert-info d-flex align-items-center mt-2 mb-2 shadow-sm animate__animated animate__fadeInDown" role="alert">
+  <i class="bi bi-pencil-square me-2" style="font-size:1.5em;"></i>
+  <span style="font-size:1.08em;">{{ _('Edit the maintenance activity details below.') }}</span>
+</div>
+{% endblock %}
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-md-7">
+    <div class="card border-0 shadow-sm animate__animated animate__fadeInUp">
+      <div class="card-body">
+        <h3 class="mb-3 text-primary"><i class="bi bi-gear"></i> {{ _('Edit Maintenance Activity') }}</h3>
+        <form method="post">
+          <div class="mb-3">
+            <label class="form-label">{{ _('Machine Type') }}</label>
+            <select id="grupo-select" name="grupo" class="form-select" required>
+              <option value="fresadoras" {% if grupo=='fresadoras' %}selected{% endif %}>{{ _('Milling Machines') }}</option>
+              <option value="hornos" {% if grupo=='hornos' %}selected{% endif %}>{{ _('Ovens') }}</option>
+              <option value="aspiradoras" {% if grupo=='aspiradoras' %}selected{% endif %}>{{ _('Vacuum Cleaners') }}</option>
+            </select>
+          </div>
+          <div class="mb-3">
+            <label class="form-label">{{ _('Machine') }}</label>
+            <select id="maquina-select" name="maquina" class="form-select" required>
+              {% for m in maquinas_dict[grupo] %}
+                <option value="{{ m }}" {% if m == mant.maquina %}selected{% endif %}>{{ m }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="mb-3">
+            <label class="form-label">{{ _('Activity') }}</label>
+            <select id="actividad-select" name="actividad" class="form-select" required>
+              {% for act in actividades_dict[grupo] %}
+                <option value="{{ act }}" {% if act == mant.actividad_edit %}selected{% endif %}>{{ _(act) }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="mb-3">
+            <label class="form-label">{{ _('Description') }}</label>
+            <input type="text" name="descripcion" class="form-control" value="{{ mant.descripcion }}">
+          </div>
+          <div class="mb-3">
+            <label class="form-label">{{ _('Date') }}</label>
+            <input type="datetime-local" name="fecha" class="form-control" value="{{ mant.fecha.strftime('%Y-%m-%dT%H:%M') }}" required>
+          </div>
+          <div class="mb-3">
+            <label class="form-label">{{ _('Frequency') }}</label>
+            <input type="number" name="intervalo" class="form-control" min="1" value="{{ mant.intervalo_edit or 1 }}" required style="max-width:120px;display:inline-block;">
+            <select name="unidad" class="form-select d-inline-block" style="width:auto;max-width:160px;">
+              <option value="semana" {% if mant.unidad_edit=='semana' %}selected{% endif %}>{{ _('Week(s)') }}</option>
+              <option value="mes" {% if mant.unidad_edit=='mes' %}selected{% endif %}>{{ _('Month(s)') }}</option>
+              <option value="año" {% if mant.unidad_edit=='año' %}selected{% endif %}>{{ _('Year(s)') }}</option>
+            </select>
+          </div>
+          <div class="text-end mt-4">
+            <a href="{{ url_for('mantenimiento.mantenimiento') }}" class="btn btn-secondary">{{ _('Cancel') }}</a>
+            <button type="submit" class="btn btn-primary ms-2">{{ _('Save Changes') }}</button>
+          </div>
+        </form>
+        <script type="text/javascript">
+        //<![CDATA[
+        var maquinasDict = {{ maquinas_dict|tojson|safe }};
+        var actividadesDict = {{ actividades_dict|tojson|safe }};
+        document.addEventListener('DOMContentLoaded', function() {
+          var grupoSelect = document.getElementById('grupo-select');
+          var maquinaSelect = document.getElementById('maquina-select');
+          var actividadSelect = document.getElementById('actividad-select');
+          function updateMaquinas() {
+            var grupo = grupoSelect.value;
+            maquinaSelect.innerHTML = '';
+            (maquinasDict[grupo] || []).forEach(function(m) {
+              var opt = document.createElement('option');
+              opt.value = m;
+              opt.textContent = m;
+              maquinaSelect.appendChild(opt);
+            });
+          }
+          function updateActividades() {
+            var grupo = grupoSelect.value;
+            actividadSelect.innerHTML = '';
+            (actividadesDict[grupo] || []).forEach(function(a) {
+              var opt = document.createElement('option');
+              opt.value = a;
+              opt.textContent = a;
+              actividadSelect.appendChild(opt);
+            });
+          }
+          grupoSelect.addEventListener('change', function() {
+            updateMaquinas();
+            updateActividades();
+          });
+        });
+        //]]>
+        </script>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

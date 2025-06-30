@@ -64,6 +64,36 @@
     <div class="card border-0 shadow-sm animate__animated animate__fadeInUp mb-4">
       <div class="card-body">
         <h4 class="mb-3"><i class="bi bi-box"></i> {{ _('Used Blocks') }}</h4>
+        <!-- Filtros para tabla de bloques usados -->
+        <div class="row mb-2">
+          <div class="col-md-4">
+            <label class="form-label mb-1">{{ _('Brand') }}</label>
+            <select class="form-select form-select-sm filtro-bloques" data-col="3" id="filtro-marca-usados">
+              <option value="">{{ _('All Brands') }}</option>
+              {% for m in marcas %}
+                <option value="{{ m }}">{{ m }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="col-md-4">
+            <label class="form-label mb-1">{{ _('Shade') }}</label>
+            <select class="form-select form-select-sm filtro-bloques" data-col="2" id="filtro-shade-usados">
+              <option value="">{{ _('All Shades') }}</option>
+              {% for s in shades %}
+                <option value="{{ s }}">{{ s }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="col-md-4">
+            <label class="form-label mb-1">{{ _('Thickness') }}</label>
+            <select class="form-select form-select-sm filtro-bloques" data-col="4" id="filtro-grosor-usados">
+              <option value="">{{ _('All Thicknesses') }}</option>
+              {% for g in grosores %}
+                <option value="{{ g }}">{{ g }}</option>
+              {% endfor %}
+            </select>
+          </div>
+        </div>
         <div class="table-responsive animate__animated animate__fadeIn">
           <table class="table table-striped table-hover table-bloques" id="tabla-bloques-usados">
             <thead class="table-secondary">
@@ -106,6 +136,36 @@
     <div class="card border-0 shadow-sm animate__animated animate__fadeInUp mb-4">
       <div class="card-body">
         <h4 class="mb-3"><i class="bi bi-box"></i> {{ _('New Blocks') }}</h4>
+        <!-- Filtros para tabla de bloques nuevos -->
+        <div class="row mb-2">
+          <div class="col-md-4">
+            <label class="form-label mb-1">{{ _('Brand') }}</label>
+            <select class="form-select form-select-sm filtro-bloques" data-col="2" id="filtro-marca-nuevos">
+              <option value="">{{ _('All Brands') }}</option>
+              {% for m in marcas %}
+                <option value="{{ m }}">{{ m }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="col-md-4">
+            <label class="form-label mb-1">{{ _('Shade') }}</label>
+            <select class="form-select form-select-sm filtro-bloques" data-col="1" id="filtro-shade-nuevos">
+              <option value="">{{ _('All Shades') }}</option>
+              {% for s in shades %}
+                <option value="{{ s }}">{{ s }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="col-md-4">
+            <label class="form-label mb-1">{{ _('Thickness') }}</label>
+            <select class="form-select form-select-sm filtro-bloques" data-col="3" id="filtro-grosor-nuevos">
+              <option value="">{{ _('All Thicknesses') }}</option>
+              {% for g in grosores %}
+                <option value="{{ g }}">{{ g }}</option>
+              {% endfor %}
+            </select>
+          </div>
+        </div>
         <div class="table-responsive animate__animated animate__fadeIn">
           <table class="table table-striped table-hover table-bloques" id="tabla-bloques-nuevos">
             <thead class="table-secondary">
@@ -268,16 +328,28 @@ $(document).ready(function() {
 <script>
 $(document).ready(function(){
   // Para bloques nuevos: columna 5 (fecha)
-  $('#tabla-bloques-nuevos').DataTable({
+  var tablaNuevos = $('#tabla-bloques-nuevos').DataTable({
     language: { url: window.getDataTablesLangUrl() },
     "order": [[5, "desc"]],
     "dom": '<"datatable-top"f>t<"datatable-bottom d-flex justify-content-between align-items-center"lip>'
   });
   // Para bloques usados: columna 6 (fecha)
-  $('#tabla-bloques-usados').DataTable({
+  var tablaUsados = $('#tabla-bloques-usados').DataTable({
     language: { url: window.getDataTablesLangUrl() },
     "order": [[6, "desc"]],
     "dom": '<"datatable-top"f>t<"datatable-bottom d-flex justify-content-between align-items-center"lip>'
+  });
+  // Filtros para usados
+  $('#filtro-marca-usados, #filtro-shade-usados, #filtro-grosor-usados').on('change', function(){
+    var col = $(this).data('col');
+    var val = $(this).val();
+    tablaUsados.column(col).search(val, false, false).draw();
+  });
+  // Filtros para nuevos
+  $('#filtro-marca-nuevos, #filtro-shade-nuevos, #filtro-grosor-nuevos').on('change', function(){
+    var col = $(this).data('col');
+    var val = $(this).val();
+    tablaNuevos.column(col).search(val, false, false).draw();
   });
 });
 </script>
@@ -299,6 +371,55 @@ $(document).on('click', '.btn-convertir-usado', function() {
     var modal = new bootstrap.Modal(document.getElementById('modalConvertirUsado'));
     modal.show();
     setTimeout(function(){ $('#codigoUsado').focus(); }, 500);
+  });
+});
+</script>
+<script>
+function llenarFiltrosDinamicos(tablaId, filtroMarca, filtroShade, filtroGrosor, colMarca, colShade, colGrosor) {
+  var tabla = $(tablaId).DataTable();
+  // Marca
+  var marcas = new Set();
+  tabla.column(colMarca, {search:'applied'}).data().each(function(val){ if(val) marcas.add(val); });
+  var $marca = $(filtroMarca);
+  var marcaSel = $marca.val();
+  $marca.empty().append('<option value="">'+"{{ _('All Brands') }}"+'</option>');
+  Array.from(marcas).sort().forEach(function(m){ $marca.append('<option value="'+m+'">'+m+'</option>'); });
+  if(marcaSel) $marca.val(marcaSel);
+  // Shade
+  var shades = new Set();
+  tabla.column(colShade, {search:'applied'}).data().each(function(val){ if(val) shades.add(val); });
+  var $shade = $(filtroShade);
+  var shadeSel = $shade.val();
+  $shade.empty().append('<option value="">'+"{{ _('All Shades') }}"+'</option>');
+  Array.from(shades).sort().forEach(function(s){ $shade.append('<option value="'+s+'">'+s+'</option>'); });
+  if(shadeSel) $shade.val(shadeSel);
+  // Grosor
+  var grosores = new Set();
+  tabla.column(colGrosor, {search:'applied'}).data().each(function(val){ if(val) grosores.add(val); });
+  var $grosor = $(filtroGrosor);
+  var grosorSel = $grosor.val();
+  $grosor.empty().append('<option value="">'+"{{ _('All Thicknesses') }}"+'</option>');
+  Array.from(grosores).sort().forEach(function(g){ $grosor.append('<option value="'+g+'">'+g+'</option>'); });
+  if(grosorSel) $grosor.val(grosorSel);
+}
+$(document).ready(function(){
+  // Llenar filtros dinámicamente al cargar
+  llenarFiltrosDinamicos('#tabla-bloques-usados', '#filtro-marca-usados', '#filtro-shade-usados', '#filtro-grosor-usados', 3, 2, 4);
+  llenarFiltrosDinamicos('#tabla-bloques-nuevos', '#filtro-marca-nuevos', '#filtro-shade-nuevos', '#filtro-grosor-nuevos', 2, 1, 3);
+  // Al cambiar un filtro, volver a llenar los otros según el filtrado actual
+  $('#filtro-marca-usados, #filtro-shade-usados, #filtro-grosor-usados').on('change', function(){
+    var tabla = $('#tabla-bloques-usados').DataTable();
+    var col = $(this).data('col');
+    var val = $(this).val();
+    tabla.column(col).search(val, false, false).draw();
+    llenarFiltrosDinamicos('#tabla-bloques-usados', '#filtro-marca-usados', '#filtro-shade-usados', '#filtro-grosor-usados', 3, 2, 4);
+  });
+  $('#filtro-marca-nuevos, #filtro-shade-nuevos, #filtro-grosor-nuevos').on('change', function(){
+    var tabla = $('#tabla-bloques-nuevos').DataTable();
+    var col = $(this).data('col');
+    var val = $(this).val();
+    tabla.column(col).search(val, false, false).draw();
+    llenarFiltrosDinamicos('#tabla-bloques-nuevos', '#filtro-marca-nuevos', '#filtro-shade-nuevos', '#filtro-grosor-nuevos', 2, 1, 3);
   });
 });
 </script>

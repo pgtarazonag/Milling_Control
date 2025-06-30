@@ -51,16 +51,19 @@
           {% endfor %}
         </select>
       </div>
+      <div class="col-md-6">
+        <label class="form-label">{{ _('Block Code') }}</label>
+        <input type="text" name="codigo_barra" class="form-control" value="{{ bloque.codigo_barra or '' }}">
+      </div>
+      <div class="col-md-6">
+        <label class="form-label">{{ _('Milled Models') }}</label>
+        <input type="number" name="modelos_fresados" class="form-control" value="{{ bloque.modelos_fresados or 0 }}" min="0">
+      </div>
+      <input type="hidden" name="estado" value="{{ bloque.estado }}">
       {% if bloque.estado == 'nuevo' %}
       <div class="col-md-6">
         <label class="form-label">{{ _('Count') }}</label>
         <input type="number" name="cantidad" class="form-control" value="{{ bloque.cantidad }}" min="1">
-      </div>
-      {% endif %}
-      {% if bloque.estado == 'usado' %}
-      <div class="col-md-6">
-        <label class="form-label">{{ _('Used Quantity') }}</label>
-        <input type="number" name="cantidad_usada" class="form-control" value="{{ bloque.cantidad_usada }}" min="0">
       </div>
       {% endif %}
       <div class="col-12 text-end">

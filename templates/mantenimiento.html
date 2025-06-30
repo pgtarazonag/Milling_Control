@@ -8,11 +8,6 @@
 {% endblock %}
 {% block content %}
 <div class="container-fluid px-0 mb-3">
-  <div class="d-flex justify-content-end">
-    <a class="btn btn-outline-info" href="{{ url_for('mantenimiento.documentacion') }}" target="_blank">
-      <i class="bi bi-journal-text"></i> {{ _('Documentation') }}
-    </a>
-  </div>
 </div>
 <div class="card border-0 shadow-sm animate__animated animate__fadeInUp">
   <div class="card-body">
@@ -24,41 +19,55 @@
     </div>
     <div class="row g-4">
       <div class="col-md-8">
-        <form method="post" class="row g-2 mb-3 align-items-end flex-nowrap">
-          <div class="col-auto mb-1">
-            <label class="form-label form-label-sm mb-1">{{ _('Machine') }}</label>
-            <select name="maquina" class="form-select form-select-sm d-inline-block w-auto" size="3" style="max-width: 120px; min-width: 70px;" required>
-              {% for m in maquinas %}
-                <option value="{{ m }}">{{ m }}</option>
-              {% endfor %}
-            </select>
+        <form method="post" class="mb-3">
+          <div class="row g-2 align-items-end">
+            <div class="col-auto mb-1">
+              <label class="form-label form-label-sm mb-1" style="display:block; margin-bottom:0.25rem;">{{ _('Machine') }}</label>
+              <select name="maquina" class="form-select form-select-sm d-inline-block w-auto" size="5" style="max-width: 140px; min-width: 90px;" required>
+                {% for m in maquinas %}
+                  <option value="{{ m }}">{{ m }}</option>
+                {% endfor %}
+              </select>
+            </div>
+            <div class="col mb-1">
+              <!-- Botón de documentación justo encima de Actividad -->
+              <div class="mb-2">
+                <a href="{{ url_for('mantenimiento.documentacion') }}" target="_blank" class="btn btn-outline-info btn-sm" style="font-weight:500;">
+                  <i class="bi bi-journal-text me-1"></i> {{ _('Documentation') }}
+                </a>
+              </div>
+              <div class="row g-2 align-items-end">
+                <div class="col-auto">
+                  <label class="form-label form-label-sm mb-1">{{ _('Activity') }}</label>
+                  <select name="actividad" class="form-select form-select-sm d-inline-block w-auto" style="max-width: 220px; min-width: 140px;" required>
+                    {% for act in actividades %}
+                      <option value="{{ act.nombre }}">{{ _(act.nombre) }}</option>
+                    {% endfor %}
+                  </select>
+                </div>
+                <div class="col-auto">
+                  <label class="form-label form-label-sm mb-1">{{ _('Every') }}</label>
+                  <input type="number" name="intervalo" class="form-control form-control-sm d-inline-block w-auto" min="1" value="1" style="max-width: 70px;" required>
+                </div>
+                <div class="col-auto">
+                  <label class="form-label form-label-sm mb-1">{{ _('Unit') }}</label>
+                  <select name="unidad" class="form-select form-select-sm d-inline-block w-auto" style="max-width: 100px; min-width: 70px;" required>
+                    <option value="semana">{{ _('Week(s)') }}</option>
+                    <option value="mes">{{ _('Month(s)') }}</option>
+                    <option value="año">{{ _('Year(s)') }}</option>
+                  </select>
+                </div>
+              </div>
+            </div>
           </div>
-          <div class="col-auto mb-1">
-            <label class="form-label form-label-sm mb-1">{{ _('Activity') }}</label>
-            <select name="actividad" class="form-select form-select-sm d-inline-block w-auto" style="max-width: 110px; min-width: 70px;" required>
-              {% for act in actividades %}
-                <option value="{{ act.nombre }}">{{ _(act.nombre) }}</option>
-              {% endfor %}
-            </select>
-          </div>
-          <div class="col-auto mb-1">
-            <label class="form-label form-label-sm mb-1">{{ _('Every') }}</label>
-            <input type="number" name="intervalo" class="form-control form-control-sm d-inline-block w-auto" min="1" value="1" style="max-width: 60px;" required>
-          </div>
-          <div class="col-auto mb-1">
-            <label class="form-label form-label-sm mb-1">{{ _('Unit') }}</label>
-            <select name="unidad" class="form-select form-select-sm d-inline-block w-auto" style="max-width: 80px; min-width: 60px;" required>
-              <option value="semana">{{ _('Week(s)') }}</option>
-              <option value="mes">{{ _('Month(s)') }}</option>
-              <option value="año">{{ _('Year(s)') }}</option>
-            </select>
-          </div>
-          <div class="col-auto mb-1">
-            <label class="form-label form-label-sm mb-1">{{ _('Description') }}</label>
-            <input type="text" name="descripcion" class="form-control form-control-sm d-inline-block w-auto" style="max-width: 120px; min-width: 70px;">
-          </div>
-          <div class="col-auto text-end mt-1">
-            <button type="submit" class="btn btn-primary btn-sm"><i class="bi bi-plus-circle"></i> {{ _('Register Maintenance') }}</button>
+          <div class="row g-2 mt-1 align-items-end">
+            <div class="col">
+              <label class="form-label form-label-sm mb-1">{{ _('Description') }}</label>
+              <input type="text" name="descripcion" class="form-control form-control-sm" style="min-width: 120px;">
+            </div>
+            <div class="col-auto text-end">
+              <button type="submit" class="btn btn-primary btn-sm mt-2"><i class="bi bi-plus-circle"></i> {{ _('Register Maintenance') }}</button>
+            </div>
           </div>
         </form>
         <div class="table-responsive animate__animated animate__fadeIn">
@@ -83,9 +92,12 @@
                 <td>{% if reg.proxima_fecha %}<span class="fecha-tabla">{{ reg.proxima_fecha.strftime('%Y-%m-%d %H:%M') }}</span>{% endif %}</td>
                 <td>
                   <form method="post" action="{{ url_for('mantenimiento.eliminar_mantenimiento', mant_id=reg.id) }}" style="display:inline;">
-                    <button type="submit" class="btn btn-outline-danger btn-sm"><i class="bi bi-trash"></i></button>
+                    <button type="submit" class="btn btn-outline-danger btn-sm" title="{{ _('Delete') }}"><i class="bi bi-trash"></i></button>
                   </form>
-                  <button type="button" class="btn btn-outline-warning btn-sm" data-bs-toggle="modal" data-bs-target="#editarMantModal{{ reg.id }}"><i class="bi bi-pencil"></i></button>
+                  <a href="{{ url_for('mantenimiento.editar_mantenimiento', mant_id=reg.id) }}" class="btn btn-outline-primary btn-sm ms-1" title="{{ _('Edit') }}">
+                    <i class="bi bi-pencil-square"></i>
+                  </a>
+                  <!-- Modales eliminados, ahora se usa página de edición -->
                 </td>
               </tr>
               {% endfor %}
@@ -127,7 +139,7 @@
 <script>
 $(document).ready(function(){
   $('#tabla-mant').DataTable({
-    "language": {"url": "//cdn.datatables.net/plug-ins/1.13.7/i18n/es-ES.json"},
+    "language": {"url": "/static/es-ES.json"},
     "order": [[0, "desc"]]
   });
 });
