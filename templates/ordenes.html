@@ -108,6 +108,26 @@
               e.preventDefault();
               return false;
             }
+            if (nuevo && !usado) {
+              e.preventDefault();
+              var formData = $(this).serialize();
+              $.post(window.location.pathname, formData, function(resp) {
+                if (resp && resp.status === 'ok' && resp.bloque_usado) {
+                  // Mostrar modal para confirmar código usando AJAX (carga el contenido del modal desde el backend)
+                  var bloque = resp.bloque_usado;
+                  var ordenData = '';
+                  // Si el backend necesita datos extra, puedes serializarlos aquí
+                  $.get('/ordenes/confirmar-codigo-bloque/' + bloque.id + '?orden_data=', function(html) {
+                    $('#modalConfirmarCodigoContent').html(html);
+                    $('#modalConfirmarCodigo').modal('show');
+                  });
+                } else {
+                  alert('Error al crear el bloque usado.');
+                }
+              });
+              return false;
+            }
+            // Si es bloque usado, submit normal
             return true;
           });
           // Actualizar shades disponibles al cambiar material

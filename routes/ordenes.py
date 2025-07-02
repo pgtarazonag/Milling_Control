@@ -24,15 +24,16 @@ import string
 from sqlalchemy import func, text, literal_column
 import pytz
 
+# Definimos el blueprint para las rutas de órdenes
+ordenes_bp = Blueprint('ordenes', __name__, url_prefix='/ordenes')
+
+# Zona horaria Vancouver definida globalmente
 VANCOUVER_TZ = pytz.timezone('America/Vancouver')
 
 # Tipos de material fijos para la app dental
 TIPOS_MATERIAL_FIJOS = [
     "Disilicato", "Zirconia", "PMMA", "Cera", "Composite", "Resina"
 ]
-
-# Definimos el blueprint para las rutas de órdenes
-ordenes_bp = Blueprint('ordenes', __name__, url_prefix='/ordenes')
 
 # Función para generar un código de bloque único
 # Recibe el grosor y genera un código aleatorio que no exista en la base de datos
@@ -198,9 +199,6 @@ def ordenes():
                 bloque_nuevo.cantidad -= 1
                 # Si el bloque nuevo sigue en inventario, actualizar su fecha de creacion
                 if bloque_nuevo.cantidad > 0:
-                    from datetime import datetime
-                    import pytz
-                    VANCOUVER_TZ = pytz.timezone('America/Vancouver')
                     bloque_nuevo.fecha_creacion = datetime.now(VANCOUVER_TZ)
                 nuevo_bloque_usado = Bloque(
                     material=bloque_nuevo.material,
@@ -325,9 +323,6 @@ def ordenes():
                     bloque_nuevo.cantidad -= 1
                     # Si el bloque nuevo sigue en inventario, actualizar su fecha de creacion
                     if bloque_nuevo.cantidad > 0:
-                        from datetime import datetime
-                        import pytz
-                        VANCOUVER_TZ = pytz.timezone('America/Vancouver')
                         bloque_nuevo.fecha_creacion = datetime.now(VANCOUVER_TZ)
                     nuevo_bloque_usado = Bloque(
                         material=bloque_nuevo.material,
@@ -691,7 +686,6 @@ def confirmar_codigo_bloque(bloque_id):
     import json
     from datetime import datetime
     import pytz
-    VANCOUVER_TZ = pytz.timezone('America/Vancouver')
     bloque = Bloque.query.get_or_404(bloque_id)
     orden_data = request.args.get('orden_data') or request.form.get('orden_data')
     is_ajax = request.headers.get('X-Requested-With') == 'XMLHttpRequest'
@@ -778,9 +772,6 @@ def confirmar_codigo_bloque(bloque_id):
                 bloque_nuevo.cantidad -= 1
                 # Si el bloque nuevo sigue en inventario, actualizar su fecha de creacion
                 if bloque_nuevo.cantidad > 0:
-                    from datetime import datetime
-                    import pytz
-                    VANCOUVER_TZ = pytz.timezone('America/Vancouver')
                     bloque_nuevo.fecha_creacion = datetime.now(VANCOUVER_TZ)
                 nuevo_bloque_usado = Bloque(
                     material=bloque_nuevo.material,
@@ -799,12 +790,15 @@ def confirmar_codigo_bloque(bloque_id):
                 if bloque_nuevo.cantidad == 0:
                     db.session.delete(bloque_nuevo)
                 db.session.commit()
-                import json
-                orden_data = json.dumps({
-                    'codigos_seleccionados': codigos,
-                    'maquina': request.form.get('maquina'),
-                    'cantidad_modelos': cantidad_modelos,
-                    'material_form': request.form.get('material'),
-                    'shade_form': request.form.get('shade')
+                # En vez de redirigir, devolver JSON para el modal
+                return jsonify({
+                    'status': 'ok',
+                    'bloque_usado': {
+                        'id': bloque.id,
+                        'codigo_barra': bloque.codigo_barra,
+                        'material': bloque.material,
+                        'marca': bloque.marca,
+                        'shade': bloque.shade,
+                        'grosor': bloque.grosor
+                    }
                 })
-                return redirect(url_for('ordenes.confirmar_codigo_bloque', bloque_id=nuevo_bloque_usado.id, orden_data=orden_data))

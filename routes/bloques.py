@@ -267,8 +267,10 @@ def usar_bloque_nuevo(bloque_id):
     else:
         db.session.delete(bloque)
     db.session.commit()
-    # Redirigir a la pantalla de confirmación de código de bloque (sin orden_data)
-    return redirect(url_for('ordenes.confirmar_codigo_bloque', bloque_id=bloque_usado.id))
+    # Antes: Redirigir a la pantalla de confirmación de código de bloque (sin orden_data)
+    # return redirect(url_for('ordenes.confirmar_codigo_bloque', bloque_id=bloque_usado.id))
+    # Ahora: Redirigir directamente a la lista de bloques
+    return redirect(url_for('bloques.bloques'))
 
 @bloques_bp.route('/api/generar-codigo-usado')
 def api_generar_codigo_usado():
