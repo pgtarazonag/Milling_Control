@@ -208,15 +208,29 @@ def ordenes():
                     cantidad=1,
                     codigo_barra=generar_codigo_bloque(bloque_nuevo.grosor, bloque_nuevo.marca, bloque_nuevo.material),
                     estado='usado',
-                    modelos_fresados=cantidad_modelos * len(codigos_seleccionados),
+                    modelos_fresados=cantidad_modelos,
                     codigos_orden_fresados=','.join(codigos_seleccionados),
                     fecha_creacion=datetime.now(VANCOUVER_TZ)
                 )
                 db.session.add(nuevo_bloque_usado)
                 db.session.flush()  # Para obtener el ID
                 bloque = nuevo_bloque_usado
-                if bloque_nuevo.cantidad == 0:
-                    db.session.delete(bloque_nuevo)
+                # Crear una sola orden con todos los códigos seleccionados
+                nueva_orden = Orden(
+                    codigos_caso=','.join(codigos_seleccionados),
+                    material=bloque.material,
+                    marca=bloque.marca if hasattr(bloque, 'marca') else None,
+                    shade=bloque.shade,
+                    codigo_barra=bloque.codigo_barra,
+                    maquina=maquina,
+                    cantidad_modelos=cantidad_modelos,
+                    fecha_creacion=datetime.now(VANCOUVER_TZ)
+                )
+                db.session.add(nueva_orden)
+                for codigo_orden in codigos_seleccionados:
+                    pendiente = OrdenPendiente.query.filter_by(codigo_orden=codigo_orden).first()
+                    if pendiente:
+                        db.session.delete(pendiente)
                 db.session.commit()
                 # Redirigir a la pantalla de confirmación de código de bloque
                 import json
@@ -228,8 +242,6 @@ def ordenes():
                     'shade_form': shade_form
                 })
                 return redirect(url_for('ordenes.confirmar_codigo_bloque', bloque_id=bloque.id, orden_data=orden_data))
-            else:
-                error = "No hay bloques nuevos disponibles."
         elif bloque_usado_id:
             bloque = Bloque.query.get(int(bloque_usado_id))
             if bloque:
@@ -275,8 +287,7 @@ def ordenes():
         codigos_orden = request.form.get('codigo_orden', '').strip()
         if codigos_orden:
             codigos_lista = [c.strip() for c in codigos_orden.split(',') if c.strip()]
-            modelos_por_caso_str = request.form.get('modelos_por_caso', '').strip()
-            cantidad_modelos_total = int(request.form.get('cantidad_modelos', 1))
+            cantidad_modelos = int(request.form.get('cantidad_modelos', 1))  # Siempre el valor del form
             material_form = request.form.get('material')
             shade_form = request.form.get('shade')
             maquina = request.form.get('maquina')
@@ -286,11 +297,12 @@ def ordenes():
             if bloque_usado_id:
                 bloque = Bloque.query.get(int(bloque_usado_id))
                 if bloque:
-                    bloque.modelos_fresados += sum(cantidades)
+                    # Actualiza modelos_fresados del bloque (opcional: puedes sumar cantidad_modelos si quieres llevar control)
+                    bloque.modelos_fresados += cantidad_modelos
                     codigos = bloque.get_codigos_orden_fresados()
                     codigos.extend(codigos_lista)
                     bloque.codigos_orden_fresados = ','.join(codigos)
-                    # --- CAMBIO: crear la orden solo si es bloque usado (flujo normal) ---
+                    # Crear una sola orden con todos los códigos y cantidad_modelos del form
                     nueva_orden = Orden(
                         codigos_caso=','.join(codigos_lista),
                         material=bloque.material,
@@ -298,7 +310,7 @@ def ordenes():
                         shade=bloque.shade,
                         codigo_barra=bloque.codigo_barra,
                         maquina=maquina,
-                        cantidad_modelos=sum(cantidades),
+                        cantidad_modelos=cantidad_modelos,
                         fecha_creacion=datetime.now(VANCOUVER_TZ)
                     )
                     db.session.add(nueva_orden)
@@ -306,14 +318,14 @@ def ordenes():
                         pendiente = OrdenPendiente.query.filter_by(codigo_orden=codigo_orden).first()
                         if pendiente:
                             db.session.delete(pendiente)
-                    # --- ACTUALIZAR TODAS LAS FRESAS INSTALADAS COMPATIBLES ---
+                    # Actualizar todas las fresas instaladas compatibles
                     if maquina:
                         fresas_compatibles = FresaInstalada.query.filter(
                             FresaInstalada.maquina == maquina,
                             FresaInstalada.materiales.like(f"%{bloque.material}%")
                         ).all()
                         for fresa in fresas_compatibles:
-                            fresa.modelos_fresados += sum(cantidades)
+                            fresa.modelos_fresados += cantidad_modelos
                     db.session.commit()
                     flash('Orden creada correctamente.')
                     return redirect(url_for('ordenes.ordenes', material=material_form, shade=shade_form))
@@ -321,7 +333,6 @@ def ordenes():
                 bloque_nuevo = Bloque.query.get(int(bloque_nuevo_id))
                 if bloque_nuevo and bloque_nuevo.cantidad > 0:
                     bloque_nuevo.cantidad -= 1
-                    # Si el bloque nuevo sigue en inventario, actualizar su fecha de creacion
                     if bloque_nuevo.cantidad > 0:
                         bloque_nuevo.fecha_creacion = datetime.now(VANCOUVER_TZ)
                     nuevo_bloque_usado = Bloque(
@@ -332,7 +343,7 @@ def ordenes():
                         cantidad=1,
                         codigo_barra=generar_codigo_bloque(bloque_nuevo.grosor, bloque_nuevo.marca, bloque_nuevo.material),
                         estado='usado',
-                        modelos_fresados=sum(cantidades),
+                        modelos_fresados=cantidad_modelos,
                         codigos_orden_fresados=','.join(codigos_lista),
                         fecha_creacion=datetime.now(VANCOUVER_TZ)
                     )
@@ -346,7 +357,7 @@ def ordenes():
                     orden_data = json.dumps({
                         'codigos_seleccionados': codigos_lista,
                         'maquina': maquina,
-                        'cantidad_modelos': cantidad_modelos_total,
+                        'cantidad_modelos': cantidad_modelos,
                         'material_form': material_form,
                         'shade_form': shade_form
                     })
@@ -355,34 +366,24 @@ def ordenes():
                     error = "No hay bloques nuevos disponibles."
             if not bloque:
                 error = "Debes seleccionar un bloque usado o nuevo."
-            elif bloque:
-                # --- CAMBIO: crear una sola orden con todos los códigos de caso ---
-                nueva_orden = Orden(
-                    codigos_caso=','.join(codigos_lista),
-                    material=bloque.material,
-                    marca=bloque.marca if hasattr(bloque, 'marca') else None,
-                    shade=bloque.shade,
-                    codigo_barra=bloque.codigo_barra,
-                    maquina=maquina,
-                    cantidad_modelos=sum(cantidades),
-                    fecha_creacion=datetime.now(VANCOUVER_TZ)
+            # Render template with error if needed
+            if error:
+                return render_template(
+                    'ordenes.html',
+                    error=error,
+                    pendientes_orden=OrdenPendiente.query.order_by(OrdenPendiente.fecha_escaneo.asc()).all(),
+                    tipos_material=tipos_material,
+                    material=material_form,
+                    shade=shade_form,
+                    maquinas=maquinas,
+                    shades_disponibles=shades_disponibles,
+                    bloques_usados=bloques_usados,
+                    bloques_nuevos=bloques_nuevos,
+                    bloque_usado_id=bloque_usado_id,
+                    bloque_nuevo_id=bloque_nuevo_id,
+                    ordenes=Orden.query.order_by(Orden.fecha_creacion.desc()).all(),
+                    request=request
                 )
-                db.session.add(nueva_orden)
-                for codigo_orden in codigos_lista:
-                    pendiente = OrdenPendiente.query.filter_by(codigo_orden=codigo_orden).first()
-                    if pendiente:
-                        db.session.delete(pendiente)
-                # --- ACTUALIZAR TODAS LAS FRESAS INSTALADAS COMPATIBLES ---
-                if maquina:
-                    fresas_compatibles = FresaInstalada.query.filter(
-                        FresaInstalada.maquina == maquina,
-                        FresaInstalada.materiales.like(f"%{bloque.material}%")
-                    ).all()
-                    for fresa in fresas_compatibles:
-                        fresa.modelos_fresados += sum(cantidades)
-                db.session.commit()
-                flash('Orden creada correctamente.')
-                return redirect(url_for('ordenes.ordenes', material=material_form, shade=shade_form))
 
     # Obtenemos todas las órdenes para mostrarlas en la tabla
     ordenes = Orden.query.order_by(Orden.fecha_creacion.desc()).all()
