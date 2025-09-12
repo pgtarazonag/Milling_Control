@@ -16,7 +16,7 @@ Paso a paso:
 """
 
 # Importamos Flask y la función para renderizar plantillas HTML
-from flask import Flask, render_template, session, request, redirect, url_for, jsonify
+from flask import Flask, render_template, session, request, redirect, url_for, jsonify, make_response, abort
 # Importamos la base de datos desde extensions.py
 from extensions import db
 # Importamos la función de traducción
@@ -25,6 +25,7 @@ from flask_babel import Babel
 import os
 import pytz
 from datetime import datetime
+import json
 
 if os.environ.get("RAILWAY_ENV") is None and os.environ.get("RENDER") is None:
     from dotenv import load_dotenv
@@ -35,7 +36,16 @@ def create_app():
     # Creamos la instancia de la aplicación Flask
     app = Flask(__name__)
     # Configuramos la base de datos y la clave secreta
-    app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('DATABASE_URL', 'sqlite:///fresado.db')
+    db_url = os.environ.get('DATABASE_URL', 'sqlite:///fresado.db')
+    # Normalizar esquema para SQLAlchemy
+    if db_url.startswith('postgres://'):
+        db_url = db_url.replace('postgres://', 'postgresql://', 1)
+    # Asegurar SSL en plataformas hospedadas si no está presente
+    if db_url.startswith('postgresql://') and 'sslmode=' not in db_url and (
+        os.environ.get('RAILWAY_ENV') or os.environ.get('RENDER') or os.environ.get('FLY_APP_NAME')
+    ):
+        db_url = f"{db_url}{'&' if '?' in db_url else '?'}sslmode=require"
+    app.config['SQLALCHEMY_DATABASE_URI'] = db_url
     app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
     app.secret_key = os.environ.get('SECRET_KEY', 'supersecreto')
     # Configuración de Babel para traducción
@@ -163,6 +173,134 @@ def create_app():
             'iso': ahora.isoformat(),
             'zona': 'America/Vancouver'
         })
+
+    # Seguridad: permitir sin token solo en entorno local/desarrollo
+    def is_dev_or_local():
+        if app.debug:
+            return True
+        # Consideramos "local" si no estamos en plataformas hospedadas y la petición viene de localhost
+        if not os.environ.get('RENDER') and not os.environ.get('RAILWAY_ENV'):
+            ip = (request.remote_addr or '')
+            host = (request.host or '')
+            return ip in ('127.0.0.1', '::1') or host.startswith('localhost') or host.startswith('127.0.0.1')
+        return False
+
+    def enforce_backup_auth():
+        expected = os.environ.get('BACKUP_TOKEN')
+        token = request.args.get('token') or request.headers.get('X-Backup-Token')
+        if expected:
+            if token != expected:
+                abort(403)
+        else:
+            # Si no hay token configurado, solo permitir en local/desarrollo
+            if not is_dev_or_local():
+                abort(403)
+
+    # Ruta: Backup completo de la base de datos (JSON)
+    @app.route('/backup', methods=['GET'])
+    def backup_db():
+        enforce_backup_auth()
+        # Importar modelos localmente para evitar dependencias circulares
+        from models import (
+            Orden, Bloque, BloqueHistorial, FresaInventario,
+            FresaInstalada, Mantenimiento, OrdenPendiente, Configuracion
+        )
+        modelos = [
+            Orden, Bloque, BloqueHistorial, FresaInventario,
+            FresaInstalada, Mantenimiento, OrdenPendiente, Configuracion
+        ]
+        def serialize_row(obj):
+            data = {}
+            for col in obj.__table__.columns:
+                val = getattr(obj, col.name)
+                if isinstance(val, datetime):
+                    try:
+                        data[col.name] = val.isoformat()
+                    except Exception:
+                        data[col.name] = val.strftime('%Y-%m-%dT%H:%M:%S')
+                else:
+                    data[col.name] = val
+            return data
+        payload = {}
+        for m in modelos:
+            rows = m.query.all()
+            payload[m.__name__] = [serialize_row(r) for r in rows]
+        content = json.dumps(payload, ensure_ascii=False, indent=2)
+        resp = make_response(content)
+        resp.headers['Content-Type'] = 'application/json; charset=utf-8'
+        ts = datetime.now().strftime('%Y%m%d_%H%M%S')
+        resp.headers['Content-Disposition'] = f'attachment; filename=fresado_backup_{ts}.json'
+        return resp
+
+    # Ruta: Restaurar backup (JSON). Modo por defecto: merge. Para limpiar antes: /restore?mode=wipe
+    @app.route('/restore', methods=['POST'])
+    def restore_db():
+        enforce_backup_auth()
+        if 'file' not in request.files:
+            return jsonify({'status': 'error', 'msg': 'Falta archivo'}), 400
+        file = request.files['file']
+        try:
+            payload = json.load(file)
+        except Exception as e:
+            return jsonify({'status': 'error', 'msg': f'JSON inválido: {e}'}), 400
+        mode = (request.args.get('mode') or 'merge').lower()
+        from models import (
+            Orden, Bloque, BloqueHistorial, FresaInventario,
+            FresaInstalada, Mantenimiento, OrdenPendiente, Configuracion
+        )
+        modelos = {
+            'Orden': Orden,
+            'Bloque': Bloque,
+            'BloqueHistorial': BloqueHistorial,
+            'FresaInventario': FresaInventario,
+            'FresaInstalada': FresaInstalada,
+            'Mantenimiento': Mantenimiento,
+            'OrdenPendiente': OrdenPendiente,
+            'Configuracion': Configuracion,
+        }
+        # Utilidad: detectar columnas datetime
+        def datetime_cols(model):
+            return {c.name for c in model.__table__.columns if getattr(c.type, '__class__', type('t', (), {})).__name__ == 'DateTime'}
+        def parse_dt(val):
+            if not isinstance(val, str):
+                return val
+            try:
+                # Soporta 'YYYY-MM-DDTHH:MM:SS[.fff][+/-TZ]'
+                return datetime.fromisoformat(val.replace('Z', '+00:00'))
+            except Exception:
+                return val
+        # Limpieza si corresponde
+        if mode == 'wipe':
+            # Borrar en un orden seguro; no hay FKs explícitas, pero empezamos por dependientes posibles
+            for name in ['OrdenPendiente', 'Mantenimiento', 'FresaInstalada', 'FresaInventario', 'BloqueHistorial', 'Orden', 'Bloque', 'Configuracion']:
+                modelos[name].query.delete()
+            db.session.commit()
+        total_insert = 0
+        total_update = 0
+        for name, rows in payload.items():
+            Model = modelos.get(name)
+            if not Model:
+                continue
+            dt_fields = datetime_cols(Model)
+            for raw in rows or []:
+                data = dict(raw)
+                for k in list(data.keys()):
+                    if k in dt_fields and data[k] is not None:
+                        data[k] = parse_dt(data[k])
+                obj = None
+                # upsert por id si existe
+                if 'id' in data and data['id'] is not None:
+                    obj = Model.query.get(data['id'])
+                if obj is None:
+                    obj = Model(**data)
+                    db.session.add(obj)
+                    total_insert += 1
+                else:
+                    for k, v in data.items():
+                        setattr(obj, k, v)
+                    total_update += 1
+        db.session.commit()
+        return jsonify({'status': 'ok', 'mode': mode, 'inserted': total_insert, 'updated': total_update})
 
     # Creamos las tablas de la base de datos si no existen
     with app.app_context():
