@@ -7,7 +7,7 @@
   },
   "deploy": {
     "numReplicas": 1,
-    "startCommand": "gunicorn -w 2 -k gthread -b 0.0.0.0:$PORT app:create_app()",
+    "startCommand": "gunicorn -w 2 -k gthread -b 0.0.0.0:$PORT wsgi:app",
     "restartPolicyType": "ON_FAILURE",
     "sleepApplication": false
   }
