@@ -117,22 +117,6 @@
         </div>
       </div>
     </div>
-    <div class="card border-0 shadow-sm animate__animated animate__fadeInUp mb-4">
-      <div class="card-body">
-        <h6 class="card-title mb-3 text-primary" style="font-weight:600;"><i class="bi bi-bar-chart me-1 text-info"></i> {{ _('Blocks by Shade (Filtered)') }}</h6>
-        <div class="rounded-4 p-2 bg-white shadow-sm mb-2" style="min-height:130px;">
-          <canvas id="graficaBloquesShadeFiltrada" height="120"></canvas>
-        </div>
-      </div>
-    </div>
-    <div class="card border-0 shadow-sm animate__animated animate__fadeInUp mb-4">
-      <div class="card-body">
-        <h6 class="card-title mb-3 text-success" style="font-weight:600;"><i class="bi bi-pie-chart me-1 text-accent"></i> {{ _('Material Distribution') }}</h6>
-        <div class="rounded-4 p-2 bg-white shadow-sm mb-2" style="min-height:130px;">
-          <canvas id="graficaMateriales" height="120"></canvas>
-        </div>
-      </div>
-    </div>
   </div>
   <!-- DERECHA: Upcoming activities -->
   <div class="col-md-3">
@@ -160,6 +144,29 @@
       <ul class="list-group list-group-flush" id="upcoming-activities-list">
         <li class="list-group-item text-muted">{{ _('Loading...') }}</li>
       </ul>
+    </div>
+  </div>
+</div>
+<!-- NUEVAS GRAFICAS AL FINAL -->
+<div class="row g-2 mt-3">
+  <div class="col-md-5">
+    <div class="card border-0 shadow-sm animate__animated animate__fadeInUp mb-3">
+      <div class="card-body">
+        <h6 class="card-title mb-3 text-primary" style="font-weight:600;"><i class="bi bi-grid-3x3-gap me-1 text-info"></i> {{ _('Stock by Shade and Thickness') }}</h6>
+        <div class="rounded-4 p-2 bg-white shadow-sm mb-2" style="min-height:130px;">
+          <canvas id="graficaStockShadeGrosor" height="120"></canvas>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-6">
+    <div class="card border-0 shadow-sm animate__animated animate__fadeInUp mb-3">
+      <div class="card-body">
+        <h6 class="card-title mb-3 text-warning" style="font-weight:600;"><i class="bi bi-hourglass-split me-1 text-success"></i> {{ _('Block Lifespan (weeks) by Shade') }}</h6>
+        <div class="rounded-4 p-2 bg-white shadow-sm mb-2" style="min-height:130px;">
+          <canvas id="graficaVidaBloques" height="120"></canvas>
+        </div>
+      </div>
     </div>
   </div>
 </div>
@@ -200,20 +207,23 @@ $(document).ready(function(){
       },
       options: {responsive:true, plugins:{legend:{display:false}}}
     });
-    // Pie chart: Material Distribution
+    // Pie chart: Material Distribution (solo si existe el canvas)
     try {
-      var ctx2 = document.getElementById('graficaMateriales').getContext('2d');
-      new Chart(ctx2, {
-        type: 'pie',
-        data: {
-          labels: data.modelos_material_semana.map(x => x.material),
-          datasets: [{
-            data: data.modelos_material_semana.map(x => x.cantidad),
-            backgroundColor: ['#1976d2','#43a047','#fbc02d','#8e24aa','#e53935','#00838f']
-          }]
-        },
-        options: {responsive:true, radius: '45%', plugins:{legend:{position:'bottom'}}}
-      });
+      var el2 = document.getElementById('graficaMateriales');
+      if (el2) {
+        var ctx2 = el2.getContext('2d');
+        new Chart(ctx2, {
+          type: 'pie',
+          data: {
+            labels: data.modelos_material_semana.map(x => x.material),
+            datasets: [{
+              data: data.modelos_material_semana.map(x => x.cantidad),
+              backgroundColor: ['#1976d2','#43a047','#fbc02d','#8e24aa','#e53935','#00838f']
+            }]
+          },
+          options: {responsive:true, radius: '45%', plugins:{legend:{position:'bottom'}}}
+        });
+      }
     } catch(e) { console.error('[DEBUG] Error dibujando graficaMateriales', e); }
     // Bloques por shade
     try {
@@ -309,13 +319,15 @@ function renderGraficaFresasNuevas(orden) {
       window.graficaFresasNuevas.destroy();
     }
     const barColors = ['#1976d2','#43a047','#fbc02d','#8e24aa','#e53935','#00838f','#ff9800','#90a4ae'];
+    const originalCounts = data.map(x => x.cantidad || 0);
+    const plotCounts = originalCounts.map(v => (v > 0 ? v : null)); // evitar 0 en escala log
     window.graficaFresasNuevas = new Chart(ctx, {
-      type: 'doughnut',
+      type: 'bar',
       data: {
         labels: data.map(x => x.tipo),
         datasets: [{
           label: "{{ _('Units') }}",
-          data: data.map(x => x.cantidad),
+          data: plotCounts,
           backgroundColor: data.map((x,i) => barColors[i % barColors.length]),
         }]
       },
@@ -325,6 +337,10 @@ function renderGraficaFresasNuevas(orden) {
           legend:{position:'bottom'},
           tooltip:{
             callbacks:{
+              label: function(context){
+                const idx = context.dataIndex;
+                return "{{ _('Units') }}: " + (originalCounts[idx] ?? 0);
+              },
               afterBody: function(context) {
                 const idx = context[0].dataIndex;
                 const fresa = data[idx];
@@ -336,7 +352,17 @@ function renderGraficaFresasNuevas(orden) {
             }
           }
         },
-        cutout: '65%',
+        scales: {
+          y: {
+            type: 'logarithmic',
+            min: 1,
+            ticks: {
+              callback: function(value){ return Number(value).toLocaleString(); }
+            },
+            title: { display: true, text: "{{ _('Units') }}" }
+          },
+          x: { ticks: { autoSkip: true, maxRotation: 45, minRotation: 0 } }
+        }
       }
     });
   });
@@ -349,7 +375,7 @@ function actualizarDropdownMarcas() {
   const material = $('#filtro-material').val();
   const $marca = $('#filtro-marca');
   $marca.empty();
-  $marca.append('<option value="">'+"{{ _('All Brands') }}"+'</option>');
+  $marca.append('<option value="">' + "{{ _('All Brands') }}" + '</option>');
   function getMarcaString(marca) {
     try {
       if (typeof marca === 'string') return marca;
@@ -453,14 +479,14 @@ $(document).ready(function(){
     var $list = $('#upcoming-activities-list');
     $list.empty();
     if (data.length === 0) {
-      $list.append('<li class="list-group-item text-muted">'+"{{ _('No upcoming activities scheduled.') }}"+'</li>');
+      $list.append('<li class="list-group-item text-muted">' + "{{ _('No upcoming activities scheduled.') }}" + '</li>');
     } else {
       data.forEach(function(prox) {
         var fecha = prox.proxima_fecha ? new Date(prox.proxima_fecha) : null;
         var fechaStr = fecha ? fecha.toLocaleString('es-CA', {year:'numeric', month:'2-digit', day:'2-digit', hour:'2-digit', minute:'2-digit'}) : '';
         $list.append('<li class="list-group-item d-flex justify-content-between align-items-center">'
           + '<div><b>' + prox.maquina + '</b> - ' + prox.actividad + '<br>'
-          + '<small class="text-muted">'+"{{ _('Next') }}"+': <span class="fecha-tabla">' + fechaStr + '</span></small></div>'
+          + '<small class="text-muted">' + "{{ _('Next') }}" + ': <span class="fecha-tabla">' + fechaStr + '</span></small></div>'
           + '</li>');
       });
     }
@@ -502,8 +528,8 @@ function renderGraficaRecordCases() {
           tooltip:{enabled:true}
         },
         scales: {
-          x: { title: { display: true, text: '{{ _('Day') }}' } },
-          y: { beginAtZero: true, title: { display: true, text: '{{ _('Quantity') }}' } }
+          x: { title: { display: true, text: "{{ _('Day') }}" } },
+          y: { beginAtZero: true, title: { display: true, text: "{{ _('Quantity') }}" } }
         }
       }
     });
@@ -513,6 +539,100 @@ $('#filtro-record-tipo, #filtro-record-dias').on('change', renderGraficaRecordCa
 $(document).ready(function(){
   $('#filtro-record-dias').val('10');
   renderGraficaRecordCases();
+});
+function renderGraficaStockShadeGrosor() {
+  $.getJSON('/bloques/api/stock-shade-grosor', { material: 'Zirconia' }, function(resp) {
+    const ctx = document.getElementById('graficaStockShadeGrosor');
+    if(!ctx) return;
+    const shades = resp.shades || [];
+    const grosores = resp.grosores || [];
+    const matriz = resp.matriz || [];
+    if(window.graficaStockShadeGrosor && typeof window.graficaStockShadeGrosor.destroy === 'function') {
+      window.graficaStockShadeGrosor.destroy();
+    }
+    const palette = ['#1976d2','#43a047','#fbc02d','#8e24aa','#e53935','#00838f','#ff9800','#90a4ae','#6d4c41','#26c6da'];
+    // Construir datasets por grosor (columnas de la matriz)
+    const datasets = grosores.map(function(g, idx) {
+      const dataCol = matriz.map(fila => fila[idx] || 0);
+      return {
+        label: g + ' mm',
+        data: dataCol,
+        backgroundColor: palette[idx % palette.length],
+        stack: 'stack1'
+      };
+    });
+    const ctx2d = ctx.getContext('2d');
+    window.graficaStockShadeGrosor = new Chart(ctx2d, {
+      type: 'bar',
+      data: {
+        labels: shades.length ? shades : ["{{ _('No data') }}"],
+        datasets: datasets.length ? datasets : [{label: 'N/A', data: [0], backgroundColor: '#ccc'}]
+      },
+      options: {
+        responsive: true,
+        plugins: {
+          legend: { position: 'bottom' },
+          tooltip: { enabled: true }
+        },
+        scales: {
+          x: { stacked: true, title: { display: true, text: "{{ _('Shade') }}" } },
+          y: { stacked: true, beginAtZero: true, title: { display: true, text: "{{ _('Quantity') }}" } }
+        }
+      }
+    });
+  }).fail(function(jqXHR, textStatus, errorThrown){
+    console.error('[DEBUG] /bloques/api/stock-shade-grosor', textStatus, errorThrown, jqXHR.responseText);
+  });
+}
+function renderGraficaVidaBloques() {
+  $.getJSON('/bloques/api/vida-bloques', function(resp) {
+    const ctx = document.getElementById('graficaVidaBloques');
+    if(!ctx) return;
+    const labels = resp.labels || [];
+    const values = resp.values || [];
+    const counts = resp.counts || [];
+    if(window.graficaVidaBloques && typeof window.graficaVidaBloques.destroy === 'function') {
+      window.graficaVidaBloques.destroy();
+    }
+    const ctx2d = ctx.getContext('2d');
+    window.graficaVidaBloques = new Chart(ctx2d, {
+      type: 'bar',
+      data: {
+        labels: labels.length ? labels : ["{{ _('No data') }}"],
+        datasets: [{
+          label: "{{ _('Avg weeks') }}",
+          data: values.length ? values : [0],
+          backgroundColor: '#26a69a'
+        }]
+      },
+      options: {
+        responsive: true,
+        plugins: {
+          legend: { display: true, position: 'bottom' },
+          tooltip: {
+            callbacks: {
+              afterBody: function(items) {
+                const idx = items && items[0] ? items[0].dataIndex : 0;
+                const n = counts[idx] || 0;
+                return "{{ _('Samples') }}: " + n;
+              }
+            }
+          }
+        },
+        scales: {
+          x: { title: { display: true, text: "{{ _('Shade') }}" } },
+          y: { beginAtZero: true, title: { display: true, text: "{{ _('Weeks') }}" } }
+        }
+      }
+    });
+  }).fail(function(jqXHR, textStatus, errorThrown){
+    console.error('[DEBUG] /bloques/api/vida-bloques', textStatus, errorThrown, jqXHR.responseText);
+  });
+}
+$(document).ready(function(){
+  // Render inicial de nuevas gráficas
+  setTimeout(renderGraficaStockShadeGrosor, 150);
+  setTimeout(renderGraficaVidaBloques, 200);
 });
 </script>
 {% endblock %}

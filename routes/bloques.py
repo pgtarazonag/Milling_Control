@@ -62,18 +62,34 @@ def bloques():
                 import pytz
                 VANCOUVER_TZ = pytz.timezone('America/Vancouver')
                 ahora_van = datetime.now(VANCOUVER_TZ)
-                # Guardar la fecha en UTC pero mostrarla en Vancouver
-                nuevo = Bloque(
-                    material=material,
-                    marca=marca,
-                    shade=shade,
-                    grosor=grosor,
-                    cantidad=cantidad,
-                    estado='nuevo',
-                    fecha_creacion=ahora_van.astimezone(pytz.utc)
+                # Upsert: si ya existe un bloque "nuevo" con mismas características, sumar cantidad
+                existente = (
+                    Bloque.query
+                    .filter_by(estado='nuevo', material=material, marca=marca, shade=shade, grosor=grosor, codigo_barra=None)
+                    .first()
                 )
-                db.session.add(nuevo)
-                db.session.commit()
+                if existente:
+                    existente.cantidad = (existente.cantidad or 0) + cantidad
+                    # Guardar la fecha en UTC para consistencia con la vista
+                    try:
+                        import pytz as _p
+                        existente.fecha_creacion = ahora_van.astimezone(_p.utc)
+                    except Exception:
+                        existente.fecha_creacion = ahora_van
+                    db.session.commit()
+                else:
+                    # Guardar la fecha en UTC pero mostrarla en Vancouver
+                    nuevo = Bloque(
+                        material=material,
+                        marca=marca,
+                        shade=shade,
+                        grosor=grosor,
+                        cantidad=cantidad,
+                        estado='nuevo',
+                        fecha_creacion=ahora_van.astimezone(pytz.utc)
+                    )
+                    db.session.add(nuevo)
+                    db.session.commit()
                 return redirect(url_for('bloques.bloques'))
             except ValueError:
                 error = 'El grosor y la cantidad deben ser números válidos.'
@@ -390,3 +406,96 @@ def eliminar_varios_bloques_usados():
     db.session.commit()
     flash(f'Se eliminaron {count} bloques usados.', 'success')
     return redirect(url_for('historial.historial_bloques'))
+
+@bloques_bp.route('/api/stock-shade-grosor')
+def api_stock_shade_grosor():
+    """Devuelve el stock de bloques nuevos agrupado por shade y grosor.
+    Respuesta: {
+      "shades": ["A1","A2",...],
+      "grosores": [14,16,...],
+      "matriz": [[qty_por_grosor_para_shade_0], [para_shade_1], ...]
+    }
+    """
+    from flask import jsonify, request
+    # Filtrar opcionalmente por material (p.ej. material=Zirconia)
+    material = request.args.get('material')
+    if material:
+        bloques = Bloque.query.filter_by(estado='nuevo', material=material).all()
+    else:
+        # Obtener todos los bloques nuevos
+        bloques = Bloque.query.filter_by(estado='nuevo').all()
+    # Agregar por (shade, grosor)
+    shades = set()
+    grosores = set()
+    agg = {}
+    for b in bloques:
+        if not b.shade or b.grosor is None:
+            continue
+        shades.add(b.shade)
+        grosores.add(int(b.grosor))
+        key = (b.shade, int(b.grosor))
+        agg[key] = agg.get(key, 0) + (b.cantidad or 0)
+    shades = sorted(shades)
+    grosores = sorted(grosores)
+    # Construir matriz [len(shades) x len(grosores)]
+    matriz = []
+    for s in shades:
+        fila = []
+        for g in grosores:
+            fila.append(agg.get((s, g), 0))
+        matriz.append(fila)
+    return jsonify({
+        'shades': shades,
+        'grosores': grosores,
+        'matriz': matriz
+    })
+
+@bloques_bp.route('/api/vida-bloques')
+def api_vida_bloques():
+    """Calcula vida útil en semanas por shade usando historial (fecha_eliminacion - fecha_creacion).
+    Respuesta: { labels: [shades], values: [avg_weeks], counts: [n] }
+    """
+    from flask import jsonify
+    import pytz as _p
+    registros = BloqueHistorial.query.filter(
+        BloqueHistorial.fecha_creacion.isnot(None),
+        BloqueHistorial.fecha_eliminacion.isnot(None)
+    ).all()
+    por_shade = {}
+    def to_utc(dt):
+        try:
+            if dt is None:
+                return None
+            if dt.tzinfo is None:
+                # asumir UTC si es naive
+                return dt.replace(tzinfo=_p.UTC)
+            return dt.astimezone(_p.UTC)
+        except Exception:
+            return dt
+    for r in registros:
+        if not r.shade:
+            continue
+        fc = to_utc(r.fecha_creacion)
+        fe = to_utc(r.fecha_eliminacion)
+        try:
+            delta = (fe - fc).total_seconds()
+            semanas = max(delta / (7 * 24 * 3600), 0)
+        except Exception:
+            continue
+        arr = por_shade.setdefault(r.shade, [])
+        arr.append(semanas)
+    labels = []
+    values = []
+    counts = []
+    items = []
+    for shade, lst in por_shade.items():
+        if not lst:
+            continue
+        avg = sum(lst) / len(lst)
+        items.append((shade, avg, len(lst)))
+    items.sort(key=lambda x: x[1], reverse=True)
+    for shade, avg, n in items:
+        labels.append(shade)
+        values.append(round(avg, 2))
+        counts.append(n)
+    return jsonify({'labels': labels, 'values': values, 'counts': counts})
