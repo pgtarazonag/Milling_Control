@@ -7,128 +7,179 @@
 </div>
 {% endblock %}
 {% block content %}
-<div class="container-fluid px-0 mb-3">
-</div>
-<div class="card border-0 shadow-sm animate__animated animate__fadeInUp">
-  <div class="card-body">
-    <h3 class="mb-3"><i class="bi bi-gear"></i> {{ _('Maintenance and Calibrations') }}</h3>
-    <div class="mb-3">
-      <a href="{{ url_for('mantenimiento.mantenimiento', grupo='fresadoras') }}" class="btn btn-outline-primary {% if grupo == 'fresadoras' %}active{% endif %}"><i class="bi bi-cpu"></i> {{ _('Milling Machines') }}</a>
-      <a href="{{ url_for('mantenimiento.mantenimiento', grupo='hornos') }}" class="btn btn-outline-warning {% if grupo == 'hornos' %}active{% endif %}"><i class="bi bi-fire"></i> {{ _('Ovens') }}</a>
-      <a href="{{ url_for('mantenimiento.mantenimiento', grupo='aspiradoras') }}" class="btn btn-outline-success {% if grupo == 'aspiradoras' %}active{% endif %}"><i class="bi bi-wind"></i> {{ _('Vacuum Cleaners') }}</a>
-    </div>
-    <div class="row g-4">
-      <div class="col-md-8">
-        <form method="post" class="mb-3">
-          <div class="row g-2 align-items-end">
-            <div class="col-auto mb-1">
-              <label class="form-label form-label-sm mb-1" style="display:block; margin-bottom:0.25rem;">{{ _('Machine') }}</label>
-              <select name="maquina" class="form-select form-select-sm d-inline-block w-auto" size="5" style="max-width: 140px; min-width: 90px;" required>
-                {% for m in maquinas %}
-                  <option value="{{ m }}">{{ m }}</option>
-                {% endfor %}
-              </select>
-            </div>
-            <div class="col mb-1">
-              <!-- Botón de documentación justo encima de Actividad -->
-              <div class="mb-2">
-                <a href="{{ url_for('mantenimiento.documentacion') }}" target="_blank" class="btn btn-outline-info btn-sm" style="font-weight:500;">
-                  <i class="bi bi-journal-text me-1"></i> {{ _('Documentation') }}
-                </a>
-              </div>
-              <div class="row g-2 align-items-end">
-                <div class="col-auto">
-                  <label class="form-label form-label-sm mb-1">{{ _('Activity') }}</label>
-                  <select name="actividad" class="form-select form-select-sm d-inline-block w-auto" style="max-width: 220px; min-width: 140px;" required>
-                    {% for act in actividades %}
-                      <option value="{{ act.nombre }}">{{ _(act.nombre) }}</option>
-                    {% endfor %}
-                  </select>
-                </div>
-                <div class="col-auto">
-                  <label class="form-label form-label-sm mb-1">{{ _('Every') }}</label>
-                  <input type="number" name="intervalo" class="form-control form-control-sm d-inline-block w-auto" min="1" value="1" style="max-width: 70px;" required>
-                </div>
-                <div class="col-auto">
-                  <label class="form-label form-label-sm mb-1">{{ _('Unit') }}</label>
-                  <select name="unidad" class="form-select form-select-sm d-inline-block w-auto" style="max-width: 100px; min-width: 70px;" required>
-                    <option value="semana">{{ _('Week(s)') }}</option>
-                    <option value="mes">{{ _('Month(s)') }}</option>
-                    <option value="año">{{ _('Year(s)') }}</option>
-                  </select>
-                </div>
-              </div>
-            </div>
-          </div>
-          <div class="row g-2 mt-1 align-items-end">
-            <div class="col">
-              <label class="form-label form-label-sm mb-1">{{ _('Description') }}</label>
-              <input type="text" name="descripcion" class="form-control form-control-sm" style="min-width: 120px;">
-            </div>
-            <div class="col-auto text-end">
-              <button type="submit" class="btn btn-primary btn-sm mt-2"><i class="bi bi-plus-circle"></i> {{ _('Register Maintenance') }}</button>
-            </div>
-          </div>
-        </form>
-        <div class="table-responsive animate__animated animate__fadeIn">
-          <table class="table table-striped table-hover" id="tabla-mant">
-            <thead class="table-info">
-              <tr>
-                <th><i class="bi bi-calendar"></i> {{ _('Date') }}</th>
-                <th><i class="bi bi-cpu"></i> {{ _('Machine') }}</th>
-                <th><i class="bi bi-gear"></i> {{ _('Activity') }}</th>
-                <th><i class="bi bi-card-text"></i> {{ _('Description') }}</th>
-                <th><i class="bi bi-calendar-check"></i> {{ _('Next') }}</th>
-                <th><i class="bi bi-gear"></i> {{ _('Actions') }}</th>
-              </tr>
-            </thead>
-            <tbody>
-              {% for reg in registros %}
-              <tr>
-                <td><span class="fecha-tabla">{{ reg.fecha.strftime('%Y-%m-%d %H:%M') }}</span></td>
-                <td>{{ reg.maquina }}</td>
-                <td>{{ reg.actividad }}</td>
-                <td>{{ reg.descripcion or '' }}</td>
-                <td>{% if reg.proxima_fecha %}<span class="fecha-tabla">{{ reg.proxima_fecha.strftime('%Y-%m-%d %H:%M') }}</span>{% endif %}</td>
-                <td>
-                  <form method="post" action="{{ url_for('mantenimiento.eliminar_mantenimiento', mant_id=reg.id) }}" style="display:inline;">
-                    <button type="submit" class="btn btn-outline-danger btn-sm" title="{{ _('Delete') }}"><i class="bi bi-trash"></i></button>
-                  </form>
-                  <a href="{{ url_for('mantenimiento.editar_mantenimiento', mant_id=reg.id) }}" class="btn btn-outline-primary btn-sm ms-1" title="{{ _('Edit') }}">
-                    <i class="bi bi-pencil-square"></i>
-                  </a>
-                  <!-- Modales eliminados, ahora se usa página de edición -->
-                </td>
-              </tr>
-              {% endfor %}
-            </tbody>
-          </table>
+<style>
+  /* Utilities estilo Tailwind minimalistas para esta vista */
+  .max-w-7xl{max-width:80rem;} .mx-auto{margin-left:auto;margin-right:auto;} .px-3{padding-left:0.75rem;padding-right:0.75rem}
+  .grid{display:grid;} .gap-6{gap:1.5rem}
+  .grid-cols-1{grid-template-columns:repeat(1,minmax(0,1fr))}
+  @media (min-width: 640px){ .sm\:grid-cols-2{grid-template-columns:repeat(2,minmax(0,1fr))} }
+  @media (min-width: 1280px){ .xl\:grid-cols-3{grid-template-columns:repeat(3,minmax(0,1fr))} .xl\:col-span-2{grid-column:span 2 / span 2} }
+  .rounded-2xl{border-radius:1rem!important}
+  .sticky-header{position:sticky; top:60px; z-index:1010; backdrop-filter:saturate(180%) blur(8px); background:rgba(255,255,255,0.9); border-bottom:1px solid #eef2f7}
+  .kpi{display:flex;align-items:center;gap:.6rem;padding:.75rem 1rem;border-radius:.8rem;border:1px solid #eef2f7;background:#fff}
+  .kpi .num{font-weight:700;font-size:1.15rem}
+  .segmented{display:inline-flex;border:1px solid #d6dbe3;border-radius:.7rem;overflow:hidden;background:#fff}
+  .segmented a{padding:.4rem .75rem;text-decoration:none;color:#1565c0;border-right:1px solid #d6dbe3;font-weight:600}
+  .segmented a:last-child{border-right:none}
+  .segmented a.active,.segmented a:hover{background:#e3f2fd;color:#0d47a1}
+  .card-soft{background:#fff;border:1px solid #eef2f7}
+  /* Skeletons */
+  .skeleton{position:relative;overflow:hidden;background:#eef2f7;border-radius:.6rem}
+  .skeleton::after{content:"";position:absolute;inset:0;transform:translateX(-100%);background:linear-gradient(90deg,rgba(255,255,255,0) 0,rgba(255,255,255,.6) 50%,rgba(255,255,255,0) 100%);animation:shimmer 1.2s infinite}
+  @keyframes shimmer{100%{transform:translateX(100%)}}
+  .skeleton-line{height:12px;margin:8px 0}
+  .skeleton-sm{height:8px;margin:6px 0}
+</style>
+<div class="mx-auto max-w-7xl px-3">
+  <!-- Encabezado sticky con KPIs y filtros segmentados -->
+  <div class="sticky-header py-2 mb-3">
+    <div class="d-flex flex-wrap align-items-center justify-content-between gap-2">
+      <div class="d-flex flex-wrap gap-2">
+        <div class="kpi shadow-sm"><i class="bi bi-exclamation-octagon text-danger"></i> <span>{{ _('Overdue') }}:</span> <span class="num" id="kpi-overdue">—</span></div>
+        <div class="kpi shadow-sm"><i class="bi bi-calendar-week text-warning"></i> <span>{{ _('This week') }}:</span> <span class="num" id="kpi-week">—</span></div>
+        <div class="kpi shadow-sm"><i class="bi bi-calendar3 text-success"></i> <span>{{ _('Next 30d') }}:</span> <span class="num" id="kpi-30d">—</span></div>
+      </div>
+      <div>
+        <div class="segmented">
+          <a href="{{ url_for('mantenimiento.mantenimiento') }}" class="{% if not grupo %}active{% endif %}">{{ _('All') }}</a>
+          <a href="{{ url_for('mantenimiento.mantenimiento', grupo='fresadoras') }}" class="{% if grupo == 'fresadoras' %}active{% endif %}">{{ _('Milling Machines') }}</a>
+          <a href="{{ url_for('mantenimiento.mantenimiento', grupo='hornos') }}" class="{% if grupo == 'hornos' %}active{% endif %}">{{ _('Ovens') }}</a>
+          <a href="{{ url_for('mantenimiento.mantenimiento', grupo='aspiradoras') }}" class="{% if grupo == 'aspiradoras' %}active{% endif %}">{{ _('Vacuum Cleaners') }}</a>
         </div>
       </div>
-      <div class="col-md-4">
-        <div class="card shadow-sm mb-4 animate__animated animate__fadeInRight">
-          <div class="card-header bg-info text-white"><b><i class="bi bi-calendar-check"></i> {{ _('Upcoming Activities') }}</b></div>
-          <ul class="list-group list-group-flush">
-            {% for prox in proximas_actividades %}
-            <li class="list-group-item d-flex justify-content-between align-items-center">
-              <div>
-                <b>{{ prox.maquina }}</b> - {{ prox.actividad }}<br>
-                <small class="text-muted">{{ _('Next') }}: <span class="fecha-tabla">{{ prox.proxima_fecha.strftime('%Y-%m-%d %H:%M') }}</span></small>
+    </div>
+  </div>
+
+  <!-- Grilla principal -->
+  <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-6">
+    <!-- Columna principal: formulario + tabla (span 2 en xl) -->
+    <div class="xl:col-span-2">
+      <div class="card card-soft rounded-2xl shadow-sm">
+        <div class="card-body">
+          <h5 class="mb-3"><i class="bi bi-gear"></i> {{ _('Maintenance and Calibrations') }}</h5>
+          <!-- Barra de acceso a documentación y selector de máquina/actividad -->
+          <form method="post" class="mb-3">
+            <div class="row g-2 align-items-end">
+              <div class="col-auto mb-1">
+                <label class="form-label form-label-sm mb-1" style="display:block; margin-bottom:0.25rem;">{{ _('Machine') }}</label>
+                <select name="maquina" class="form-select form-select-sm d-inline-block w-auto" size="5" style="max-width: 140px; min-width: 90px;" required>
+                  {% for m in maquinas %}
+                    <option value="{{ m }}">{{ m }}</option>
+                  {% endfor %}
+                </select>
               </div>
-              <div>
-                <form method="post" action="{{ url_for('mantenimiento.descartar_proxima', mant_id=prox.id) }}" style="display:inline;">
-                  <button type="submit" class="btn btn-outline-danger btn-sm"><i class="bi bi-x-circle"></i></button>
-                </form>
-                <form method="post" action="{{ url_for('mantenimiento.realizar_proxima', mant_id=prox.id) }}" style="display:inline;">
-                  <button type="submit" class="btn btn-outline-success btn-sm"><i class="bi bi-check-circle"></i></button>
-                </form>
+              <div class="col mb-1">
+                <div class="mb-2">
+                  <a href="{{ url_for('mantenimiento.documentacion') }}" target="_blank" class="btn btn-outline-info btn-sm" style="font-weight:500;">
+                    <i class="bi bi-journal-text me-1"></i> {{ _('Documentation') }}
+                  </a>
+                </div>
+                <div class="row g-2 align-items-end">
+                  <div class="col-auto">
+                    <label class="form-label form-label-sm mb-1">{{ _('Activity') }}</label>
+                    <select name="actividad" class="form-select form-select-sm d-inline-block w-auto" style="max-width: 220px; min-width: 140px;" required>
+                      {% for act in actividades %}
+                        <option value="{{ act.nombre }}">{{ _(act.nombre) }}</option>
+                      {% endfor %}
+                    </select>
+                  </div>
+                  <div class="col-auto">
+                    <label class="form-label form-label-sm mb-1">{{ _('Every') }}</label>
+                    <input type="number" name="intervalo" class="form-control form-control-sm d-inline-block w-auto" min="1" value="1" style="max-width: 70px;" required>
+                  </div>
+                  <div class="col-auto">
+                    <label class="form-label form-label-sm mb-1">{{ _('Unit') }}</label>
+                    <select name="unidad" class="form-select form-select-sm d-inline-block w-auto" style="max-width: 100px; min-width: 70px;" required>
+                      <option value="semana">{{ _('Week(s)') }}</option>
+                      <option value="mes">{{ _('Month(s)') }}</option>
+                      <option value="año">{{ _('Year(s)') }}</option>
+                    </select>
+                  </div>
+                </div>
               </div>
-            </li>
-            {% else %}
-            <li class="list-group-item text-muted">{{ _('No hay actividades próximas programadas.') }}</li>
-            {% endfor %}
-          </ul>
+            </div>
+            <div class="row g-2 mt-1 align-items-end">
+              <div class="col">
+                <label class="form-label form-label-sm mb-1">{{ _('Description') }}</label>
+                <input type="text" name="descripcion" class="form-control form-control-sm" style="min-width: 120px;">
+              </div>
+              <div class="col-auto text-end">
+                <button type="submit" class="btn btn-primary btn-sm mt-2"><i class="bi bi-plus-circle"></i> {{ _('Register Maintenance') }}</button>
+              </div>
+            </div>
+          </form>
+
+          <!-- Skeleton tabla -->
+          <div id="mant-skeleton" class="skeleton" style="height:180px;" aria-hidden="true"></div>
+
+          <!-- Tabla -->
+          <div class="table-responsive animate__animated animate__fadeIn d-none" id="mant-table-wrap">
+            <table class="table table-striped table-hover" id="tabla-mant">
+              <thead class="table-info">
+                <tr>
+                  <th><i class="bi bi-calendar"></i> {{ _('Date') }}</th>
+                  <th><i class="bi bi-cpu"></i> {{ _('Machine') }}</th>
+                  <th><i class="bi bi-gear"></i> {{ _('Activity') }}</th>
+                  <th><i class="bi bi-card-text"></i> {{ _('Description') }}</th>
+                  <th><i class="bi bi-calendar-check"></i> {{ _('Next') }}</th>
+                  <th><i class="bi bi-gear"></i> {{ _('Actions') }}</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for reg in registros %}
+                <tr>
+                  <td><span class="fecha-tabla">{{ reg.fecha.strftime('%Y-%m-%d %H:%M') }}</span></td>
+                  <td>{{ reg.maquina }}</td>
+                  <td>{{ reg.actividad }}</td>
+                  <td>{{ reg.descripcion or '' }}</td>
+                  <td>{% if reg.proxima_fecha %}<span class="fecha-tabla" data-proxima="{{ reg.proxima_fecha.strftime('%Y-%m-%dT%H:%M:%S') }}">{{ reg.proxima_fecha.strftime('%Y-%m-%d %H:%M') }}</span>{% endif %}</td>
+                  <td>
+                    <form method="post" action="{{ url_for('mantenimiento.eliminar_mantenimiento', mant_id=reg.id) }}" style="display:inline;">
+                      <button type="submit" class="btn btn-outline-danger btn-sm" title="{{ _('Delete') }}"><i class="bi bi-trash"></i></button>
+                    </form>
+                    <a href="{{ url_for('mantenimiento.editar_mantenimiento', mant_id=reg.id) }}" class="btn btn-outline-primary btn-sm ms-1" title="{{ _('Edit') }}">
+                      <i class="bi bi-pencil-square"></i>
+                    </a>
+                  </td>
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
         </div>
+      </div>
+    </div>
+
+    <!-- Columna lateral: próximas actividades -->
+    <div>
+      <div class="card card-soft rounded-2xl shadow-sm">
+        <div class="card-header bg-white" style="font-weight:600"><i class="bi bi-calendar-check me-1"></i> {{ _('Upcoming Activities') }}</div>
+        <!-- Skeleton lista -->
+        <div id="prox-skeleton" class="p-3">
+          <div class="skeleton skeleton-line"></div>
+          <div class="skeleton skeleton-line"></div>
+          <div class="skeleton skeleton-line"></div>
+        </div>
+        <ul class="list-group list-group-flush d-none" id="prox-list">
+          {% for prox in proximas_actividades %}
+          <li class="list-group-item d-flex justify-content-between align-items-center">
+            <div>
+              <b>{{ prox.maquina }}</b> - {{ prox.actividad }}<br>
+              <small class="text-muted">{{ _('Next') }}: <span class="fecha-tabla" data-proxima="{{ prox.proxima_fecha.strftime('%Y-%m-%dT%H:%M:%S') }}">{{ prox.proxima_fecha.strftime('%Y-%m-%d %H:%M') }}</span></small>
+            </div>
+            <div>
+              <form method="post" action="{{ url_for('mantenimiento.descartar_proxima', mant_id=prox.id) }}" style="display:inline;">
+                <button type="submit" class="btn btn-outline-danger btn-sm"><i class="bi bi-x-circle"></i></button>
+              </form>
+              <form method="post" action="{{ url_for('mantenimiento.realizar_proxima', mant_id=prox.id) }}" style="display:inline;">
+                <button type="submit" class="btn btn-outline-success btn-sm"><i class="bi bi-check-circle"></i></button>
+              </form>
+            </div>
+          </li>
+          {% else %}
+          <li class="list-group-item text-muted">{{ _('No hay actividades próximas programadas.') }}</li>
+          {% endfor %}
+        </ul>
       </div>
     </div>
   </div>
@@ -138,10 +189,39 @@
 {{ super() }}
 <script>
 $(document).ready(function(){
-  $('#tabla-mant').DataTable({
-    "language": {"url": "/static/es-ES.json"},
-    "order": [[0, "desc"]]
+  // Mostrar contenido real y ocultar skeletons cuando DataTable esté listo
+  const $table = $('#tabla-mant');
+  const dt = $table.DataTable({
+    language: { url: window.getDataTablesLangUrl ? window.getDataTablesLangUrl() : '/static/es-ES.json' },
+    order: [[0, 'desc']]
   });
+  $('#mant-skeleton').addClass('d-none');
+  $('#mant-table-wrap').removeClass('d-none');
+  $('#prox-skeleton').addClass('d-none');
+  $('#prox-list').removeClass('d-none');
+
+  // KPI counters a partir de fechas en DOM (sin tocar lógica de datos)
+  function computeKPIs(){
+    const now = new Date();
+    const in7d = new Date(now.getTime() + 7*24*3600*1000);
+    const in30d = new Date(now.getTime() + 30*24*3600*1000);
+    let overdue=0, week=0, next30=0;
+    // Buscar fechas en tabla y lista lateral
+    const $fechas = $("#mant-table-wrap [data-proxima], #prox-list [data-proxima]");
+    $fechas.each(function(){
+      const s = $(this).attr('data-proxima');
+      if(!s) return;
+      const d = new Date(s);
+      if(isNaN(d)) return;
+      if(d < now) overdue++;
+      else if(d <= in7d) week++;
+      else if(d <= in30d) next30++;
+    });
+    $('#kpi-overdue').text(overdue);
+    $('#kpi-week').text(week);
+    $('#kpi-30d').text(next30);
+  }
+  computeKPIs();
 });
 </script>
 {% endblock %}
