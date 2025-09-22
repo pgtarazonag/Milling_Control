@@ -11,7 +11,7 @@ Este archivo permite consultar fácilmente los cambios y eliminaciones de bloque
 """
 
 # Importamos Blueprint para crear un grupo de rutas y render_template para mostrar páginas HTML
-from flask import Blueprint, render_template, send_file, request
+from flask import Blueprint, render_template, send_file, request, abort
 # Importamos el modelo que representa el historial de bloques en la base de datos
 from models import BloqueHistorial, Orden, Bloque, FresaInventario, FresaInstalada, Mantenimiento, OrdenPendiente
 from extensions import db
@@ -49,11 +49,38 @@ def descargar_historial():
     descargar_bd = request.args.get('descargar_bd') == '1'
     if descargar_bd or not seleccionadas:
         seleccionadas = list(tablas.keys())
+    # Crear Excel en memoria
     output = io.BytesIO()
-    with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
-        for nombre, modelo in tablas.items():
-            if nombre in seleccionadas:
-                df = pd.read_sql(modelo.query.statement, db.session.bind)
+    try:
+        with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
+            for nombre, modelo in tablas.items():
+                if nombre not in seleccionadas:
+                    continue
+                try:
+                    # Ejecutar consulta de forma segura y convertir a DataFrame
+                    query = db.session.query(modelo)
+                    df = pd.read_sql(query.statement, db.session.bind)
+                except Exception:
+                    # Si falla la lectura (por ejemplo, tabla vacía o metadata), crear df vacío con columnas básicas
+                    cols = [c.name for c in modelo.__table__.columns]
+                    df = pd.DataFrame(columns=cols)
+                # Escribir hoja (si DataFrame vacío, igualmente crea la hoja)
                 df.to_excel(writer, sheet_name=nombre, index=False)
-    output.seek(0)
-    return send_file(output, as_attachment=True, download_name='historial_fresado.xlsx', mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+                # Opcional: ajustar ancho de columnas y formato
+                try:
+                    worksheet = writer.sheets[nombre]
+                    for idx, col in enumerate(df.columns):
+                        width = min(max(10, int(df[col].astype(str).str.len().max() if not df.empty else 10) + 2), 60)
+                        worksheet.set_column(idx, idx, width)
+                except Exception:
+                    pass
+        output.seek(0)
+    except Exception as e:
+        # Si no está el engine xlsxwriter instalado, devolver error claro
+        abort(500, description=f"Error generando Excel: {e}")
+    return send_file(
+        output,
+        as_attachment=True,
+        download_name=f"historial_fresado_{datetime.now(VANCOUVER_TZ).strftime('%Y%m%d_%H%M')}.xlsx",
+        mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    )

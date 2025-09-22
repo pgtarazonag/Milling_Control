@@ -49,8 +49,8 @@ def create_app():
     app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
     app.secret_key = os.environ.get('SECRET_KEY', 'supersecreto')
     # Configuración de Babel para traducción
-    app.config['BABEL_DEFAULT_LOCALE'] = 'es'
-    app.config['BABEL_SUPPORTED_LOCALES'] = ['es', 'en']
+    app.config['BABEL_DEFAULT_LOCALE'] = 'en'
+    app.config['BABEL_SUPPORTED_LOCALES'] = ['en', 'es']
     babel = Babel(app)
 
     # Versión de assets para cache busting (usa SHA de deploy si existe)
@@ -96,9 +96,15 @@ def create_app():
     # Ruta para cambiar el idioma
     @app.route('/set_language', methods=['POST'])
     def set_language():
-        lang = request.form.get('lang', 'es')
-        session['lang'] = lang
+        lang = request.form.get('lang', 'en')
+        session['lang'] = 'en' if lang not in ('en', 'es') else lang
         return redirect(request.referrer or url_for('home'))
+
+    # Establecer inglés como idioma por defecto en la sesión
+    @app.before_request
+    def ensure_default_language():
+        if 'lang' not in session:
+            session['lang'] = 'en'
 
     # Inyectar el traductor y versión de assets en las plantillas
     @app.context_processor

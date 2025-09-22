@@ -77,7 +77,27 @@ TRANSLATIONS = {
         'año': 'año',
         'semana(s)': 'semana(s)',
         'mes(es)': 'mes(es)',
-        'año(s)': 'año(s)'
+        'año(s)': 'año(s)',
+        'Delete this used block?': '¿Eliminar este bloque usado?',
+        'Delete selected blocks?': '¿Eliminar los bloques seleccionados?',
+        'Are you sure you want to delete this order?': '¿Está seguro de eliminar esta orden?',
+        'Edit order code:': 'Editar código de orden:',
+        'Decrease by 1': 'Restar 1',
+        'Increase by 1': 'Sumar 1',
+        'Convert to used block': 'Convertir en bloque usado',
+        'Shades and Brands per Material': 'Shades y Marcas por Material',
+        'Shades': 'Shades',
+        'Brands': 'Marcas',
+        'Letters': 'Letras',
+        'Color': 'Color',
+        'Define letter and color for each brand. If not assigned, the letter will be X and the color black.': 'Define letra y color para cada marca. Si no se asigna, la letra será X y el color negro.',
+        'Association of milling tool types to machines': 'Asociación de tipos de fresa a máquinas',
+        'Milling tool types (comma separated)': 'Tipos de fresa (separados por coma)',
+        'Add or edit available milling tool types.': 'Agrega o edita los tipos de fresa disponibles.',
+        'Compatible machines': 'Máquinas compatibles',
+        'Are you sure you want to delete this installed tool?': '¿Está seguro de eliminar esta fresa instalada?',
+        'Do you want to replace it with the same type from inventory? (One unit will be deducted and the model counter will reset)': '¿Desea reemplazarla por una igual del inventario? (Se descontará una unidad y el contador de modelos se reiniciará)',
+        'Are you sure you want to delete this inventory tool?': '¿Está seguro de eliminar esta fresa del inventario?'
     },
     'en': {
         'Orders': 'Orders',
@@ -157,14 +177,35 @@ TRANSLATIONS = {
         'año': 'year',
         'semana(s)': 'week(s)',
         'mes(es)': 'month(s)',
-        'año(s)': 'year(s)'
+        'año(s)': 'year(s)',
+        'Delete this used block?': 'Delete this used block?',
+        'Delete selected blocks?': 'Delete selected blocks?',
+        'Are you sure you want to delete this order?': 'Are you sure you want to delete this order?',
+        'Edit order code:': 'Edit order code:',
+        'Decrease by 1': 'Decrease by 1',
+        'Increase by 1': 'Increase by 1',
+        'Convert to used block': 'Convert to used block',
+        'Shades and Brands per Material': 'Shades and Brands per Material',
+        'Shades': 'Shades',
+        'Brands': 'Brands',
+        'Letters': 'Letters',
+        'Color': 'Color',
+        'Define letter and color for each brand. If not assigned, the letter will be X and the color black.': 'Define letter and color for each brand. If not assigned, the letter will be X and the color black.',
+        'Association of milling tool types to machines': 'Association of milling tool types to machines',
+        'Milling tool types (comma separated)': 'Milling tool types (comma separated)',
+        'Add or edit available milling tool types.': 'Add or edit available milling tool types.',
+        'Compatible machines': 'Compatible machines',
+        'Are you sure you want to delete this installed tool?': 'Are you sure you want to delete this installed tool?',
+        'Do you want to replace it with the same type from inventory? (One unit will be deducted and the model counter will reset)': 'Do you want to replace it with the same type from inventory? (One unit will be deducted and the model counter will reset)',
+        'Are you sure you want to delete this inventory tool?': 'Are you sure you want to delete this inventory tool?'
     }
 }
 
 def get_locale():
     from flask import session, request
-    return session.get('lang') or request.accept_languages.best_match(['es', 'en']) or 'es'
+    return session.get('lang') or request.accept_languages.best_match(['en', 'es']) or 'en'
 
 def _(key):
     lang = get_locale()
-    return TRANSLATIONS.get(lang, TRANSLATIONS['es']).get(key, key)
+    # Default to English dictionary when language not found
+    return TRANSLATIONS.get(lang, TRANSLATIONS['en']).get(key, key)

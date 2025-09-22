@@ -200,14 +200,14 @@ $(document).ready(function(){
       data: {
         labels: data.modelos_dia.map(x => x.dia),
         datasets: [{
-          label: 'Modelos',
+          label: "{{ _('Models') }}",
           data: data.modelos_dia.map(x => x.cantidad),
           backgroundColor: data.modelos_dia.map((x,i) => prodColors[i % prodColors.length]),
         }]
       },
       options: {responsive:true, plugins:{legend:{display:false}}}
     });
-    // Pie chart: Material Distribution (solo si existe el canvas)
+  // Pie chart: Material Distribution (if canvas exists)
     try {
       var el2 = document.getElementById('graficaMateriales');
       if (el2) {
@@ -224,8 +224,8 @@ $(document).ready(function(){
           options: {responsive:true, radius: '45%', plugins:{legend:{position:'bottom'}}}
         });
       }
-    } catch(e) { console.error('[DEBUG] Error dibujando graficaMateriales', e); }
-    // Bloques por shade
+  } catch(e) { console.error('[DEBUG] Error rendering materials chart', e); }
+  // Blocks by shade
     try {
       var ctx3 = document.getElementById('graficaBloquesShade').getContext('2d');
       new Chart(ctx3, {
@@ -233,18 +233,18 @@ $(document).ready(function(){
         data: {
           labels: data.bloques_shade.map(x => x.shade),
           datasets: [{
-            label: 'Bloques',
+            label: "{{ _('Blocks') }}",
             data: data.bloques_shade.map(x => x.cantidad),
             backgroundColor: '#8e24aa',
           }]
         },
         options: {responsive:true, plugins:{legend:{display:false}}}
       });
-    } catch(e) { console.error('[DEBUG] Error dibujando graficaBloquesShade', e); }
+  } catch(e) { console.error('[DEBUG] Error rendering blocks-by-shade chart', e); }
   }).fail(function(jqXHR, textStatus, errorThrown) {
-    console.error('[DEBUG] Error en /ordenes/api/graficas-inventario:', textStatus, errorThrown, jqXHR.responseText);
+    console.error('[DEBUG] Error in /ordenes/api/graficas-inventario:', textStatus, errorThrown, jqXHR.responseText);
   });
-  // Evitar que la gráfica se dibuje dos veces
+  // Avoid drawing the chart twice
   let graficaInicializada = false;
   function cargarGraficaBloquesShade() {
     var material = $('#filtro-material').val();
@@ -279,7 +279,7 @@ $(document).ready(function(){
         data: {
           labels: data.map(x => x.shade),
           datasets: [{
-            label: 'Bloques',
+            label: "{{ _('Blocks') }}",
             data: data.map(x => x.cantidad),
             backgroundColor: barColors,
           }]
@@ -300,7 +300,7 @@ $(document).ready(function(){
       });
       graficaInicializada = true;
     }).fail(function(jqXHR, textStatus, errorThrown) {
-      console.error('[DEBUG] Error en /ordenes/api/graficas-bloques-shade:', textStatus, errorThrown, jqXHR.responseText);
+      console.error('[DEBUG] Error in /ordenes/api/graficas-bloques-shade:', textStatus, errorThrown, jqXHR.responseText);
     });
   }
   cargarGraficaBloquesShade();
@@ -450,7 +450,7 @@ function cargarGraficaProduccionAgrupada() {
       }
     }
     if(labels.length === 0) {
-      labels = ['No data'];
+      labels = ["{{ _('No data') }}"];
       values = [0];
     }
     const prodColors = ['#1976d2','#43a047','#fbc02d','#8e24aa','#e53935','#00838f','#ff9800','#90a4ae'];
@@ -459,7 +459,7 @@ function cargarGraficaProduccionAgrupada() {
       data: {
         labels: labels,
         datasets: [{
-          label: 'Modelos',
+          label: "{{ _('Models') }}",
           data: values,
           backgroundColor: labels.map((x,i) => prodColors[i % prodColors.length]),
         }]
@@ -483,7 +483,7 @@ $(document).ready(function(){
     } else {
       data.forEach(function(prox) {
         var fecha = prox.proxima_fecha ? new Date(prox.proxima_fecha) : null;
-        var fechaStr = fecha ? fecha.toLocaleString('es-CA', {year:'numeric', month:'2-digit', day:'2-digit', hour:'2-digit', minute:'2-digit'}) : '';
+  var fechaStr = fecha ? fecha.toLocaleString('en-CA', {year:'numeric', month:'2-digit', day:'2-digit', hour:'2-digit', minute:'2-digit'}) : '';
         $list.append('<li class="list-group-item d-flex justify-content-between align-items-center">'
           + '<div><b>' + prox.maquina + '</b> - ' + prox.actividad + '<br>'
           + '<small class="text-muted">' + "{{ _('Next') }}" + ': <span class="fecha-tabla">' + fechaStr + '</span></small></div>'
@@ -491,7 +491,7 @@ $(document).ready(function(){
       });
     }
   }).fail(function(jqXHR, textStatus, errorThrown) {
-    console.error('[DEBUG] Error en /mantenimiento/?api=1:', textStatus, errorThrown, jqXHR.responseText);
+    console.error('[DEBUG] Error in /mantenimiento/?api=1:', textStatus, errorThrown, jqXHR.responseText);
   });
 });
 function renderGraficaRecordCases() {
