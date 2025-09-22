@@ -52,6 +52,15 @@ def create_app():
     app.config['BABEL_DEFAULT_LOCALE'] = 'es'
     app.config['BABEL_SUPPORTED_LOCALES'] = ['es', 'en']
     babel = Babel(app)
+
+    # Versión de assets para cache busting (usa SHA de deploy si existe)
+    app.config['ASSET_VERSION'] = (
+        os.environ.get('ASSET_VERSION') or
+        os.environ.get('RAILWAY_GIT_COMMIT_SHA') or
+        os.environ.get('RENDER_GIT_COMMIT') or
+        datetime.utcnow().strftime('%Y%m%d%H%M%S')
+    )
+
     # Inicializamos la base de datos con la app
     db.init_app(app)
 
@@ -91,10 +100,16 @@ def create_app():
         session['lang'] = lang
         return redirect(request.referrer or url_for('home'))
 
-    # Inyectar el traductor en las plantillas
+    # Inyectar el traductor y versión de assets en las plantillas
     @app.context_processor
-    def inject_translator():
-        return {'_': _}
+    def inject_globals():
+        return {'_': _, 'ASSET_VERSION': app.config.get('ASSET_VERSION', '')}
+
+    # Atajo para /favicon.ico (algunos navegadores la piden aunque esté linkeada)
+    @app.route('/favicon.ico')
+    def favicon():
+        v = app.config.get('ASSET_VERSION', '')
+        return redirect(url_for('static', filename='favicon-32.png', v=v))
 
     # Definimos la ruta principal que muestra la página de inicio
     @app.route('/')

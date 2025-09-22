@@ -140,12 +140,13 @@
             .container-fluid { padding-top: 0 !important; }
         }
     </style>
-    <!-- Favicon -->
-    <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='favicon.svg') }}">
-    <link rel="icon" type="image/png" sizes="32x32" href="{{ url_for('static', filename='favicon-32.png') }}">
-    <link rel="icon" type="image/png" sizes="16x16" href="{{ url_for('static', filename='favicon-16.png') }}">
-    <link rel="apple-touch-icon" sizes="180x180" href="{{ url_for('static', filename='apple-touch-icon.png') }}">
-    <link rel="mask-icon" href="{{ url_for('static', filename='favicon.svg') }}" color="#26a69a">
+    <!-- Favicon with cache busting -->
+    <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='favicon.svg', v=ASSET_VERSION) }}">
+    <link rel="icon" type="image/png" sizes="32x32" href="{{ url_for('static', filename='favicon-32.png', v=ASSET_VERSION) }}">
+    <link rel="icon" type="image/png" sizes="16x16" href="{{ url_for('static', filename='favicon-16.png', v=ASSET_VERSION) }}">
+    <link rel="apple-touch-icon" sizes="180x180" href="{{ url_for('static', filename='apple-touch-icon.png', v=ASSET_VERSION) }}">
+    <link rel="mask-icon" href="{{ url_for('static', filename='favicon.svg', v=ASSET_VERSION) }}" color="#26a69a">
+    <link rel="shortcut icon" href="{{ url_for('static', filename='favicon-32.png', v=ASSET_VERSION) }}">
     {% block head %}{% endblock %}
 </head>
 <body>
@@ -153,7 +154,7 @@
     <div class="sidebar-proximity-zone" tabindex="-1"></div>
     <div class="topbar">
         <span class="logo">
-          <img src="{{ url_for('static', filename='favicon.svg') }}" alt="Shanto Dental" style="height:1.25em;width:auto;display:inline-block;vertical-align:middle;"> 
+          <img src="{{ url_for('static', filename='favicon.svg', v=ASSET_VERSION) }}" alt="Shanto Dental" style="height:1.25em;width:auto;display:inline-block;vertical-align:middle;"> 
           Milling Shanto
         </span>
         <nav style="flex:1;display:flex;justify-content:center;align-items:center;">
