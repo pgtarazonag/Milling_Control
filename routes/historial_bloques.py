@@ -57,20 +57,36 @@ def descargar_historial():
                 if nombre not in seleccionadas:
                     continue
                 try:
-                    # Ejecutar consulta de forma segura y convertir a DataFrame
-                    query = db.session.query(modelo)
-                    df = pd.read_sql(query.statement, db.session.bind)
+                    # Traer filas vía ORM y serializar a dicts
+                    rows = modelo.query.all()
+                    data = []
+                    cols = [c.name for c in modelo.__table__.columns]
+                    for obj in rows:
+                        item = {}
+                        for col in cols:
+                            val = getattr(obj, col, None)
+                            if isinstance(val, datetime):
+                                try:
+                                    val = val.isoformat()
+                                except Exception:
+                                    pass
+                            item[col] = val
+                        data.append(item)
+                    df = pd.DataFrame(data, columns=cols)
                 except Exception:
-                    # Si falla la lectura (por ejemplo, tabla vacía o metadata), crear df vacío con columnas básicas
                     cols = [c.name for c in modelo.__table__.columns]
                     df = pd.DataFrame(columns=cols)
-                # Escribir hoja (si DataFrame vacío, igualmente crea la hoja)
-                df.to_excel(writer, sheet_name=nombre, index=False)
-                # Opcional: ajustar ancho de columnas y formato
+                # Escribir hoja
+                safe_sheet = nombre[:31]
+                df.to_excel(writer, sheet_name=safe_sheet, index=False)
+                # Ajustes de ancho
                 try:
-                    worksheet = writer.sheets[nombre]
+                    worksheet = writer.sheets[safe_sheet]
                     for idx, col in enumerate(df.columns):
-                        width = min(max(10, int(df[col].astype(str).str.len().max() if not df.empty else 10) + 2), 60)
+                        max_len = 10
+                        if not df.empty:
+                            max_len = max(max_len, int(df[col].astype(str).str.len().max()))
+                        width = min(max_len + 2, 60)
                         worksheet.set_column(idx, idx, width)
                 except Exception:
                     pass
