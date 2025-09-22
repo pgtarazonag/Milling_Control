@@ -1,0 +1,8 @@
+<svg xmlns='http://www.w3.org/2000/svg' width='720' height='120' viewBox='0 0 720 120'>
+  <rect width='720' height='120' fill='none'/>
+  <g transform='translate(0,8)'>
+    <text x='20' y='54' font-family='Segoe UI, Roboto, Arial, sans-serif' font-size='54' fill='#2E3A46' letter-spacing='4'>SHANTO DENTAL</text>
+    <text x='20' y='98' font-family='Segoe UI, Roboto, Arial, sans-serif' font-size='34' fill='#E14A4C' letter-spacing='8'>LABORATORY</text>
+    <path d='M180 104 C 240 96, 380 86, 700 98' stroke='#E14A4C' stroke-width='10' fill='none' stroke-linecap='round'/>
+  </g>
+</svg>

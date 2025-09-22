@@ -12,7 +12,7 @@
   <div class="col-md-5">
     <div class="card border-0 shadow-sm animate__animated animate__fadeInUp mb-3">
       <div class="card-body">
-        <h6 class="card-title mb-3 text-primary" style="font-weight:600;"><i class="bi bi-bar-chart me-1 text-info"></i> {{ _('Blocks by Shade') }}</h6>
+  <h6 class="card-title mb-3" style="font-weight:600;"><i class="bi bi-bar-chart me-1" style="color:var(--accent);"></i> {{ _('Blocks by Shade') }}</h6>
         <div class="mb-2 d-flex flex-wrap gap-2 align-items-center">
           <label class="form-label mb-0 me-2 text-secondary">{{ _('Filter:') }}</label>
           <select id="filtro-material" class="form-select form-select-sm shadow-none" style="min-width:90px;max-width:120px;">
@@ -45,7 +45,7 @@
     </div>
     <div class="card border-0 shadow-sm animate__animated animate__fadeInUp">
       <div class="card-body">
-        <h6 class="card-title mb-3 text-success" style="font-weight:600;"><i class="bi bi-tools me-1 text-primary"></i> {{ _('New Milling Tools Inventory') }}</h6>
+  <h6 class="card-title mb-3" style="font-weight:600;"><i class="bi bi-tools me-1" style="color:var(--accent);"></i> {{ _('New Milling Tools Inventory') }}</h6>
         <div class="mb-2 d-flex flex-wrap gap-2 align-items-center">
           <label class="form-label mb-0 me-2 text-secondary">{{ _('Order by:') }}</label>
           <select id="filtro-fresa-orden" class="form-select form-select-sm shadow-none" style="min-width:90px;max-width:120px;">
@@ -75,7 +75,7 @@
   <div class="col-md-4">
     <div class="card border-0 shadow-sm animate__animated animate__fadeInUp mb-4">
       <div class="card-body">
-        <h6 class="card-title mb-3 text-info" style="font-weight:600;"><i class="bi bi-bar-chart-line me-1 text-primary"></i> {{ _('Production Analysis Daily') }}</h6>
+  <h6 class="card-title mb-3" style="font-weight:600;"><i class="bi bi-bar-chart-line me-1" style="color:var(--accent);"></i> {{ _('Production Analysis Daily') }}</h6>
         <div class="mb-2 d-flex flex-wrap gap-2 align-items-center">
           <label class="form-label mb-0 me-2 text-secondary">{{ _('Group by:') }}</label>
           <select id="filtro-prod-group" class="form-select form-select-sm shadow-none" style="min-width:140px;max-width:180px;">
@@ -95,13 +95,13 @@
     <!-- OTRAS GRÁFICAS DEBAJO -->
     <div class="card border-0 shadow-sm animate__animated animate__fadeInUp mb-4">
       <div class="card-body">
-        <h6 class="card-title mb-3 text-accent" style="font-weight:600;"><i class="bi bi-graph-up me-1 text-success"></i> {{ _('Record of Cases') }}</h6>
+  <h6 class="card-title mb-3" style="font-weight:600;"><i class="bi bi-graph-up me-1" style="color:var(--accent);"></i> {{ _('Record of Cases') }}</h6>
         <div class="mb-2 d-flex flex-wrap gap-2 align-items-center">
           <label class="form-label mb-0 me-2 text-secondary">{{ _('Show:') }}</label>
           <select id="filtro-record-tipo" class="form-select form-select-sm shadow-none" style="min-width:120px;max-width:160px;">
             <option value="casos">{{ _('Cases') }}</option>
             <option value="ordenes">{{ _('Orders') }}</option>
-            <option value="modelos">{{ _('Models') }}</option>
+            <option value="modelos">{{ _('# Units') }}</option>
           </select>
           <label class="form-label mb-0 ms-2 text-secondary">{{ _('Interval:') }}</label>
           <select id="filtro-record-dias" class="form-select form-select-sm shadow-none" style="min-width:80px;max-width:120px;">
@@ -121,7 +121,7 @@
   <!-- DERECHA: Upcoming activities -->
   <div class="col-md-3">
     <!-- Resumen del día -->
-    <div class="card shadow-sm mb-3 animate__animated animate__fadeInRight border-0" style="background:linear-gradient(90deg,#1565c0 0%,#26a69a 100%);color:#fff; border-radius:1.2rem;">
+  <div class="card shadow-sm mb-3 animate__animated animate__fadeInRight border-0" style="background:#2E3A46;color:#fff; border-radius:1.2rem;">
       <div class="card-body d-flex justify-content-between align-items-center" id="resumen-dia">
         <div class="text-center">
           <div style="font-size:1.3em;font-weight:600;">{{ total_ordenes }}</div>
@@ -135,12 +135,12 @@
         <div class="vr mx-3" style="height:40px;"></div>
         <div class="text-center">
           <div style="font-size:1.3em;font-weight:600;">{{ total_modelos }}</div>
-          <div style="font-size:0.95em;">{{ _('Models') }}</div>
+          <div style="font-size:0.95em;">{{ _('# Units') }}</div>
         </div>
       </div>
     </div>
     <div class="card shadow-sm mb-4 animate__animated animate__fadeInRight border-0">
-      <div class="card-header bg-info text-white rounded-top-4" style="font-weight:600;font-size:1.08em;"><b><i class="bi bi-calendar-check me-1"></i> {{ _('Upcoming activities') }}</b></div>
+  <div class="card-header text-white rounded-top-4" style="background:#2E3A46;font-weight:600;font-size:1.08em;border-top:3px solid var(--accent);"><b><i class="bi bi-calendar-check me-1" style="color:var(--accent);"></i> {{ _('Upcoming activities') }}</b></div>
       <ul class="list-group list-group-flush" id="upcoming-activities-list">
         <li class="list-group-item text-muted">{{ _('Loading...') }}</li>
       </ul>
@@ -152,7 +152,7 @@
   <div class="col-md-5">
     <div class="card border-0 shadow-sm animate__animated animate__fadeInUp mb-3">
       <div class="card-body">
-        <h6 class="card-title mb-3 text-primary" style="font-weight:600;"><i class="bi bi-grid-3x3-gap me-1 text-info"></i> {{ _('Stock by Shade and Thickness') }}</h6>
+  <h6 class="card-title mb-3" style="font-weight:600;"><i class="bi bi-grid-3x3-gap me-1" style="color:var(--accent);"></i> {{ _('Stock by Shade and Thickness') }}</h6>
         <div class="rounded-4 p-2 bg-white shadow-sm mb-2" style="min-height:130px;">
           <canvas id="graficaStockShadeGrosor" height="120"></canvas>
         </div>
@@ -162,7 +162,7 @@
   <div class="col-md-6">
     <div class="card border-0 shadow-sm animate__animated animate__fadeInUp mb-3">
       <div class="card-body">
-        <h6 class="card-title mb-3 text-warning" style="font-weight:600;"><i class="bi bi-hourglass-split me-1 text-success"></i> {{ _('Block Lifespan (weeks) by Shade') }}</h6>
+  <h6 class="card-title mb-3" style="font-weight:600;"><i class="bi bi-hourglass-split me-1" style="color:var(--accent);"></i> {{ _('Block Lifespan (weeks) by Shade') }}</h6>
         <div class="rounded-4 p-2 bg-white shadow-sm mb-2" style="min-height:130px;">
           <canvas id="graficaVidaBloques" height="120"></canvas>
         </div>
@@ -194,13 +194,13 @@ $(document).ready(function(){
       window.graficaModelosMaquina.destroy();
       window.graficaModelosMaquina = null;
     }
-    const prodColors = ['#1976d2','#43a047','#fbc02d','#8e24aa','#e53935','#00838f','#ff9800','#90a4ae'];
+  const prodColors = ['#2E3A46','#E14A4C','#1E88E5','#43A047','#FB8C00','#8E24AA','#00ACC1','#D81B60'];
     window.graficaModelosMaquina = new Chart(ctx1, {
       type: 'bar',
       data: {
         labels: data.modelos_dia.map(x => x.dia),
         datasets: [{
-          label: "{{ _('Models') }}",
+          label: "{{ _('# Units') }}",
           data: data.modelos_dia.map(x => x.cantidad),
           backgroundColor: data.modelos_dia.map((x,i) => prodColors[i % prodColors.length]),
         }]
@@ -218,7 +218,7 @@ $(document).ready(function(){
             labels: data.modelos_material_semana.map(x => x.material),
             datasets: [{
               data: data.modelos_material_semana.map(x => x.cantidad),
-              backgroundColor: ['#1976d2','#43a047','#fbc02d','#8e24aa','#e53935','#00838f']
+              backgroundColor: ['#2E3A46','#E14A4C','#1E88E5','#43A047','#FB8C00','#8E24AA']
             }]
           },
           options: {responsive:true, radius: '45%', plugins:{legend:{position:'bottom'}}}
@@ -235,7 +235,7 @@ $(document).ready(function(){
           datasets: [{
             label: "{{ _('Blocks') }}",
             data: data.bloques_shade.map(x => x.cantidad),
-            backgroundColor: '#8e24aa',
+            backgroundColor: '#E14A4C',
           }]
         },
         options: {responsive:true, plugins:{legend:{display:false}}}
@@ -257,14 +257,14 @@ $(document).ready(function(){
         window.graficaBloquesShade.destroy();
       }
       const materialColors = {
-        'Zirconia': '#1976d2',
-        'Disilicato': '#43a047',
-        'PMMA': '#fbc02d',
-        'Cera': '#8e24aa',
-        'Wax': '#e53935',
-        'Composite': '#00838f',
-        'Resina': '#ff9800',
-        'default': '#90a4ae'
+        'Zirconia': '#1E88E5',
+        'Disilicato': '#43A047',
+        'PMMA': '#FB8C00',
+        'Cera': '#E14A4C',
+        'Wax': '#8E24AA',
+        'Composite': '#00ACC1',
+        'Resina': '#D81B60',
+        'default': '#9E9E9E'
       };
       let selectedMaterial = $('#filtro-material').val();
       let barColors = [];
@@ -318,7 +318,7 @@ function renderGraficaFresasNuevas(orden) {
     if(window.graficaFresasNuevas && typeof window.graficaFresasNuevas.destroy === 'function') {
       window.graficaFresasNuevas.destroy();
     }
-    const barColors = ['#1976d2','#43a047','#fbc02d','#8e24aa','#e53935','#00838f','#ff9800','#90a4ae'];
+  const barColors = ['#2E3A46','#E14A4C','#1E88E5','#43A047','#FB8C00','#8E24AA','#00ACC1','#D81B60'];
     const originalCounts = data.map(x => x.cantidad || 0);
     const plotCounts = originalCounts.map(v => (v > 0 ? v : null)); // evitar 0 en escala log
     window.graficaFresasNuevas = new Chart(ctx, {
@@ -459,7 +459,7 @@ function cargarGraficaProduccionAgrupada() {
       data: {
         labels: labels,
         datasets: [{
-          label: "{{ _('Models') }}",
+          label: "{{ _('# Units') }}",
           data: values,
           backgroundColor: labels.map((x,i) => prodColors[i % prodColors.length]),
         }]
@@ -505,7 +505,7 @@ function renderGraficaRecordCases() {
     let label;
     if(tipo === 'casos') label = "{{ _('Cases') }}";
     else if(tipo === 'ordenes') label = "{{ _('Orders') }}";
-    else label = "{{ _('Models') }}";
+  else label = "{{ _('# Units') }}";
     window.graficaRecordCases = new Chart(ctx, {
       type: 'line',
       data: {
@@ -513,11 +513,11 @@ function renderGraficaRecordCases() {
         datasets: [{
           label: label,
           data: data.map(x => x.cantidad),
-          borderColor: '#1976d2',
-          backgroundColor: 'rgba(25, 118, 210, 0.1)',
+          borderColor: '#1E88E5',
+          backgroundColor: 'rgba(30,136,229,0.15)',
           tension: 0.3,
           pointRadius: 4,
-          pointBackgroundColor: '#1976d2',
+          pointBackgroundColor: '#E14A4C',
           fill: true
         }]
       },
@@ -550,14 +550,17 @@ function renderGraficaStockShadeGrosor() {
     if(window.graficaStockShadeGrosor && typeof window.graficaStockShadeGrosor.destroy === 'function') {
       window.graficaStockShadeGrosor.destroy();
     }
-    const palette = ['#1976d2','#43a047','#fbc02d','#8e24aa','#e53935','#00838f','#ff9800','#90a4ae','#6d4c41','#26c6da'];
-    // Construir datasets por grosor (columnas de la matriz)
-    const datasets = grosores.map(function(g, idx) {
-      const dataCol = matriz.map(fila => fila[idx] || 0);
+  const palette = ['#1E88E5','#43A047','#FB8C00','#8E24AA','#E14A4C','#00ACC1','#D81B60','#5E35B1','#7CB342','#F4511E'];
+    // Ordenar grosores de mayor a menor para que los más grandes queden abajo (base) y los pequeños arriba
+    const pairs = (grosores || []).map(function(g, idx){ return { g: g, idx: idx }; });
+    pairs.sort(function(a,b){ return (parseFloat(b.g) || 0) - (parseFloat(a.g) || 0); });
+    // Construir datasets por grosor ya ordenados desc
+    const datasets = pairs.map(function(p, i) {
+      const dataCol = matriz.map(fila => fila[p.idx] || 0);
       return {
-        label: g + ' mm',
+        label: p.g + ' mm',
         data: dataCol,
-        backgroundColor: palette[idx % palette.length],
+        backgroundColor: palette[i % palette.length],
         stack: 'stack1'
       };
     });
@@ -602,7 +605,7 @@ function renderGraficaVidaBloques() {
         datasets: [{
           label: "{{ _('Avg weeks') }}",
           data: values.length ? values : [0],
-          backgroundColor: '#26a69a'
+          backgroundColor: '#43A047'
         }]
       },
       options: {

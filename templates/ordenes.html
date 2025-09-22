@@ -67,7 +67,7 @@
               <option value="">-- {{ _('Select') }} --</option>
               {% for bloque in bloques_usados %}
                 <option value="{{ bloque.id }}" {% if (request.form.get('bloque_usado_id') and request.form.get('bloque_usado_id')|int == bloque.id) or (not request.form.get('bloque_usado_id') and request.args.get('bloque_usado_id') and request.args.get('bloque_usado_id')|int == bloque.id) %}selected{% endif %}>
-                  {{ bloque.codigo_barra }} | {{ bloque.material }} | Marca: {{ bloque.marca if bloque.marca else '-' }} | {{ bloque.shade }} | Grosor: {{ bloque.grosor if bloque.grosor else '-' }} | Modelos: {{ bloque.modelos_fresados }}
+                  {{ bloque.codigo_barra }} | {{ bloque.material }} | {{ _('Brand') }}: {{ bloque.marca if bloque.marca else '-' }} | {{ _('Shade') }}: {{ bloque.shade }} | {{ _('Thickness') }}: {{ bloque.grosor if bloque.grosor else '-' }} | {{ _('# Units') }}: {{ bloque.modelos_fresados }}
                 </option>
               {% endfor %}
             </select>
@@ -78,7 +78,7 @@
               <option value="">-- {{ _('Select') }} --</option>
               {% for bloque in bloques_nuevos %}
                 <option value="{{ bloque.id }}" {% if (request.form.get('bloque_nuevo_id') and request.form.get('bloque_nuevo_id')|int == bloque.id) or (not request.form.get('bloque_nuevo_id') and request.args.get('bloque_nuevo_id') and request.args.get('bloque_nuevo_id')|int == bloque.id) %}selected{% endif %}>
-                  {{ bloque.shade }} | Marca: {{ bloque.marca if bloque.marca else '-' }} | Grosor: {{ bloque.grosor if bloque.grosor else '-' }} | Cant: {{ bloque.cantidad }}
+                  {{ _('Shade') }}: {{ bloque.shade }} | {{ _('Brand') }}: {{ bloque.marca if bloque.marca else '-' }} | {{ _('Thickness') }}: {{ bloque.grosor if bloque.grosor else '-' }} | {{ _('Count') }}: {{ bloque.cantidad }}
                 </option>
               {% endfor %}
             </select>
@@ -90,7 +90,7 @@
             <small class="text-muted">{{ _('Enter one or more case codes separated by commas.') }}</small>
           </div>
           <div class="col-md-4">
-            <label class="form-label">{{ _('Model Count') }}</label>
+            <label class="form-label">{{ _('# Units') }}</label>
             <input type="number" name="cantidad_modelos" class="form-control" min="1" value="1" required>
           </div>
           <div class="col-md-3 text-end">
@@ -159,7 +159,7 @@
                 <th><i class="bi bi-award"></i> {{ _('Brand') }}</th>
                 <th><i class="bi bi-palette"></i> {{ _('Shade') }}</th>
                 <th><i class="bi bi-cpu"></i> {{ _('Machine') }}</th>
-                <th><i class="bi bi-123"></i> {{ _('Model Count') }}</th>
+                <th><i class="bi bi-123"></i> {{ _('# Units') }}</th>
                 <th><i class="bi bi-calendar"></i> {{ _('Date') }}</th>
                 <th><i class="bi bi-gear"></i> {{ _('Actions') }}</th>
               </tr>
@@ -218,7 +218,7 @@
                 <th style="width:2em;"></th>
                 <th>{{ _('Code') }}</th>
                 <th>{{ _('Date') }}</th>
-                <th style="width:6em;">{{ _('Model Count') }}</th>
+                <th style="width:6em;">{{ _('# Units') }}</th>
                 <th></th>
               </tr>
             </thead>
@@ -259,6 +259,16 @@
 }
 </style>
 
+<div id="ordenes-msgs"
+  data-msg-edit-code="{{ _('Edit order code:') }}"
+  data-msg-delete-order="{{ _('Are you sure you want to delete this order?') }}"
+  data-label-code="{{ _('Code') }}"
+  data-label-material="{{ _('Material') }}"
+  data-label-brand="{{ _('Brand') }}"
+  data-label-shade="{{ _('Shade') }}"
+  data-label-machine="{{ _('Machine') }}">
+</div>
+
 <!-- Modal para confirmar código de bloque -->
 <div class="modal fade" id="modalConfirmarCodigo" tabindex="-1" aria-hidden="true">
   <div class="modal-dialog modal-dialog-centered">
@@ -272,6 +282,15 @@
 {% block scripts %}
 {{ super() }}
 <script>
+// Dataset messages for orders
+const ordenesMsgsEl = document.getElementById('ordenes-msgs');
+const ds = ordenesMsgsEl ? ordenesMsgsEl.dataset : {};
+const MSG_DELETE_ORDER = ds.msgDeleteOrder || 'Are you sure you want to delete this order?';
+const LABEL_CODE = ds.labelCode || 'Code';
+const LABEL_MATERIAL = ds.labelMaterial || 'Material';
+const LABEL_BRAND = ds.labelBrand || 'Brand';
+const LABEL_SHADE = ds.labelShade || 'Shade';
+const LABEL_MACHINE = ds.labelMachine || 'Machine';
 // Función para abrir el modal de confirmación de código de bloque
 function abrirModalConfirmarCodigo(bloqueId, ordenData) {
   $.get('/ordenes/confirmar-codigo-bloque/' + bloqueId + '?orden_data=' + encodeURIComponent(ordenData), function(html) {
@@ -309,7 +328,7 @@ $(document).on('submit', '.form-eliminar-orden', function(e) {
   const marca = $(this).data('marca');
   const shade = $(this).data('shade');
   const maquina = $(this).data('maquina');
-  const msg = `¿Está seguro de eliminar esta orden?\n\nCódigo: ${codigo}\nMaterial: ${material}\nMarca: ${marca}\nShade: ${shade}\nMáquina: ${maquina}`;
+  const msg = `${MSG_DELETE_ORDER}\n\n${LABEL_CODE}: ${codigo}\n${LABEL_MATERIAL}: ${material}\n${LABEL_BRAND}: ${marca}\n${LABEL_SHADE}: ${shade}\n${LABEL_MACHINE}: ${maquina}`;
   if(!confirm(msg)) e.preventDefault();
 });
 </script>
@@ -328,7 +347,8 @@ $(document).ready(function(){
   $(document).on('click', '.btn-editar-pendiente', function(){
     var id = $(this).data('id');
     var codigoActual = $(this).data('codigo');
-    var nuevoCodigo = prompt('Editar código de orden:', codigoActual);
+    var msg = (document.getElementById('ordenes-msgs').dataset.msgEditCode) || 'Edit order code:';
+    var nuevoCodigo = prompt(msg, codigoActual);
     if(nuevoCodigo && nuevoCodigo !== codigoActual) {
       var form = $(this).closest('form');
       // Crea input oculto para el nuevo código

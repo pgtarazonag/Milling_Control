@@ -56,7 +56,7 @@
         <input type="text" name="codigo_barra" class="form-control" value="{{ bloque.codigo_barra or '' }}">
       </div>
       <div class="col-md-6">
-        <label class="form-label">{{ _('Milled Models') }}</label>
+  <label class="form-label">{{ _('# Units') }}</label>
         <input type="number" name="modelos_fresados" class="form-control" value="{{ bloque.modelos_fresados or 0 }}" min="0">
       </div>
       <input type="hidden" name="estado" value="{{ bloque.estado }}">
@@ -86,7 +86,7 @@ $(document).ready(function() {
     let $shade = $('select[name=shade]');
     let shadeActual = $shade.val();
     $shade.empty();
-    $shade.append('<option value="">-- Selecciona --</option>');
+  $shade.append('<option value="">-- '+"{{ _('Select') }}"+' --</option>');
     shades.forEach(function(s) {
       $shade.append('<option value="'+s+'">'+s+'</option>');
     });
@@ -98,7 +98,7 @@ $(document).ready(function() {
     let $marca = $('select[name=marca]');
     let marcaActual = $marca.val();
     $marca.empty();
-    $marca.append('<option value="">-- Selecciona --</option>');
+  $marca.append('<option value="">-- '+"{{ _('Select') }}"+' --</option>');
     marcas.forEach(function(m) {
       if (typeof m === 'string') {
         $marca.append('<option value="'+m+'">'+m+'</option>');

@@ -9,7 +9,7 @@
 {% endblock %}
 {% block content %}
 <style>
-  /* Utilities estilo Tailwind minimalistas para esta vista */
+  /* Minimal Tailwind-like utilities for this view */
   .max-w-7xl{max-width:80rem;} .mx-auto{margin-left:auto;margin-right:auto;} .px-3{padding-left:0.75rem;padding-right:0.75rem}
   .grid{display:grid;} .gap-6{gap:1.5rem}
   .grid-cols-1{grid-template-columns:repeat(1,minmax(0,1fr))}
@@ -32,14 +32,9 @@
   .skeleton-sm{height:8px;margin:6px 0}
 </style>
 <div class="mx-auto max-w-7xl px-3">
-  <!-- Encabezado sticky con KPIs y filtros segmentados -->
+  <!-- Sticky header with KPIs and segmented filters -->
   <div class="sticky-header py-2 mb-3">
     <div class="d-flex flex-wrap align-items-center justify-content-between gap-2">
-      <div class="d-flex flex-wrap gap-2">
-        <div class="kpi shadow-sm"><i class="bi bi-exclamation-octagon text-danger"></i> <span>{{ _('Overdue') }}:</span> <span class="num" id="kpi-overdue">—</span></div>
-        <div class="kpi shadow-sm"><i class="bi bi-calendar-week text-warning"></i> <span>{{ _('This week') }}:</span> <span class="num" id="kpi-week">—</span></div>
-        <div class="kpi shadow-sm"><i class="bi bi-calendar3 text-success"></i> <span>{{ _('Next 30d') }}:</span> <span class="num" id="kpi-30d">—</span></div>
-      </div>
       <div>
         <div class="segmented">
           <a href="{{ url_for('mantenimiento.mantenimiento') }}" class="{% if not grupo %}active{% endif %}">{{ _('All') }}</a>
@@ -47,6 +42,11 @@
           <a href="{{ url_for('mantenimiento.mantenimiento', grupo='hornos') }}" class="{% if grupo == 'hornos' %}active{% endif %}">{{ _('Ovens') }}</a>
           <a href="{{ url_for('mantenimiento.mantenimiento', grupo='aspiradoras') }}" class="{% if grupo == 'aspiradoras' %}active{% endif %}">{{ _('Vacuum Cleaners') }}</a>
         </div>
+      </div>
+      <div class="d-flex flex-wrap gap-2">
+        <div class="kpi shadow-sm"><i class="bi bi-exclamation-octagon text-danger"></i> <span>{{ _('Overdue') }}:</span> <span class="num" id="kpi-overdue">—</span></div>
+        <div class="kpi shadow-sm"><i class="bi bi-calendar-week text-warning"></i> <span>{{ _('This week') }}:</span> <span class="num" id="kpi-week">—</span></div>
+        <div class="kpi shadow-sm"><i class="bi bi-calendar3 text-success"></i> <span>{{ _('Next 30d') }}:</span> <span class="num" id="kpi-30d">—</span></div>
       </div>
     </div>
   </div>
@@ -58,7 +58,7 @@
       <div class="card card-soft rounded-2xl shadow-sm">
         <div class="card-body">
           <h5 class="mb-3"><i class="bi bi-gear"></i> {{ _('Maintenance and Calibrations') }}</h5>
-          <!-- Barra de acceso a documentación y selector de máquina/actividad -->
+          <!-- Documentation link and machine/activity selector -->
           <form method="post" class="mb-3">
             <div class="row g-2 align-items-end">
               <div class="col-auto mb-1">
@@ -110,10 +110,10 @@
             </div>
           </form>
 
-          <!-- Skeleton tabla -->
+          <!-- Table skeleton -->
           <div id="mant-skeleton" class="skeleton" style="height:180px;" aria-hidden="true"></div>
 
-          <!-- Tabla -->
+          <!-- Table -->
           <div class="table-responsive animate__animated animate__fadeIn d-none" id="mant-table-wrap">
             <table class="table table-striped table-hover" id="tabla-mant">
               <thead class="table-info">
@@ -151,7 +151,7 @@
       </div>
     </div>
 
-    <!-- Columna lateral: próximas actividades -->
+  <!-- Sidebar: upcoming activities -->
     <div>
       <div class="card card-soft rounded-2xl shadow-sm">
         <div class="card-header bg-white" style="font-weight:600"><i class="bi bi-calendar-check me-1"></i> {{ _('Upcoming Activities') }}</div>
@@ -165,7 +165,18 @@
           {% for prox in proximas_actividades %}
           <li class="list-group-item d-flex justify-content-between align-items-center">
             <div>
-              <b>{{ prox.maquina }}</b> - {{ prox.actividad }}<br>
+              {% set act = prox.actividad %}
+              {% set act_en = act
+                |replace('Cada ', 'Every ')
+                |replace('cada ', 'every ')
+                |replace('semanas', _('weeks'))
+                |replace('semana', _('week'))
+                |replace('meses', _('months'))
+                |replace('mes', _('month'))
+                |replace('años', _('years'))
+                |replace('año', _('year'))
+              %}
+              <b>{{ prox.maquina }}</b> - {{ act_en }}<br>
               <small class="text-muted">{{ _('Next') }}: <span class="fecha-tabla" data-proxima="{{ prox.proxima_fecha.strftime('%Y-%m-%dT%H:%M:%S') }}">{{ prox.proxima_fecha.strftime('%Y-%m-%d %H:%M') }}</span></small>
             </div>
             <div>
@@ -178,7 +189,7 @@
             </div>
           </li>
           {% else %}
-          <li class="list-group-item text-muted">{{ _('No hay actividades próximas programadas.') }}</li>
+          <li class="list-group-item text-muted">{{ _('No upcoming activities scheduled.') }}</li>
           {% endfor %}
         </ul>
       </div>
@@ -190,7 +201,7 @@
 {{ super() }}
 <script>
 $(document).ready(function(){
-  // Mostrar contenido real y ocultar skeletons cuando DataTable esté listo
+  // Show real content and hide skeletons when DataTable is ready
   const $table = $('#tabla-mant');
   const dt = $table.DataTable({
     language: { url: window.getDataTablesLangUrl ? window.getDataTablesLangUrl() : '/static/es-ES.json' },
@@ -201,7 +212,7 @@ $(document).ready(function(){
   $('#prox-skeleton').addClass('d-none');
   $('#prox-list').removeClass('d-none');
 
-  // KPI counters a partir de fechas en DOM (sin tocar lógica de datos)
+  // KPI counters from dates in DOM (without touching data logic)
   function computeKPIs(){
     const now = new Date();
     const in7d = new Date(now.getTime() + 7*24*3600*1000);

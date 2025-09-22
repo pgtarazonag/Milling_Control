@@ -1,15 +1,16 @@
 /* Dental Lab Elegant & Sober Theme */
 :root {
-  --primary: #1565c0; /* deep dental blue */
-  --secondary: #26a69a; /* elegant teal */
-  --accent: #6d4c41; /* soft brown for subtle accents */
-  --danger: #c62828; /* sober red */
-  --background: #f4f7fa; /* off-white */
-  --surface: #fff; /* white */
-  --text: #263238; /* dark blue-gray */
-  --muted: #b0bec5; /* muted gray */
-  --border: #e0e4ea;
-  --shadow: 0 2px 8px rgba(21, 101, 192, 0.07);
+  /* Shanto Dental brand-aligned palette */
+  --primary: #2E3A46; /* slate navy */
+  --secondary: #3F5566; /* lighter slate for hovers */
+  --accent: #E14A4C; /* brand red brush */
+  --danger: #B71C1C; /* strong danger red */
+  --background: #F7F8FA; /* light neutral */
+  --surface: #FFFFFF; /* white */
+  --text: #2F3B45; /* dark blue-gray */
+  --muted: #A7B1B7; /* muted gray-blue */
+  --border: #E1E6EA;
+  --shadow: 0 2px 8px rgba(46, 58, 70, 0.10);
   --radius: 1.1rem;
 }
 
@@ -34,7 +35,7 @@ body {
   margin-bottom: 1.5rem;
 }
 .table th {
-  background: var(--primary);
+  background: var(--accent);
   color: #fff;
   font-weight: 600;
   border: none;
@@ -48,8 +49,11 @@ body {
   background-color: #f4f7fa;
 }
 .table-hover tbody tr:hover {
-  background: #e3f2fd;
+  background: #EEF2F5;
 }
+
+/* Card titles use brand accent to add color */
+.card .card-title { color: var(--accent) !important; }
 
 .btn, .btn-action {
   border-radius: 2rem;
@@ -58,14 +62,8 @@ body {
   box-shadow: 0 1px 4px rgba(21, 101, 192, 0.08);
   border: none;
 }
-.btn-primary, .btn-action {
-  background: var(--primary);
-  color: #fff;
-}
-.btn-primary:hover, .btn-action:hover {
-  background: var(--secondary);
-  color: #fff;
-}
+.btn-primary, .btn-action { background: var(--primary); color: #fff; }
+.btn-primary:hover, .btn-action:hover { background: var(--secondary); color: #fff; }
 .btn-danger {
   background: var(--danger);
   color: #fff;
@@ -73,11 +71,7 @@ body {
 .btn-danger:hover {
   background: #8e0000;
 }
-.btn-outline-primary {
-  border: 1.5px solid var(--primary);
-  color: var(--primary);
-  background: transparent;
-}
+.btn-outline-primary { border: 1.5px solid var(--primary); color: var(--primary); background: transparent; }
 .btn-outline-primary:hover {
   background: var(--primary);
   color: #fff;
@@ -122,7 +116,7 @@ th .bi {
 
 /* Subtle shadow for hoverable cards */
 .card:hover {
-  box-shadow: 0 4px 16px rgba(21, 101, 192, 0.13);
+  box-shadow: 0 4px 16px rgba(46, 58, 70, 0.14);
   transition: box-shadow 0.2s;
 }
 
@@ -132,7 +126,7 @@ th .bi {
   padding: 0.3em 0.8em;
   font-size: 0.95em;
   font-weight: 500;
-  background: var(--secondary);
+  background: var(--accent);
   color: #fff;
 }
 
@@ -145,7 +139,7 @@ th .bi {
   color: #fff;
   border: none;
   border-radius: 1.5em;
-  box-shadow: 0 1px 4px rgba(21, 101, 192, 0.08);
+  box-shadow: 0 1px 4px rgba(46, 58, 70, 0.12);
 }
 .table .btn-action:hover {
   background: var(--secondary);
@@ -163,13 +157,13 @@ th .bi {
 
 /* Sidebar: only icons, no text, no expand */
 .sidebar {
-  background: #212b36 !important;
+  background: #212B36 !important;
   min-width: 24px !important;
   width: 24px !important;
   max-width: 24px !important;
   color: #fff !important;
   border-right: 1px solid #1a2229;
-  box-shadow: 2px 0 8px rgba(21,101,192,0.04);
+  box-shadow: 2px 0 8px rgba(46,58,70,0.06);
 }
 .sidebar .nav-link {
   color: #b0bec5 !important;
@@ -183,11 +177,10 @@ th .bi {
   background: none;
   transition: background 0.18s, color 0.18s;
   gap: 0.1em;
+  border-left: 3px solid transparent;
 }
-.sidebar .nav-link.active, .sidebar .nav-link:hover {
-  background: linear-gradient(90deg, #1565c0 0%, #26a69a 100%) !important;
-  color: #fff !important;
-}
+.sidebar .nav-link.active, .sidebar .nav-link:hover { background: #263238 !important; color: #fff !important; border-left-color: var(--accent); }
+.sidebar .nav-link.active .bi, .sidebar .nav-link:hover .bi { color: var(--accent) !important; }
 .sidebar .nav-link .menu-text {
   display: inline !important;
   color: #b0bec5;
@@ -210,7 +203,7 @@ th .bi {
 /* Topbar: strong contrast, elegant */
 .topbar {
   border-bottom: 1.5px solid #e0e4ea;
-  box-shadow: 0 2px 8px rgba(21,101,192,0.04);
+  box-shadow: 0 2px 8px rgba(46,58,70,0.08);
 }
 .topbar .logo {
   color: #fff !important;
@@ -240,7 +233,7 @@ th .bi {
 }
 
 .footer {
-  background: #212b36;
+  background: #212B36;
   color: #b0bec5;
   text-align: center;
   padding: 1.2rem 0 0.5rem 0;

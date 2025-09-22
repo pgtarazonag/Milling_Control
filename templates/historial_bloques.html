@@ -61,9 +61,13 @@
         </div>
       </div>
       <div class="col-md-6 ps-md-2">
+        <div id="historial-msgs"
+             data-msg-delete-used="{{ _('Delete this used block?') }}"
+             data-msg-delete-selected="{{ _('Delete selected blocks?') }}">
+        </div>
         <form method="post" id="form-eliminar-bloques-usados" action="{{ url_for('bloques.eliminar_varios_bloques_usados') }}">
           <div class="table-responsive animate__animated animate__fadeIn mb-4 h-100">
-            <h5 class="mb-2"><i class="bi bi-cpu"></i> {{ _('Used Blocks (by Models)') }}</h5>
+            <h5 class="mb-2"><i class="bi bi-cpu"></i> {{ _('Used Blocks (by # Units)') }}</h5>
             <div class="d-flex align-items-center mb-2 gap-2">
               <label class="form-label mb-0">{{ _('Material:') }}</label>
               <select id="filtro-material-usados" class="form-select form-select-sm" style="width:120px;">
@@ -74,7 +78,7 @@
               </select>
               <label class="form-label mb-0 ms-2">{{ _('Highlight limit:') }}</label>
               <input type="number" id="limite-modelos" class="form-control form-control-sm" style="width:70px;" min="1" value="{{ limite_modelos or 17 }}">
-              <span class="text-muted small">{{ _('Rows with models above this value will be highlighted.') }}</span>
+              <span class="text-muted small">{{ _('Rows with # units above this value will be highlighted.') }}</span>
             </div>
             <table class="table table-bordered table-hover" id="tabla-usados-modelos">
               <thead class="table-info">
@@ -85,7 +89,7 @@
                   <th><i class="bi bi-award"></i> {{ _('Brand') }}</th>
                   <th><i class="bi bi-palette"></i> {{ _('Shade') }}</th>
                   <th><i class="bi bi-rulers"></i> {{ _('Thickness') }}</th>
-                  <th><i class="bi bi-bar-chart"></i> {{ _('Models') }}</th>
+                  <th><i class="bi bi-bar-chart"></i> {{ _('# Units') }}</th>
                   <th><i class="bi bi-gear"></i> {{ _('Action') }}</th>
                 </tr>
               </thead>
@@ -100,15 +104,15 @@
                   <td>{{ bloque.grosor }}</td>
                   <td>{{ bloque.modelos_fresados }}</td>
                   <td>
-                    <form method="post" action="{{ url_for('bloques.eliminar_bloque_usado', bloque_id=bloque.id) }}" style="display:inline;">
-                      <button type="submit" class="btn btn-outline-danger btn-sm" onclick="return confirm('¿Eliminar este bloque usado?');"><i class="bi bi-trash"></i></button>
-                    </form>
+                        <form method="post" action="{{ url_for('bloques.eliminar_bloque_usado', bloque_id=bloque.id) }}" style="display:inline;" class="form-eliminar-bloque-usado">
+                          <button type="submit" class="btn btn-outline-danger btn-sm"><i class="bi bi-trash"></i></button>
+                        </form>
                   </td>
                 </tr>
                 {% endfor %}
               </tbody>
             </table>
-            <button type="submit" class="btn btn-danger btn-sm mt-2" onclick="return confirm('¿Eliminar los bloques seleccionados?');"><i class="bi bi-trash"></i> {{ _('Delete Selected') }}</button>
+              <button type="submit" class="btn btn-danger btn-sm mt-2" id="btn-eliminar-seleccion"><i class="bi bi-trash"></i> {{ _('Delete Selected') }}</button>
             <div class="small text-muted mt-2">{{ _('Rows highlighted mean the block should be replaced soon.') }}</div>
           </div>
         </form>
@@ -121,6 +125,16 @@
 {{ super() }}
 <script>
 $(document).ready(function(){
+  // Confirmations (single used block and bulk delete)
+  const msgsEl = document.getElementById('historial-msgs');
+  const MSG_DELETE_USED = (msgsEl && msgsEl.dataset.msgDeleteUsed) || 'Delete this used block?';
+  const MSG_DELETE_SELECTED = (msgsEl && msgsEl.dataset.msgDeleteSelected) || 'Delete selected blocks?';
+  $(document).on('submit', '.form-eliminar-bloque-usado', function(e){
+    if(!confirm(MSG_DELETE_USED)) { e.preventDefault(); }
+  });
+  $('#form-eliminar-bloques-usados').on('submit', function(e){
+    if(!confirm(MSG_DELETE_SELECTED)) { e.preventDefault(); }
+  });
   // DataTable para tabla de historial
   $('#tabla-historial').DataTable({
     language: { url: window.getDataTablesLangUrl() }
