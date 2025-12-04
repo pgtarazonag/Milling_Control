@@ -335,6 +335,18 @@ def create_app():
     # Retornamos la app lista para usarse
     return app
 
+# Expose a WSGI application object for Gunicorn and other WSGI servers.
+# This makes the process invocation simpler (e.g. `gunicorn app:application`).
+# We keep the development `if __name__ == '__main__'` block below unchanged.
+try:
+    # Delay creation until module import; if environment isn't configured
+    # this will raise later when the process starts — that's expected.
+    application = create_app()
+except Exception:
+    # If creation at import time fails (e.g., missing DB in build phase),
+    # do not crash here; Gunicorn or the runtime will show real error on start.
+    application = None
+
 # Si este archivo se ejecuta directamente, inicia el servidor en modo debug
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
