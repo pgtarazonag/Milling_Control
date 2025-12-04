@@ -54,11 +54,12 @@ def create_app():
     babel = Babel(app)
 
     # Versión de assets para cache busting (usa SHA de deploy si existe)
+    # Use timezone-aware UTC timestamp to avoid DeprecationWarning on Python 3.13+
     app.config['ASSET_VERSION'] = (
         os.environ.get('ASSET_VERSION') or
         os.environ.get('RAILWAY_GIT_COMMIT_SHA') or
         os.environ.get('RENDER_GIT_COMMIT') or
-        datetime.utcnow().strftime('%Y%m%d%H%M%S')
+        datetime.now(pytz.UTC).strftime('%Y%m%d%H%M%S')
     )
 
     # Inicializamos la base de datos con la app
@@ -323,9 +324,22 @@ def create_app():
         db.session.commit()
         return jsonify({'status': 'ok', 'mode': mode, 'inserted': total_insert, 'updated': total_update})
 
-    # Creamos las tablas de la base de datos si no existen
+    # Creamos las tablas de la base de datos si no existen.
+    # Nota: en entornos hospedados la base de datos puede no estar lista
+    # inmediatamente al arrancar; evitamos que la aplicación falle en ese caso
+    # registrando una advertencia en lugar de propagar la excepción.
+    from sqlalchemy.exc import OperationalError
     with app.app_context():
-        db.create_all()
+        try:
+            db.create_all()
+        except OperationalError as e:
+            # Registrar advertencia y seguir; la infra debería intentar
+            # reconectar más tarde o ejecutar migraciones por separado.
+            try:
+                app.logger.warning('Database not available at startup: %s', e)
+            except Exception:
+                # Si logger no está listo, imprimir como fallback
+                print('Warning: Database not available at startup:', e)
 
     # NOTA: Cuando el usuario selecciona varios códigos de la lista de pendientes y presiona "Fresar seleccionados",
     # se debe redirigir a un formulario donde se completan los datos compartidos (shade, material, bloque, etc.)
