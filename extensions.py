@@ -19,3 +19,7 @@ from flask_sqlalchemy import SQLAlchemy
 
 # Creamos la instancia
 db = SQLAlchemy()
+
+# Instancia de Migrate para migraciones de base de datos
+from flask_migrate import Migrate
+migrate = Migrate()

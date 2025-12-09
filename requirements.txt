@@ -7,3 +7,4 @@ pandas
 xlsxwriter
 pytz
 flask_babel
+Flask-Migrate

@@ -628,10 +628,10 @@ def api_cases():
 @ordenes_bp.route('/api/record-cases')
 def api_record_cases():
     """
-    Devuelve un registro diario de casos, órdenes o modelos fresados en los últimos N días.
+    Devuelve un registro diario de casos, órdenes o modelos fresados en los últimos N días CON ACTIVIDAD.
     Parámetros GET:
       - tipo: 'casos', 'ordenes' o 'modelos'
-      - dias: número de días hacia atrás (int)
+      - dias: número de días activos hacia atrás (int)
     """
     from sqlalchemy import text, func
     tipo = request.args.get('tipo', 'casos')
@@ -639,32 +639,47 @@ def api_record_cases():
         dias = int(request.args.get('dias', 5))
     except Exception:
         dias = 5
-    VANCOUVER_TZ = pytz.timezone('America/Vancouver')
-    hoy = datetime.now(VANCOUVER_TZ).replace(hour=0, minute=0, second=0, microsecond=0)
-    desde = hoy - timedelta(days=dias-1)
+    
+    # Expresión para agrupar por fecha en zona horaria Vancouver
     fecha_expr = literal_column("to_char(fecha_creacion AT TIME ZONE 'UTC' AT TIME ZONE 'America/Vancouver', 'YYYY-MM-DD')")
-    # Query base agrupada por día
+    
+    data = []
+    
     if tipo == 'casos':
         # Sumar la cantidad de códigos de caso por día
+        # Primero obtenemos el número de casos por orden
         subq = db.session.query(
             Orden.id,
             func.array_length(func.string_to_array(Orden.codigos_caso, ','), 1).label('num_casos'),
             fecha_expr.label('dia')
-        ).filter(Orden.fecha_creacion >= desde).subquery()
-        res = db.session.query(subq.c.dia, func.sum(subq.c.num_casos)).group_by(subq.c.dia).order_by(subq.c.dia).all()
+        ).subquery()
+        
+        # Luego agrupamos por día, ordenamos descendente para limitar, y luego revertimos
+        res = db.session.query(subq.c.dia, func.sum(subq.c.num_casos))\
+            .group_by(subq.c.dia)\
+            .order_by(subq.c.dia.desc())\
+            .limit(dias)\
+            .all()
+            
         data = [{'dia': d, 'cantidad': int(c or 0)} for d, c in res]
+        
     elif tipo == 'ordenes':
         res = db.session.query(
             fecha_expr.label('dia'), func.count(Orden.id)
-        ).filter(Orden.fecha_creacion >= desde).group_by(fecha_expr).order_by(fecha_expr).all()
+        ).group_by(fecha_expr).order_by(fecha_expr.desc()).limit(dias).all()
+        
         data = [{'dia': d, 'cantidad': int(c or 0)} for d, c in res]
+        
     elif tipo == 'modelos':
         res = db.session.query(
             fecha_expr.label('dia'), func.sum(Orden.cantidad_modelos)
-        ).filter(Orden.fecha_creacion >= desde).group_by(fecha_expr).order_by(fecha_expr).all()
+        ).group_by(fecha_expr).order_by(fecha_expr.desc()).limit(dias).all()
+        
         data = [{'dia': d, 'cantidad': int(c or 0)} for d, c in res]
-    else:
-        data = []
+    
+    # Revertir para mostrar cronológicamente (antiguo -> nuevo)
+    data.reverse()
+    
     return jsonify(data)
 
 @ordenes_bp.route('/api/resumen-dia')
@@ -803,3 +818,109 @@ def confirmar_codigo_bloque(bloque_id):
                         'grosor': bloque.grosor
                     }
                 })
+
+@ordenes_bp.route('/api/analytics/shade-distribution')
+def api_analytics_shade_distribution():
+    """
+    Returns shade distribution based on:
+    - 'orders': count of orders
+    - 'cases': count of individual cases (split by comma)
+    - 'units': sum of units (cantidad_modelos)
+    """
+    metric = request.args.get('metric', 'units')  # units, cases, orders
+    material = request.args.get('material')
+    limit_arg = request.args.get('limit')
+    
+    query = db.session.query(Orden)
+    
+    if material:
+        query = query.filter(Orden.material == material)
+        
+    if limit_arg and limit_arg != 'total':
+        try:
+            limit_days = int(limit_arg)
+            # Find the last N distinct dates (days)
+            # This is complex in pure ORM for SQLite/Postgres compatibility without raw SQL, 
+            # but we can do a subquery or 2 steps.
+            # Step 1: Get distinct valid dates descending
+            from sqlalchemy import func
+            # We use the date part of fecha_creacion
+            # Note: We need to handle timezone if strictly required, but for "active days" 
+            # sorting by fecha_creacion desc is usually sufficient to find cutoffs.
+            
+            # Efficient way: Get all dates, distinct, sort, pick Nth.
+            # Since dataset is likely not massive, fetching distinct dates is okay. 
+            # For massive datasets, this needs optimization.
+            
+            # Using simple python-side unique date extraction for simplicity and DB-agnostic behavior 
+            # (unless dataset is huge, which it doesn't seem to be yet).
+            # ACTUALLY, let's do a proper query to get distinct dates.
+            # Using strftime for SQLite/Postgres generic approach if possible, but distinct(date(fecha_creacion)) is safer.
+            
+            # Let's try to filter by range. 
+            # First, find the distinct dates available
+            available_dates = db.session.query(func.date(Orden.fecha_creacion)).distinct().order_by(func.date(Orden.fecha_creacion).desc()).limit(limit_days).all()
+            
+            if available_dates:
+                # available_dates is a list of tuples like [('2023-10-20',), ('2023-10-18',)]
+                # Logic: Filter orders where date(fecha_creacion) >= smallest_date found
+                oldest_date_str = available_dates[-1][0]
+                query = query.filter(func.date(Orden.fecha_creacion) >= oldest_date_str)
+                
+        except ValueError:
+            pass # Ignore invalid limit
+    
+    # Calculate totals by shade
+    # We fetch all and process in python for 'cases' splitting simplicity, 
+    # unless we want to use complex SQL array functions. Given the scale, Python processing is fine.
+    ordenes = query.all()
+    
+    distribution = {}
+    
+    for orden in ordenes:
+        shade = orden.shade or 'Unknown'
+        if shade not in distribution:
+            distribution[shade] = 0
+            
+        if metric == 'orders':
+            distribution[shade] += 1
+        elif metric == 'units':
+            distribution[shade] += (orden.cantidad_modelos or 0)
+        elif metric == 'cases':
+            count = len(orden.get_codigos_caso())
+            distribution[shade] += count
+
+    # Sort by value desc
+    sorted_dist = sorted(distribution.items(), key=lambda x: x[1], reverse=True)
+
+    # NEW: Fetch inventory counts (Total Blocks) for the relevant material/shades
+    # We query Bloque table where estado='nuevo' (lowercase, based on routes/bloques.py)
+    # We MUST SUM(Bloque.cantidad) because one row can represent multiple blocks.
+    
+    from models import Bloque
+    
+    inventory_query = db.session.query(Bloque.shade, func.sum(Bloque.cantidad))\
+        .filter(Bloque.estado == 'nuevo')
+        
+    if material:
+        inventory_query = inventory_query.filter(Bloque.material == material)
+        
+    inventory_counts_list = inventory_query.group_by(Bloque.shade).all()
+    # inventory_counts_list is list of (shade, total_qty)
+    # Convert to dict for easy lookup: {'A1': 5, 'B2': 0}
+    inventory_map = {shade: (qty or 0) for shade, qty in inventory_counts_list}
+    
+    # Construct inventory list matching the sorted_dist order
+    # sorted_dist is [('A1', 50), ('B2', 20)]
+    inventory_values = []
+    
+    for shade, _ in sorted_dist:
+        # Use existing map or 0
+        inv_count = inventory_map.get(shade, 0)
+        inventory_values.append(inv_count)
+    
+    return jsonify({
+        'labels': [k for k, v in sorted_dist],
+        'values': [v for k, v in sorted_dist],
+        'inventory': inventory_values
+    })

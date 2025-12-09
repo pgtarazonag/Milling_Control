@@ -1,38 +1,46 @@
 {% extends "base.html" %}
 {% block title %}{{ _('Home') }} | Fresado Pro{% endblock %}
 {% block instructions %}
-<div class="alert alert-info d-flex align-items-center mt-2 mb-2 shadow-sm animate__animated animate__fadeInDown" role="alert" style="margin-top:0.5rem !important; margin-bottom:0.5rem !important;">
+<div class="alert alert-info d-flex align-items-center mt-2 mb-2 shadow-sm animate__animated animate__fadeInDown"
+  role="alert" style="margin-top:0.5rem !important; margin-bottom:0.5rem !important;">
   <i class="bi bi-info-circle me-2" style="font-size:1.5em;"></i>
-  <span style="font-size:1.08em;">{{ _('Welcome to') }} <b>Fresado Pro</b>. {{ _('Use the sidebar to navigate between main functions. Here you can analyze data, manage orders, blocks, milling tools, and more. Optimize your dental lab!') }}</span>
+  <span style="font-size:1.08em;">{{ _('Welcome to') }} <b>Fresado Pro</b>. {{ _('Use the sidebar to navigate between
+    main functions. Here you can analyze data, manage orders, blocks, milling tools, and more. Optimize your dental
+    lab!') }}</span>
 </div>
 {% endblock %}
 {% block content %}
 <div class="row g-2">
   <!-- IZQUIERDA: Blocks by Shade y New Milling Tools Inventory -->
-  <div class="col-md-5">
+  <div class="col-md-4">
     <div class="card border-0 shadow-sm animate__animated animate__fadeInUp mb-3">
       <div class="card-body">
-  <h6 class="card-title mb-3" style="font-weight:600;"><i class="bi bi-bar-chart me-1" style="color:var(--accent);"></i> {{ _('Blocks by Shade') }}</h6>
+        <h6 class="card-title mb-3" style="font-weight:600;"><i class="bi bi-bar-chart me-1"
+            style="color:var(--accent);"></i> {{ _('Blocks by Shade') }}</h6>
         <div class="mb-2 d-flex flex-wrap gap-2 align-items-center">
           <label class="form-label mb-0 me-2 text-secondary">{{ _('Filter:') }}</label>
-          <select id="filtro-material" class="form-select form-select-sm shadow-none" style="min-width:90px;max-width:120px;">
+          <select id="filtro-material" class="form-select form-select-sm shadow-none"
+            style="min-width:90px;max-width:120px;">
             <option value="">{{ _('All Materials') }}</option>
             {% for mat in tipos_material %}
-              <option value="{{ mat }}" {% if mat == 'Zirconia' %}selected{% endif %}>{{ _(mat) }}</option>
+            <option value="{{ mat }}" {% if mat=='Zirconia' %}selected{% endif %}>{{ _(mat) }}</option>
             {% endfor %}
           </select>
-          <select id="filtro-marca" class="form-select form-select-sm shadow-none" style="min-width:90px;max-width:120px;">
+          <select id="filtro-marca" class="form-select form-select-sm shadow-none"
+            style="min-width:90px;max-width:120px;">
             <option value="">{{ _('All Brands') }}</option>
             {% for m in marcas %}
-              <option value="{{ m }}">{{ _(m) }}</option>
+            <option value="{{ m }}">{{ _(m) }}</option>
             {% endfor %}
           </select>
-          <select id="filtro-estado" class="form-select form-select-sm shadow-none" style="min-width:90px;max-width:120px;">
+          <select id="filtro-estado" class="form-select form-select-sm shadow-none"
+            style="min-width:90px;max-width:120px;">
             <option value="">{{ _('All States') }}</option>
             <option value="nuevo" selected>{{ _('New') }}</option>
             <option value="usado">{{ _('Used') }}</option>
           </select>
-          <select id="filtro-orden" class="form-select form-select-sm shadow-none" style="min-width:90px;max-width:120px;">
+          <select id="filtro-orden" class="form-select form-select-sm shadow-none"
+            style="min-width:90px;max-width:120px;">
             <option value="cantidad_desc">{{ _('Most Blocks') }}</option>
             <option value="cantidad_asc">{{ _('Fewest Blocks') }}</option>
             <option value="alfabetico" selected>{{ _('A-Z') }}</option>
@@ -43,21 +51,57 @@
         </div>
       </div>
     </div>
+    <div class="card border-0 shadow-sm animate__animated animate__fadeInUp mb-3">
+      <div class="card-body">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+          <h6 class="card-title mb-0" style="font-weight:600;"><i class="bi bi-pie-chart-fill me-1"
+              style="color:var(--accent);"></i> {{ _('Historical Shade Consumption') }}</h6>
+          <div class="d-flex gap-2 align-items-center">
+            <select id="filtro-shade-material" class="form-select form-select-sm shadow-none"
+              style="width:auto; max-width:120px;">
+              <option value="">{{ _('All Materials') }}</option>
+              {% for mat in tipos_material %}
+              <option value="{{ mat }}" {% if mat=='Zirconia' %}selected{% endif %}>{{ _(mat) }}</option>
+              {% endfor %}
+            </select>
+            <select id="filtro-shade-limit" class="form-select form-select-sm shadow-none" style="width:auto;">
+              <option value="total">{{ _('Total') }}</option>
+              <option value="30">{{ _('Last 30 Active Days') }}</option>
+              <option value="20">{{ _('Last 20 Active Days') }}</option>
+              <option value="10" selected>{{ _('Last 10 Active Days') }}</option>
+              <option value="5">{{ _('Last 5 Active Days') }}</option>
+              <option value="3">{{ _('Last 3 Active Days') }}</option>
+            </select>
+            <select id="filtro-shade-metric" class="form-select form-select-sm shadow-none" style="width:auto;">
+              <option value="units" selected>{{ _('# Units') }}</option>
+              <option value="cases">{{ _('Cases') }}</option>
+              <option value="orders">{{ _('Orders') }}</option>
+            </select>
+          </div>
+        </div>
+        <div class="rounded-4 p-2 bg-white shadow-sm mb-2 position-relative" style="min-height:250px;">
+          <canvas id="graficaShadeHistorico"></canvas>
+        </div>
+      </div>
+    </div>
     <div class="card border-0 shadow-sm animate__animated animate__fadeInUp">
       <div class="card-body">
-  <h6 class="card-title mb-3" style="font-weight:600;"><i class="bi bi-tools me-1" style="color:var(--accent);"></i> {{ _('New Milling Tools Inventory') }}</h6>
+        <h6 class="card-title mb-3" style="font-weight:600;"><i class="bi bi-tools me-1"
+            style="color:var(--accent);"></i> {{ _('New Milling Tools Inventory') }}</h6>
         <div class="mb-2 d-flex flex-wrap gap-2 align-items-center">
           <label class="form-label mb-0 me-2 text-secondary">{{ _('Order by:') }}</label>
-          <select id="filtro-fresa-orden" class="form-select form-select-sm shadow-none" style="min-width:90px;max-width:120px;">
+          <select id="filtro-fresa-orden" class="form-select form-select-sm shadow-none"
+            style="min-width:90px;max-width:120px;">
             <option value="tipo">{{ _('Type (A-Z)') }}</option>
             <option value="cantidad_desc">{{ _('Most Units') }}</option>
             <option value="cantidad_asc">{{ _('Fewest Units') }}</option>
           </select>
           <label class="form-label mb-0 ms-2 text-secondary">{{ _('Machine:') }}</label>
-          <select id="filtro-fresa-maquina" class="form-select form-select-sm shadow-none" style="min-width:90px;max-width:120px;">
+          <select id="filtro-fresa-maquina" class="form-select form-select-sm shadow-none"
+            style="min-width:90px;max-width:120px;">
             <option value="">{{ _('All Machines') }}</option>
             {% for m in maquinas %}
-              <option value="{{ m }}">{{ _(m) }}</option>
+            <option value="{{ m }}">{{ _(m) }}</option>
             {% endfor %}
           </select>
         </div>
@@ -75,17 +119,20 @@
   <div class="col-md-4">
     <div class="card border-0 shadow-sm animate__animated animate__fadeInUp mb-4">
       <div class="card-body">
-  <h6 class="card-title mb-3" style="font-weight:600;"><i class="bi bi-bar-chart-line me-1" style="color:var(--accent);"></i> {{ _('Production Analysis Daily') }}</h6>
+        <h6 class="card-title mb-3" style="font-weight:600;"><i class="bi bi-bar-chart-line me-1"
+            style="color:var(--accent);"></i> {{ _('Production Analysis Daily') }}</h6>
         <div class="mb-2 d-flex flex-wrap gap-2 align-items-center">
           <label class="form-label mb-0 me-2 text-secondary">{{ _('Group by:') }}</label>
-          <select id="filtro-prod-group" class="form-select form-select-sm shadow-none" style="min-width:140px;max-width:180px;">
+          <select id="filtro-prod-group" class="form-select form-select-sm shadow-none"
+            style="min-width:140px;max-width:180px;">
             <option value="dia">{{ _('Day') }}</option>
             <option value="maquina">{{ _('Machine') }}</option>
             <option value="material">{{ _('Material') }}</option>
             <option value="marca" selected>{{ _('Brand') }}</option>
           </select>
           <label class="form-label mb-0 ms-2 text-secondary">{{ _('Date:') }}</label>
-          <input type="date" id="filtro-prod-fecha" class="form-control form-control-sm shadow-none" style="min-width:130px;max-width:160px;">
+          <input type="date" id="filtro-prod-fecha" class="form-control form-control-sm shadow-none"
+            style="min-width:130px;max-width:160px;">
         </div>
         <div class="rounded-4 p-2 bg-white shadow-sm mb-2" style="min-height:130px;">
           <canvas id="graficaModelosMaquina" height="120"></canvas>
@@ -95,20 +142,24 @@
     <!-- OTRAS GRÁFICAS DEBAJO -->
     <div class="card border-0 shadow-sm animate__animated animate__fadeInUp mb-4">
       <div class="card-body">
-  <h6 class="card-title mb-3" style="font-weight:600;"><i class="bi bi-graph-up me-1" style="color:var(--accent);"></i> {{ _('Record of Cases') }}</h6>
+        <h6 class="card-title mb-3" style="font-weight:600;"><i class="bi bi-graph-up me-1"
+            style="color:var(--accent);"></i> {{ _('Record of Cases') }}</h6>
         <div class="mb-2 d-flex flex-wrap gap-2 align-items-center">
           <label class="form-label mb-0 me-2 text-secondary">{{ _('Show:') }}</label>
-          <select id="filtro-record-tipo" class="form-select form-select-sm shadow-none" style="min-width:120px;max-width:160px;">
+          <select id="filtro-record-tipo" class="form-select form-select-sm shadow-none"
+            style="min-width:120px;max-width:160px;">
             <option value="casos">{{ _('Cases') }}</option>
             <option value="ordenes">{{ _('Orders') }}</option>
-            <option value="modelos">{{ _('# Units') }}</option>
+            <option value="modelos" selected>{{ _('# Units') }}</option>
           </select>
           <label class="form-label mb-0 ms-2 text-secondary">{{ _('Interval:') }}</label>
-          <select id="filtro-record-dias" class="form-select form-select-sm shadow-none" style="min-width:80px;max-width:120px;">
+          <select id="filtro-record-dias" class="form-select form-select-sm shadow-none"
+            style="min-width:80px;max-width:120px;">
             <option value="1">1</option>
             <option value="2">2</option>
             <option value="5">5</option>
-            <option value="10" selected>10</option>
+            <option value="10">10</option>
+            <option value="20" selected>20</option>
             <option value="30">30</option>
           </select>
         </div>
@@ -117,11 +168,21 @@
         </div>
       </div>
     </div>
+    <div class="card border-0 shadow-sm animate__animated animate__fadeInUp mb-4">
+      <div class="card-body">
+        <h6 class="card-title mb-3" style="font-weight:600;"><i class="bi bi-grid-3x3-gap me-1"
+            style="color:var(--accent);"></i> {{ _('Stock by Shade and Thickness') }}</h6>
+        <div class="rounded-4 p-2 bg-white shadow-sm mb-2" style="min-height:240px;">
+          <canvas id="graficaStockShadeGrosor" height="240"></canvas>
+        </div>
+      </div>
+    </div>
   </div>
   <!-- DERECHA: Upcoming activities -->
-  <div class="col-md-3">
+  <div class="col-md-4">
     <!-- Resumen del día -->
-  <div class="card shadow-sm mb-3 animate__animated animate__fadeInRight border-0" style="background:#2E3A46;color:#fff; border-radius:1.2rem;">
+    <div class="card shadow-sm mb-3 animate__animated animate__fadeInRight border-0"
+      style="background:#2E3A46;color:#fff; border-radius:1.2rem;">
       <div class="card-body d-flex justify-content-between align-items-center" id="resumen-dia">
         <div class="text-center">
           <div style="font-size:1.3em;font-weight:600;">{{ total_ordenes }}</div>
@@ -140,7 +201,9 @@
       </div>
     </div>
     <div class="card shadow-sm mb-4 animate__animated animate__fadeInRight border-0">
-  <div class="card-header text-white rounded-top-4" style="background:#2E3A46;font-weight:600;font-size:1.08em;border-top:3px solid var(--accent);"><b><i class="bi bi-calendar-check me-1" style="color:var(--accent);"></i> {{ _('Upcoming activities') }}</b></div>
+      <div class="card-header text-white rounded-top-4"
+        style="background:#2E3A46;font-weight:600;font-size:1.08em;border-top:3px solid var(--accent);"><b><i
+            class="bi bi-calendar-check me-1" style="color:var(--accent);"></i> {{ _('Upcoming Activities') }}</b></div>
       <ul class="list-group list-group-flush" id="upcoming-activities-list">
         <li class="list-group-item text-muted">{{ _('Loading...') }}</li>
       </ul>
@@ -148,112 +211,93 @@
   </div>
 </div>
 <!-- NUEVAS GRAFICAS AL FINAL -->
-<div class="row g-2 mt-3">
-  <div class="col-md-5">
-    <div class="card border-0 shadow-sm animate__animated animate__fadeInUp mb-3">
-      <div class="card-body">
-  <h6 class="card-title mb-3" style="font-weight:600;"><i class="bi bi-grid-3x3-gap me-1" style="color:var(--accent);"></i> {{ _('Stock by Shade and Thickness') }}</h6>
-        <div class="rounded-4 p-2 bg-white shadow-sm mb-2" style="min-height:130px;">
-          <canvas id="graficaStockShadeGrosor" height="120"></canvas>
-        </div>
-      </div>
-    </div>
-  </div>
-  <div class="col-md-6">
-    <div class="card border-0 shadow-sm animate__animated animate__fadeInUp mb-3">
-      <div class="card-body">
-  <h6 class="card-title mb-3" style="font-weight:600;"><i class="bi bi-hourglass-split me-1" style="color:var(--accent);"></i> {{ _('Block Lifespan (weeks) by Shade') }}</h6>
-        <div class="rounded-4 p-2 bg-white shadow-sm mb-2" style="min-height:130px;">
-          <canvas id="graficaVidaBloques" height="120"></canvas>
-        </div>
-      </div>
-    </div>
-  </div>
-</div>
+
 {% endblock %}
 {% block scripts %}
 {{ super() }}
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 <script src="/static/chart.min.js"></script>
 <script>
-// Variables de contexto Jinja correctamente serializadas
-const fresasMaquinas = {{ fresas_maquinas|tojson|safe }};
-const materialesAvanzado = {{ (materiales_avanzado or {})|tojson|safe }};
-const allMarcas = {{ (marcas or [])|tojson|safe }};
-// Animaciones de cards
-$(document).ready(function(){
-  $('.card').css({opacity:0, transform:'translateY(30px)'}).each(function(i,el){
-    setTimeout(function(){$(el).animate({opacity:1, transform:'none'}, 700);}, 200*i);
-  });
-  // Cargar datos de las gráficas
-  $.getJSON('/ordenes/api/graficas-inventario', function(data) {
-    var ctx1 = document.getElementById('graficaModelosMaquina');
-    if (!ctx1) return;
-    ctx1 = ctx1.getContext('2d');
-    if(window.graficaModelosMaquina && typeof window.graficaModelosMaquina.destroy === 'function') {
-      window.graficaModelosMaquina.destroy();
-      window.graficaModelosMaquina = null;
-    }
-  const prodColors = ['#2E3A46','#E14A4C','#1E88E5','#43A047','#FB8C00','#8E24AA','#00ACC1','#D81B60'];
-    window.graficaModelosMaquina = new Chart(ctx1, {
-      type: 'bar',
-      data: {
-        labels: data.modelos_dia.map(x => x.dia),
-        datasets: [{
-          label: "{{ _('# Units') }}",
-          data: data.modelos_dia.map(x => x.cantidad),
-          backgroundColor: data.modelos_dia.map((x,i) => prodColors[i % prodColors.length]),
-        }]
-      },
-      options: {responsive:true, plugins:{legend:{display:false}}}
+  // Variables de contexto Jinja correctamente serializadas
+  const fresasMaquinas = {{ fresas_maquinas| tojson | safe }};
+  const materialesAvanzado = {{ (materiales_avanzado or { })| tojson | safe }};
+  const allMarcas = {{ (marcas or[])| tojson | safe }};
+
+  // Animaciones de cards y carga inicial de gráficas principales
+  $(document).ready(function () {
+    $('.card').css({ opacity: 0, transform: 'translateY(30px)' }).each(function (i, el) {
+      setTimeout(function () { $(el).animate({ opacity: 1, transform: 'none' }, 700); }, 200 * i);
     });
-  // Pie chart: Material Distribution (if canvas exists)
-    try {
-      var el2 = document.getElementById('graficaMateriales');
-      if (el2) {
-        var ctx2 = el2.getContext('2d');
-        new Chart(ctx2, {
-          type: 'pie',
-          data: {
-            labels: data.modelos_material_semana.map(x => x.material),
-            datasets: [{
-              data: data.modelos_material_semana.map(x => x.cantidad),
-              backgroundColor: ['#2E3A46','#E14A4C','#1E88E5','#43A047','#FB8C00','#8E24AA']
-            }]
-          },
-          options: {responsive:true, radius: '45%', plugins:{legend:{position:'bottom'}}}
-        });
+    $.getJSON('/ordenes/api/graficas-inventario', function (data) {
+      var ctx1 = document.getElementById('graficaModelosMaquina');
+      if (!ctx1) return;
+      ctx1 = ctx1.getContext('2d');
+      if (window.graficaModelosMaquina && typeof window.graficaModelosMaquina.destroy === 'function') {
+        window.graficaModelosMaquina.destroy();
+        window.graficaModelosMaquina = null;
       }
-  } catch(e) { console.error('[DEBUG] Error rendering materials chart', e); }
-  // Blocks by shade
-    try {
-      var ctx3 = document.getElementById('graficaBloquesShade').getContext('2d');
-      new Chart(ctx3, {
+      const prodColors = ['#2E3A46', '#E14A4C', '#1E88E5', '#43A047', '#FB8C00', '#8E24AA', '#00ACC1', '#D81B60'];
+      window.graficaModelosMaquina = new Chart(ctx1, {
         type: 'bar',
         data: {
-          labels: data.bloques_shade.map(x => x.shade),
+          labels: data.modelos_dia.map(x => x.dia),
           datasets: [{
-            label: "{{ _('Blocks') }}",
-            data: data.bloques_shade.map(x => x.cantidad),
-            backgroundColor: '#E14A4C',
+            label: "{{ _('# Units') }}",
+            data: data.modelos_dia.map(x => x.cantidad),
+            backgroundColor: data.modelos_dia.map((x, i) => prodColors[i % prodColors.length]),
           }]
         },
-        options: {responsive:true, plugins:{legend:{display:false}}}
+        options: { responsive: true, plugins: { legend: { display: false } } }
       });
-  } catch(e) { console.error('[DEBUG] Error rendering blocks-by-shade chart', e); }
-  }).fail(function(jqXHR, textStatus, errorThrown) {
-    console.error('[DEBUG] Error in /ordenes/api/graficas-inventario:', textStatus, errorThrown, jqXHR.responseText);
+      // Pie chart opcional
+      try {
+        var el2 = document.getElementById('graficaMateriales');
+        if (el2) {
+          var ctx2 = el2.getContext('2d');
+          new Chart(ctx2, {
+            type: 'pie',
+            data: {
+              labels: data.modelos_material_semana.map(x => x.material),
+              datasets: [{
+                data: data.modelos_material_semana.map(x => x.cantidad),
+                backgroundColor: ['#2E3A46', '#E14A4C', '#1E88E5', '#43A047', '#FB8C00', '#8E24AA']
+              }]
+            },
+            options: { responsive: true, radius: '45%', plugins: { legend: { position: 'bottom' } } }
+          });
+        }
+      } catch (e) { console.error('[DEBUG] Error rendering materials chart', e); }
+      // Blocks by shade simple
+      try {
+        var ctx3 = document.getElementById('graficaBloquesShade').getContext('2d');
+        new Chart(ctx3, {
+          type: 'bar',
+          data: {
+            labels: data.bloques_shade.map(x => x.shade),
+            datasets: [{
+              label: "{{ _('Blocks') }}",
+              data: data.bloques_shade.map(x => x.cantidad),
+              backgroundColor: '#E14A4C',
+            }]
+          },
+          options: { responsive: true, plugins: { legend: { display: false } } }
+        });
+      } catch (e) { console.error('[DEBUG] Error rendering blocks-by-shade chart', e); }
+    }).fail(function (jqXHR, textStatus, errorThrown) {
+      console.error('[DEBUG] Error in /ordenes/api/graficas-inventario:', textStatus, errorThrown, jqXHR.responseText);
+    });
   });
-  // Avoid drawing the chart twice
+
+  // Gráfica Bloques por Shade con filtros
   let graficaInicializada = false;
   function cargarGraficaBloquesShade() {
     var material = $('#filtro-material').val();
     var estado = $('#filtro-estado').val();
     var order = $('#filtro-orden').val();
     var marca = $('#filtro-marca').val();
-    $.getJSON('/ordenes/api/graficas-bloques-shade', {material, estado, order, marca}, function(data) {
+    $.getJSON('/ordenes/api/graficas-bloques-shade', { material, estado, order, marca }, function (data) {
       var ctx3 = document.getElementById('graficaBloquesShade').getContext('2d');
-      if(window.graficaBloquesShade && typeof window.graficaBloquesShade.destroy === 'function') {
+      if (window.graficaBloquesShade && typeof window.graficaBloquesShade.destroy === 'function') {
         window.graficaBloquesShade.destroy();
       }
       const materialColors = {
@@ -268,11 +312,11 @@ $(document).ready(function(){
       };
       let selectedMaterial = $('#filtro-material').val();
       let barColors = [];
-      if(selectedMaterial && materialColors[selectedMaterial]) {
+      if (selectedMaterial && materialColors[selectedMaterial]) {
         barColors = data.map(() => materialColors[selectedMaterial]);
       } else {
         const palette = Object.values(materialColors).filter(c => c !== materialColors['default']);
-        barColors = data.map((x,i) => palette[i % palette.length]);
+        barColors = data.map((x, i) => palette[i % palette.length]);
       }
       window.graficaBloquesShade = new Chart(ctx3, {
         type: 'bar',
@@ -286,11 +330,11 @@ $(document).ready(function(){
         },
         options: {
           responsive: true,
-          plugins: {legend: {display: false}},
+          plugins: { legend: { display: false } },
           scales: {
             x: {
               ticks: {
-                font: {size: 11},
+                font: { size: 11 },
                 minRotation: 90,
                 maxRotation: 90
               }
@@ -299,343 +343,448 @@ $(document).ready(function(){
         }
       });
       graficaInicializada = true;
-    }).fail(function(jqXHR, textStatus, errorThrown) {
+    }).fail(function (jqXHR, textStatus, errorThrown) {
       console.error('[DEBUG] Error in /ordenes/api/graficas-bloques-shade:', textStatus, errorThrown, jqXHR.responseText);
     });
   }
-  cargarGraficaBloquesShade();
-  $('#filtro-material, #filtro-estado, #filtro-orden, #filtro-marca').on('change', cargarGraficaBloquesShade);
-});
-function renderGraficaFresasNuevas(orden) {
-  var maquina = $('#filtro-fresa-maquina').val();
-  $.getJSON('/fresas/api/fresas-nuevas', {orden}, function(data) {
-    if(maquina && fresasMaquinas) {
-      data = data.filter(function(fresa) {
-        return fresasMaquinas[fresa.tipo] && fresasMaquinas[fresa.tipo].includes(maquina);
-      });
-    }
-    var ctx = document.getElementById('graficaFresasNuevas').getContext('2d');
-    if(window.graficaFresasNuevas && typeof window.graficaFresasNuevas.destroy === 'function') {
-      window.graficaFresasNuevas.destroy();
-    }
-  const barColors = ['#2E3A46','#E14A4C','#1E88E5','#43A047','#FB8C00','#8E24AA','#00ACC1','#D81B60'];
-    const originalCounts = data.map(x => x.cantidad || 0);
-    const plotCounts = originalCounts.map(v => (v > 0 ? v : null)); // evitar 0 en escala log
-    window.graficaFresasNuevas = new Chart(ctx, {
-      type: 'bar',
-      data: {
-        labels: data.map(x => x.tipo),
-        datasets: [{
-          label: "{{ _('Units') }}",
-          data: plotCounts,
-          backgroundColor: data.map((x,i) => barColors[i % barColors.length]),
-        }]
-      },
-      options: {
-        responsive:true,
-        plugins:{
-          legend:{position:'bottom'},
-          tooltip:{
-            callbacks:{
-              label: function(context){
-                const idx = context.dataIndex;
-                return "{{ _('Units') }}: " + (originalCounts[idx] ?? 0);
-              },
-              afterBody: function(context) {
-                const idx = context[0].dataIndex;
-                const fresa = data[idx];
-                return [
-                  "{{ _('Materials') }}: " + fresa.materiales,
-                  "{{ _('Registration Date') }}: " + fresa.fecha
-                ];
+  $(document).ready(function () {
+    cargarGraficaBloquesShade();
+    $('#filtro-material, #filtro-estado, #filtro-orden, #filtro-marca').on('change', cargarGraficaBloquesShade);
+  });
+
+  function renderGraficaFresasNuevas(orden) {
+    var maquina = $('#filtro-fresa-maquina').val();
+    $.getJSON('/fresas/api/fresas-nuevas', { orden }, function (data) {
+      if (maquina && fresasMaquinas) {
+        data = data.filter(function (fresa) {
+          return fresasMaquinas[fresa.tipo] && fresasMaquinas[fresa.tipo].includes(maquina);
+        });
+      }
+      var ctx = document.getElementById('graficaFresasNuevas').getContext('2d');
+      if (window.graficaFresasNuevas && typeof window.graficaFresasNuevas.destroy === 'function') {
+        window.graficaFresasNuevas.destroy();
+      }
+      const barColors = ['#2E3A46', '#E14A4C', '#1E88E5', '#43A047', '#FB8C00', '#8E24AA', '#00ACC1', '#D81B60'];
+      const originalCounts = data.map(x => x.cantidad || 0);
+      const plotCounts = originalCounts.map(v => (v > 0 ? v : null)); // evitar 0 en escala log
+      window.graficaFresasNuevas = new Chart(ctx, {
+        type: 'bar',
+        data: {
+          labels: data.map(x => x.tipo),
+          datasets: [{
+            label: "{{ _('Units') }}",
+            data: plotCounts,
+            backgroundColor: data.map((x, i) => barColors[i % barColors.length]),
+          }]
+        },
+        options: {
+          responsive: true,
+          plugins: {
+            legend: { position: 'bottom' },
+            tooltip: {
+              callbacks: {
+                label: function (context) {
+                  const idx = context.dataIndex;
+                  return "{{ _('Units') }}: " + (originalCounts[idx] ?? 0);
+                },
+                afterBody: function (context) {
+                  const idx = context[0].dataIndex;
+                  const fresa = data[idx];
+                  return [
+                    "{{ _('Materials') }}: " + fresa.materiales,
+                    "{{ _('Registration Date') }}: " + fresa.fecha
+                  ];
+                }
               }
             }
-          }
-        },
-        scales: {
-          y: {
-            type: 'logarithmic',
-            min: 1,
-            ticks: {
-              callback: function(value){ return Number(value).toLocaleString(); }
-            },
-            title: { display: true, text: "{{ _('Units') }}" }
           },
-          x: { ticks: { autoSkip: true, maxRotation: 45, minRotation: 0 } }
+          scales: {
+            y: {
+              type: 'logarithmic',
+              min: 1,
+              ticks: {
+                callback: function (value) { return Number(value).toLocaleString(); }
+              },
+              title: { display: true, text: "{{ _('Units') }}" }
+            },
+            x: { ticks: { autoSkip: true, maxRotation: 45, minRotation: 0 } }
+          }
         }
-      }
+      });
     });
+  }
+  $('#filtro-fresa-orden, #filtro-fresa-maquina').on('change', function () {
+    renderGraficaFresasNuevas($('#filtro-fresa-orden').val());
   });
-}
-$('#filtro-fresa-orden, #filtro-fresa-maquina').on('change', function() {
-  renderGraficaFresasNuevas($('#filtro-fresa-orden').val());
-});
-renderGraficaFresasNuevas('tipo');
-function actualizarDropdownMarcas() {
-  const material = $('#filtro-material').val();
-  const $marca = $('#filtro-marca');
-  $marca.empty();
-  $marca.append('<option value="">' + "{{ _('All Brands') }}" + '</option>');
-  function getMarcaString(marca) {
-    try {
-      if (typeof marca === 'string') return marca;
-      if (typeof marca === 'object' && marca !== null) {
-        if (marca.nombre) return String(marca.nombre);
-        if (marca.name) return String(marca.name);
-        for (const key in marca) {
-          if (typeof marca[key] === 'string') return marca[key];
-        }
-      }
-    } catch (e) { return ''; }
-    return '';
-  }
-  let marcasArr = [];
-  if (material && materialesAvanzado[material] && Array.isArray(materialesAvanzado[material].marcas) && materialesAvanzado[material].marcas.length > 0) {
-    marcasArr = materialesAvanzado[material].marcas;
-  }
-  if (marcasArr.length > 0) {
-    marcasArr.forEach(function(marca) {
+  renderGraficaFresasNuevas('tipo');
+  function actualizarDropdownMarcas() {
+    const material = $('#filtro-material').val();
+    const $marca = $('#filtro-marca');
+    $marca.empty();
+    $marca.append('<option value="">' + "{{ _('All Brands') }}" + '</option>');
+    function getMarcaString(marca) {
       try {
-        const marcaStr = getMarcaString(marca);
-        if (marcaStr)
-          $marca.append('<option value="'+marcaStr+'">'+marcaStr+'</option>');
-      } catch (e) {}
-    });
-  }
-}
-$('#filtro-material').on('change', function() {
-  actualizarDropdownMarcas();
-  $('#filtro-marca').val('');
-  $('#filtro-marca').trigger('change');
-});
-$(document).ready(function(){
-  actualizarDropdownMarcas();
-  $('#filtro-prod-group').val('marca');
-  cargarGraficaProduccionAgrupada();
-});
-function cargarGraficaProduccionAgrupada() {
-  var group = $('#filtro-prod-group').val();
-  var fecha = $('#filtro-prod-fecha').val();
-  var params = {group: group};
-  if(fecha) {
-    params['fecha'] = fecha;
-  }
-  $.getJSON('/ordenes/api/graficas-inventario', params, function(data) {
-    var ctx1 = document.getElementById('graficaModelosMaquina');
-    if (!ctx1) return;
-    ctx1 = ctx1.getContext('2d');
-    if(window.graficaModelosMaquina && typeof window.graficaModelosMaquina.destroy === 'function') {
-      window.graficaModelosMaquina.destroy();
-      window.graficaModelosMaquina = null;
+        if (typeof marca === 'string') return marca;
+        if (typeof marca === 'object' && marca !== null) {
+          if (marca.nombre) return String(marca.nombre);
+          if (marca.name) return String(marca.name);
+          for (const key in marca) {
+            if (typeof marca[key] === 'string') return marca[key];
+          }
+        }
+      } catch (e) { return ''; }
+      return '';
     }
-    let labels = [];
-    let values = [];
-    if(group === 'dia' && Array.isArray(data.modelos_dia)) {
-      labels = data.modelos_dia.map(x => x.dia);
-      values = data.modelos_dia.map(x => x.cantidad);
-    } else if(group === 'maquina' && Array.isArray(data.modelos_por_maquina)) {
-      labels = data.modelos_por_maquina.map(x => x.maquina);
-      values = data.modelos_por_maquina.map(x => x.cantidad);
-    } else if(group === 'material' && Array.isArray(data.modelos_por_material)) {
-      labels = data.modelos_por_material.map(x => x.material);
-      values = data.modelos_por_material.map(x => x.cantidad);
-    } else if(group === 'marca' && Array.isArray(data.modelos_por_marca)) {
-      labels = data.modelos_por_marca.map(x => x.marca);
-      values = data.modelos_por_marca.map(x => x.cantidad);
-    } else {
-      let key = Object.keys(data).find(k => Array.isArray(data[k]) && data[k].length > 0);
-      if(key) {
-        labels = data[key].map(x => Object.values(x)[0]);
-        values = data[key].map(x => Object.values(x)[1]);
-      }
+    let marcasArr = [];
+    if (material && materialesAvanzado[material] && Array.isArray(materialesAvanzado[material].marcas) && materialesAvanzado[material].marcas.length > 0) {
+      marcasArr = materialesAvanzado[material].marcas;
     }
-    if(labels.length === 0) {
-      labels = ["{{ _('No data') }}"];
-      values = [0];
-    }
-    const prodColors = ['#1976d2','#43a047','#fbc02d','#8e24aa','#e53935','#00838f','#ff9800','#90a4ae'];
-    window.graficaModelosMaquina = new Chart(ctx1, {
-      type: 'bar',
-      data: {
-        labels: labels,
-        datasets: [{
-          label: "{{ _('# Units') }}",
-          data: values,
-          backgroundColor: labels.map((x,i) => prodColors[i % prodColors.length]),
-        }]
-      },
-      options: {responsive:true, plugins:{legend:{display:false}}}
-    });
-  });
-}
-$('#filtro-prod-group, #filtro-prod-fecha').off('change').on('change', function() {
-  setTimeout(cargarGraficaProduccionAgrupada, 50);
-});
-$(document).ready(function(){
-  setTimeout(cargarGraficaProduccionAgrupada, 100);
-});
-$(document).ready(function(){
-  $.getJSON('/mantenimiento/?api=1', function(data) {
-    var $list = $('#upcoming-activities-list');
-    $list.empty();
-    if (data.length === 0) {
-      $list.append('<li class="list-group-item text-muted">' + "{{ _('No upcoming activities scheduled.') }}" + '</li>');
-    } else {
-      data.forEach(function(prox) {
-        var fecha = prox.proxima_fecha ? new Date(prox.proxima_fecha) : null;
-  var fechaStr = fecha ? fecha.toLocaleString('en-CA', {year:'numeric', month:'2-digit', day:'2-digit', hour:'2-digit', minute:'2-digit'}) : '';
-        $list.append('<li class="list-group-item d-flex justify-content-between align-items-center">'
-          + '<div><b>' + prox.maquina + '</b> - ' + prox.actividad + '<br>'
-          + '<small class="text-muted">' + "{{ _('Next') }}" + ': <span class="fecha-tabla">' + fechaStr + '</span></small></div>'
-          + '</li>');
+    if (marcasArr.length > 0) {
+      marcasArr.forEach(function (marca) {
+        try {
+          const marcaStr = getMarcaString(marca);
+          if (marcaStr)
+            $marca.append('<option value="' + marcaStr + '">' + marcaStr + '</option>');
+        } catch (e) { }
       });
     }
-  }).fail(function(jqXHR, textStatus, errorThrown) {
-    console.error('[DEBUG] Error in /mantenimiento/?api=1:', textStatus, errorThrown, jqXHR.responseText);
+  }
+  $('#filtro-material').on('change', function () {
+    actualizarDropdownMarcas();
+    $('#filtro-marca').val('');
+    $('#filtro-marca').trigger('change');
   });
-});
-function renderGraficaRecordCases() {
-  var tipo = $('#filtro-record-tipo').val();
-  var dias = $('#filtro-record-dias').val();
-  $.getJSON('/ordenes/api/record-cases', {tipo, dias}, function(data) {
-    var ctx = document.getElementById('graficaRecordCases').getContext('2d');
-    if(window.graficaRecordCases && typeof window.graficaRecordCases.destroy === 'function') {
-      window.graficaRecordCases.destroy();
+  $(document).ready(function () {
+    actualizarDropdownMarcas();
+    $('#filtro-prod-group').val('marca');
+    cargarGraficaProduccionAgrupada();
+  });
+  function cargarGraficaProduccionAgrupada() {
+    var group = $('#filtro-prod-group').val();
+    var fecha = $('#filtro-prod-fecha').val();
+    var params = { group: group };
+    if (fecha) {
+      params['fecha'] = fecha;
     }
-    let label;
-    if(tipo === 'casos') label = "{{ _('Cases') }}";
-    else if(tipo === 'ordenes') label = "{{ _('Orders') }}";
-  else label = "{{ _('# Units') }}";
-    window.graficaRecordCases = new Chart(ctx, {
-      type: 'line',
-      data: {
-        labels: data.map(x => x.dia),
-        datasets: [{
-          label: label,
-          data: data.map(x => x.cantidad),
-          borderColor: '#1E88E5',
-          backgroundColor: 'rgba(30,136,229,0.15)',
-          tension: 0.3,
-          pointRadius: 4,
-          pointBackgroundColor: '#E14A4C',
-          fill: true
-        }]
-      },
-      options: {
-        responsive:true,
-        plugins:{
-          legend:{display:true, position:'top'},
-          tooltip:{enabled:true}
-        },
-        scales: {
-          x: { title: { display: true, text: "{{ _('Day') }}" } },
-          y: { beginAtZero: true, title: { display: true, text: "{{ _('Quantity') }}" } }
+    $.getJSON('/ordenes/api/graficas-inventario', params, function (data) {
+      var ctx1 = document.getElementById('graficaModelosMaquina');
+      if (!ctx1) return;
+      ctx1 = ctx1.getContext('2d');
+      if (window.graficaModelosMaquina && typeof window.graficaModelosMaquina.destroy === 'function') {
+        window.graficaModelosMaquina.destroy();
+        window.graficaModelosMaquina = null;
+      }
+      let labels = [];
+      let values = [];
+      if (group === 'dia' && Array.isArray(data.modelos_dia)) {
+        labels = data.modelos_dia.map(x => x.dia);
+        values = data.modelos_dia.map(x => x.cantidad);
+      } else if (group === 'maquina' && Array.isArray(data.modelos_por_maquina)) {
+        labels = data.modelos_por_maquina.map(x => x.maquina);
+        values = data.modelos_por_maquina.map(x => x.cantidad);
+      } else if (group === 'material' && Array.isArray(data.modelos_por_material)) {
+        labels = data.modelos_por_material.map(x => x.material);
+        values = data.modelos_por_material.map(x => x.cantidad);
+      } else if (group === 'marca' && Array.isArray(data.modelos_por_marca)) {
+        labels = data.modelos_por_marca.map(x => x.marca);
+        values = data.modelos_por_marca.map(x => x.cantidad);
+      } else {
+        let key = Object.keys(data).find(k => Array.isArray(data[k]) && data[k].length > 0);
+        if (key) {
+          labels = data[key].map(x => Object.values(x)[0]);
+          values = data[key].map(x => Object.values(x)[1]);
         }
       }
-    });
-  });
-}
-$('#filtro-record-tipo, #filtro-record-dias').on('change', renderGraficaRecordCases);
-$(document).ready(function(){
-  $('#filtro-record-dias').val('10');
-  renderGraficaRecordCases();
-});
-function renderGraficaStockShadeGrosor() {
-  $.getJSON('/bloques/api/stock-shade-grosor', { material: 'Zirconia' }, function(resp) {
-    const ctx = document.getElementById('graficaStockShadeGrosor');
-    if(!ctx) return;
-    const shades = resp.shades || [];
-    const grosores = resp.grosores || [];
-    const matriz = resp.matriz || [];
-    if(window.graficaStockShadeGrosor && typeof window.graficaStockShadeGrosor.destroy === 'function') {
-      window.graficaStockShadeGrosor.destroy();
-    }
-  const palette = ['#1E88E5','#43A047','#FB8C00','#8E24AA','#E14A4C','#00ACC1','#D81B60','#5E35B1','#7CB342','#F4511E'];
-    // Ordenar grosores de mayor a menor para que los más grandes queden abajo (base) y los pequeños arriba
-    const pairs = (grosores || []).map(function(g, idx){ return { g: g, idx: idx }; });
-    pairs.sort(function(a,b){ return (parseFloat(b.g) || 0) - (parseFloat(a.g) || 0); });
-    // Construir datasets por grosor ya ordenados desc
-    const datasets = pairs.map(function(p, i) {
-      const dataCol = matriz.map(fila => fila[p.idx] || 0);
-      return {
-        label: p.g + ' mm',
-        data: dataCol,
-        backgroundColor: palette[i % palette.length],
-        stack: 'stack1'
-      };
-    });
-    const ctx2d = ctx.getContext('2d');
-    window.graficaStockShadeGrosor = new Chart(ctx2d, {
-      type: 'bar',
-      data: {
-        labels: shades.length ? shades : ["{{ _('No data') }}"],
-        datasets: datasets.length ? datasets : [{label: 'N/A', data: [0], backgroundColor: '#ccc'}]
-      },
-      options: {
-        responsive: true,
-        plugins: {
-          legend: { position: 'bottom' },
-          tooltip: { enabled: true }
-        },
-        scales: {
-          x: { stacked: true, title: { display: true, text: "{{ _('Shade') }}" } },
-          y: { stacked: true, beginAtZero: true, title: { display: true, text: "{{ _('Quantity') }}" } }
-        }
+      if (labels.length === 0) {
+        labels = ["{{ _('No data') }}"];
+        values = [0];
       }
+      const prodColors = ['#1976d2', '#43a047', '#fbc02d', '#8e24aa', '#e53935', '#00838f', '#ff9800', '#90a4ae'];
+      window.graficaModelosMaquina = new Chart(ctx1, {
+        type: 'bar',
+        data: {
+          labels: labels,
+          datasets: [{
+            label: "{{ _('# Units') }}",
+            data: values,
+            backgroundColor: labels.map((x, i) => prodColors[i % prodColors.length]),
+          }]
+        },
+        options: { responsive: true, plugins: { legend: { display: false } } }
+      });
     });
-  }).fail(function(jqXHR, textStatus, errorThrown){
-    console.error('[DEBUG] /bloques/api/stock-shade-grosor', textStatus, errorThrown, jqXHR.responseText);
+  }
+  $('#filtro-prod-group, #filtro-prod-fecha').off('change').on('change', function () {
+    setTimeout(cargarGraficaProduccionAgrupada, 50);
   });
-}
-function renderGraficaVidaBloques() {
-  $.getJSON('/bloques/api/vida-bloques', function(resp) {
-    const ctx = document.getElementById('graficaVidaBloques');
-    if(!ctx) return;
-    const labels = resp.labels || [];
-    const values = resp.values || [];
-    const counts = resp.counts || [];
-    if(window.graficaVidaBloques && typeof window.graficaVidaBloques.destroy === 'function') {
-      window.graficaVidaBloques.destroy();
-    }
-    const ctx2d = ctx.getContext('2d');
-    window.graficaVidaBloques = new Chart(ctx2d, {
-      type: 'bar',
-      data: {
-        labels: labels.length ? labels : ["{{ _('No data') }}"],
-        datasets: [{
-          label: "{{ _('Avg weeks') }}",
-          data: values.length ? values : [0],
-          backgroundColor: '#43A047'
-        }]
-      },
-      options: {
-        responsive: true,
-        plugins: {
-          legend: { display: true, position: 'bottom' },
-          tooltip: {
-            callbacks: {
-              afterBody: function(items) {
-                const idx = items && items[0] ? items[0].dataIndex : 0;
-                const n = counts[idx] || 0;
-                return "{{ _('Samples') }}: " + n;
+  $(document).ready(function () {
+    setTimeout(cargarGraficaProduccionAgrupada, 100);
+  });
+  // Helper: traducir patrones '(cada N unidad)' a inglés limpio
+  function toEnglishActivity(actRaw) {
+    try {
+      const act = String(actRaw || '').trim();
+      const m = act.match(/\(\s*cada\s+(\d+)\s+(semana|semanas|mes|meses|a\u00f1o|a\u00f1os)\s*\)/i);
+      const base = act.replace(/\s*\(.*\)\s*$/, '').trim();
+      if (m) {
+        const n = parseInt(m[1], 10) || 1;
+        const unit = (m[2] || '').toLowerCase();
+        let unitEn = '';
+        if (unit.startsWith('semana')) unitEn = (n === 1) ? "{{ _('week') }}" : "{{ _('weeks') }}";
+        else if (unit.startsWith('mes')) unitEn = (n === 1) ? "{{ _('month') }}" : "{{ _('months') }}";
+        else unitEn = (n === 1) ? "{{ _('year') }}" : "{{ _('years') }}";
+        return base ? `${base} — {{ _('Every') }} ${n} ${unitEn}` : `{{ _('Every') }} ${n} ${unitEn}`;
+      }
+      return act
+        .replace(/\b[Cc]ada\b/g, "{{ _('Every') }}")
+        .replace(/\bsemanas\b/g, "{{ _('weeks') }}")
+        .replace(/\bsemana\b/g, "{{ _('week') }}")
+        .replace(/\bmeses\b/g, "{{ _('months') }}")
+        .replace(/\bmes\b/g, "{{ _('month') }}")
+        .replace(/\ba\u00f1os\b/g, "{{ _('years') }}")
+        .replace(/\ba\u00f1o\b/g, "{{ _('year') }}");
+    } catch (e) { return String(actRaw || ''); }
+  }
+
+  // Cargar y renderizar Próximas Actividades con botones de acción (idénticos a Mantenimiento)
+  function loadUpcomingActivities() {
+    $.getJSON('/mantenimiento/?api=1', function (data) {
+      var $list = $('#upcoming-activities-list');
+      $list.empty();
+      if (!Array.isArray(data) || data.length === 0) {
+        $list.append('<li class="list-group-item text-muted">' + "{{ _('No upcoming activities scheduled.') }}" + '</li>');
+        return;
+      }
+      data.forEach(function (prox) {
+        var fecha = prox.proxima_fecha ? new Date(prox.proxima_fecha) : null;
+        var fechaStr = fecha ? fecha.toLocaleString('en-CA', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' }) : '';
+        var act_en = toEnglishActivity(prox.actividad);
+        var liHtml = `
+        <li class="list-group-item d-flex justify-content-between align-items-center">
+          <div><b>${prox.maquina}</b> - ${act_en}<br>
+            <small class="text-muted">{{ _('Next') }}: 
+              <span class="fecha-tabla" data-proxima="${prox.proxima_fecha ? prox.proxima_fecha : ''}">${fechaStr}</span>
+            </small>
+          </div>
+          <div>
+            <form method="post" action="/mantenimiento/descartar_proxima/${prox.id}" style="display:inline;" class="form-descartar">
+              <button type="submit" class="btn btn-outline-danger btn-sm btn-descartar" title="{{ _('Delete') }}"><i class="bi bi-x-circle"></i></button>
+            </form>
+            <form method="post" action="/mantenimiento/realizar_proxima/${prox.id}" style="display:inline;" class="form-realizar ms-1">
+              <button type="submit" class="btn btn-outline-success btn-sm btn-realizar" title="{{ _('Mark as done') }}"><i class="bi bi-check-circle"></i></button>
+            </form>
+          </div>
+        </li>`;
+        $list.append(liHtml);
+      });
+    }).fail(function (jqXHR, textStatus, errorThrown) {
+      console.error('[DEBUG] Error in /mantenimiento/?api=1:', textStatus, errorThrown, jqXHR.responseText);
+    });
+  }
+  $(document).ready(function () {
+    loadUpcomingActivities();
+    $('#upcoming-activities-list').on('click', '.btn-descartar, .btn-realizar', function (e) {
+      e.preventDefault();
+      var $form = $(this).closest('form');
+      var action = $form.attr('action');
+      $.post(action).done(function () {
+        loadUpcomingActivities();
+      }).fail(function (jqXHR) {
+        console.error('[DEBUG] Action failed:', jqXHR.status, jqXHR.responseText);
+        // Fallback: submit normal
+        $form.off('submit');
+        $form.trigger('submit');
+      });
+    });
+  });
+  function renderGraficaRecordCases() {
+    var tipo = $('#filtro-record-tipo').val();
+    var dias = $('#filtro-record-dias').val();
+    $.getJSON('/ordenes/api/record-cases', { tipo, dias }, function (data) {
+      var ctx = document.getElementById('graficaRecordCases').getContext('2d');
+      if (window.graficaRecordCases && typeof window.graficaRecordCases.destroy === 'function') {
+        window.graficaRecordCases.destroy();
+      }
+      let label;
+      if (tipo === 'casos') label = "{{ _('Cases') }}";
+      else if (tipo === 'ordenes') label = "{{ _('Orders') }}";
+      else label = "{{ _('# Units') }}";
+      window.graficaRecordCases = new Chart(ctx, {
+        type: 'line',
+        data: {
+          labels: data.map(x => x.dia),
+          datasets: [{
+            label: label,
+            data: data.map(x => x.cantidad),
+            borderColor: '#1E88E5',
+            backgroundColor: 'rgba(30,136,229,0.15)',
+            tension: 0.3,
+            pointRadius: 4,
+            pointBackgroundColor: '#E14A4C',
+            fill: true
+          }]
+        },
+        options: {
+          responsive: true,
+          plugins: {
+            legend: { display: true, position: 'top' },
+            tooltip: { enabled: true }
+          },
+          scales: {
+            x: { title: { display: true, text: "{{ _('Day') }}" } },
+            y: { beginAtZero: true, title: { display: true, text: "{{ _('Quantity') }}" } }
+          }
+        }
+      });
+    });
+  }
+  $('#filtro-record-tipo, #filtro-record-dias').on('change', renderGraficaRecordCases);
+  $(document).ready(function () {
+    $('#filtro-record-dias').val('10');
+    renderGraficaRecordCases();
+  });
+  function renderGraficaStockShadeGrosor() {
+    $.getJSON('/bloques/api/stock-shade-grosor', { material: 'Zirconia' }, function (resp) {
+      const ctx = document.getElementById('graficaStockShadeGrosor');
+      if (!ctx) return;
+      const shades = resp.shades || [];
+      const grosores = resp.grosores || [];
+      const matriz = resp.matriz || [];
+      if (window.graficaStockShadeGrosor && typeof window.graficaStockShadeGrosor.destroy === 'function') {
+        window.graficaStockShadeGrosor.destroy();
+      }
+      const palette = ['#1E88E5', '#43A047', '#FB8C00', '#8E24AA', '#E14A4C', '#00ACC1', '#D81B60', '#5E35B1', '#7CB342', '#F4511E'];
+      // Ordenar grosores de mayor a menor para que los más grandes queden abajo (base) y los pequeños arriba
+      const pairs = (grosores || []).map(function (g, idx) { return { g: g, idx: idx }; });
+      pairs.sort(function (a, b) { return (parseFloat(b.g) || 0) - (parseFloat(a.g) || 0); });
+      // Construir datasets por grosor ya ordenados desc
+      const datasets = pairs.map(function (p, i) {
+        const dataCol = matriz.map(fila => fila[p.idx] || 0);
+        return {
+          label: p.g + ' mm',
+          data: dataCol,
+          backgroundColor: palette[i % palette.length],
+          stack: 'stack1'
+        };
+      });
+      const ctx2d = ctx.getContext('2d');
+      window.graficaStockShadeGrosor = new Chart(ctx2d, {
+        type: 'bar',
+        data: {
+          labels: shades.length ? shades : ["{{ _('No data') }}"],
+          datasets: datasets.length ? datasets : [{ label: 'N/A', data: [0], backgroundColor: '#ccc' }]
+        },
+        options: {
+          responsive: true,
+          plugins: {
+            legend: { position: 'bottom' },
+            tooltip: { enabled: true }
+          },
+          scales: {
+            x: { stacked: true, title: { display: true, text: "{{ _('Shade') }}" } },
+            y: { stacked: true, beginAtZero: true, title: { display: true, text: "{{ _('Quantity') }}" } }
+          }
+        }
+      });
+    }).fail(function (jqXHR, textStatus, errorThrown) {
+      console.error('[DEBUG] /bloques/api/stock-shade-grosor', textStatus, errorThrown, jqXHR.responseText);
+    });
+  }
+  $(document).ready(function () {
+    // Render inicial de nuevas gráficas
+    setTimeout(renderGraficaStockShadeGrosor, 150);
+    setTimeout(renderGraficaShadeHistorico, 200);
+  });
+
+  function renderGraficaShadeHistorico() {
+    var metric = $('#filtro-shade-metric').val();
+    var material = $('#filtro-shade-material').val();
+    var limit = $('#filtro-shade-limit').val();
+
+    $.getJSON('/ordenes/api/analytics/shade-distribution', { metric: metric, material: material, limit: limit }, function (data) {
+      const ctx = document.getElementById('graficaShadeHistorico');
+      if (!ctx) return;
+
+      if (window.graficaShadeHistorico && typeof window.graficaShadeHistorico.destroy === 'function') {
+        window.graficaShadeHistorico.destroy();
+      }
+
+      // Si no hay datos, mostrar mensaje o gráfico vacío (opcional, Chart.js maneja array vacío)
+
+      const palette = ['#1E88E5', '#43A047', '#FB8C00', '#8E24AA', '#E14A4C', '#00ACC1', '#D81B60', '#5E35B1', '#7CB342', '#F4511E', '#C0CA33', '#6D4C41'];
+
+      // Calcular total para porcentajes
+      const totalSum = data.values.reduce((a, b) => a + b, 0);
+
+      // Crear etiquetas formateadas: "Shade (Value - %)"
+      const labelsFormatted = data.labels.map((label, index) => {
+        let val = data.values[index];
+        let pct = totalSum > 0 ? ((val / totalSum) * 100).toFixed(1) : '0';
+        return `${label} (${val} - ${pct}%)`;
+      });
+
+      window.graficaShadeHistorico = new Chart(ctx, {
+        type: 'pie',
+        data: {
+          labels: labelsFormatted,
+          datasets: [{
+            data: data.values,
+            backgroundColor: data.labels.map((_, i) => palette[i % palette.length]),
+            borderWidth: 1
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: {
+              position: 'right',
+              labels: {
+                generateLabels: function (chart) {
+                  const data = chart.data;
+                  if (data.labels.length && data.datasets.length) {
+                    return data.labels.map(function (label, i) {
+                      const meta = chart.getDatasetMeta(0);
+                      const style = meta.controller.getStyle(i);
+                      return {
+                        text: label,
+                        fillStyle: style.backgroundColor,
+                        strokeStyle: style.borderColor,
+                        lineWidth: style.borderWidth,
+                        hidden: isNaN(data.datasets[0].data[i]) || meta.data[i].hidden,
+                        index: i
+                      };
+                    });
+                  }
+                  return [];
+                }
+              }
+            },
+            title: {
+              display: true,
+              text: metric === 'units' ? "{{ _('Distribution by Units') }}" :
+                metric === 'cases' ? "{{ _('Distribution by Cases') }}" : "{{ _('Distribution by Orders') }}"
+            },
+            tooltip: {
+              callbacks: {
+                label: function (context) {
+                  // Ya tenemos la info en la etiqueta, pero en tooltip es bueno tenerla limpia
+                  // OJO: data.labels ahora tiene el formato largo. 
+                  // Podríamos intentar recuperar el label original si lo guardamos, o parsear.
+                  // Simplemente mostraremos el valor actual tal cual.
+                  let labelFormatted = context.label;
+                  return labelFormatted;
+                }
               }
             }
           }
-        },
-        scales: {
-          x: { title: { display: true, text: "{{ _('Shade') }}" } },
-          y: { beginAtZero: true, title: { display: true, text: "{{ _('Weeks') }}" } }
         }
-      }
+      });
     });
-  }).fail(function(jqXHR, textStatus, errorThrown){
-    console.error('[DEBUG] /bloques/api/vida-bloques', textStatus, errorThrown, jqXHR.responseText);
+  }
+
+  $('#filtro-shade-metric, #filtro-shade-material, #filtro-shade-limit').on('change', function () {
+    renderGraficaShadeHistorico();
   });
-}
-$(document).ready(function(){
-  // Render inicial de nuevas gráficas
-  setTimeout(renderGraficaStockShadeGrosor, 150);
-  setTimeout(renderGraficaVidaBloques, 200);
-});
 </script>
 {% endblock %}

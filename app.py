@@ -18,7 +18,7 @@ Paso a paso:
 # Importamos Flask y la función para renderizar plantillas HTML
 from flask import Flask, render_template, session, request, redirect, url_for, jsonify, make_response, abort
 # Importamos la base de datos desde extensions.py
-from extensions import db
+from extensions import db, migrate
 # Importamos la función de traducción
 from translations import _
 from flask_babel import Babel
@@ -64,6 +64,7 @@ def create_app():
 
     # Inicializamos la base de datos con la app
     db.init_app(app)
+    migrate.init_app(app, db)
 
     @app.template_filter('vancouver')
     def vancouver_filter(dt):

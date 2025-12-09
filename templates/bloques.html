@@ -8,53 +8,125 @@
 {% endblock %}
 {% block content %}
 <div class="row g-4">
-  <div class="col-12 mb-4">
-    <div class="card border-0 shadow-sm animate__animated animate__fadeInUp">
+  <!-- Top Section: Analytics Table & Add Block Form -->
+  <div class="col-lg-5 mb-4">
+    <div class="card border-0 shadow-sm animate__animated animate__fadeInLeft">
       <div class="card-body">
-        <h4 class="mb-3"><i class="bi bi-plus-circle"></i> {{ _('Add New Block to Inventory') }}</h4>
-        <form method="post" class="row g-3 mb-0" id="form-bloque-agregar">
-          <div class="col-md-3">
-            <label class="form-label">{{ _('Material') }}</label>
-            <select class="form-select" name="material" id="material" size="6" required style="height:auto;min-height:120px;">
-              <option value="">-- {{ _('Select') }} --</option>
+        <div class="d-flex justify-content-between align-items-center mb-3">
+          <h4 class="fs-5 mb-0"><i class="bi bi-graph-up"></i> {{ _('Historical Consumption') }}</h4>
+        </div>
+
+        <!-- Filters for Table -->
+        <div class="row g-2 mb-3">
+          <div class="col-md-6">
+            <select class="form-select form-select-sm" id="table-filter-material">
               {% for mat in materiales %}
-                <option value="{{ mat }}" {% if request.form.get('material', '') == mat or (not request.form.get('material') and mat == 'Zirconia') %}selected{% endif %}>{{ mat }}</option>
+              <option value="{{ mat }}" {% if mat=='Zirconia' %}selected{% endif %}>{{ mat }}</option>
               {% endfor %}
             </select>
           </div>
+          <div class="col-md-6">
+            <select class="form-select form-select-sm" id="table-filter-days">
+              <option value="10">10 Days</option>
+              <option value="20">20 Days</option>
+              <option value="30" selected>30 Days</option>
+            </select>
+          </div>
+        </div>
+        <div class="table-responsive border rounded" style="max-height: 250px; overflow-y: auto;">
+          <table class="table table-sm table-striped table-hover mb-0" style="font-size: 0.85rem;">
+            <thead class="table-dark" style="position: sticky; top: 0; z-index: 1;">
+              <tr>
+                <th class="text-white sortable-header" data-sort="shade" style="cursor: pointer;">{{ _('Shade') }} <i
+                    class="bi bi-arrow-down-up small text-muted ms-1"></i></th>
+                <th class="text-center text-white sortable-header" data-sort="count" style="cursor: pointer;">{{ _('#
+                  Units') }} <i class="bi bi-arrow-down-up small text-muted ms-1"></i></th>
+                <th class="text-center text-primary text-white sortable-header" data-sort="fresados"
+                  style="cursor: pointer;">{{ _('# Milled Blocks') }} <i
+                    class="bi bi-arrow-down-up small text-muted ms-1"></i></th>
+                <th class="text-center text-success text-white sortable-header" data-sort="inventory"
+                  style="cursor: pointer;">{{ _('Total Blocks') }} <i
+                    class="bi bi-arrow-down-up small text-muted ms-1"></i></th>
+                <th class="text-center text-secondary text-white sortable-header" data-sort="forecast"
+                  style="cursor: pointer;">{{ _('Inventory Weeks') }} <i
+                    class="bi bi-arrow-down-up small text-muted ms-1"></i></th>
+              </tr>
+            </thead>
+            <tbody id="tabla-consumo-body">
+              <!-- Loaded via JS -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+
+  <div class="col-lg-7 mb-4">
+    <div class="card border-0 shadow-sm animate__animated animate__fadeInRight">
+      <div class="card-body">
+        <h4 class="mb-3 fs-5"><i class="bi bi-plus-circle"></i> {{ _('Add New Block') }}</h4>
+        <form method="post" class="row g-2 mb-0" id="form-bloque-agregar">
+          <!-- Material (Vertical) -->
           <div class="col-md-3">
-            <label class="form-label">{{ _('Shade') }}</label>
-            <select class="form-select" name="shade" id="shade" size="6" required style="height:auto;min-height:120px;">
-              <option value="">-- {{ _('Select') }} --</option>
-              {% for s in shades %}
-                <option value="{{ s }}" {% if request.form.get('shade', '') == s %}selected{% endif %}>{{ s }}</option>
+            <label class="form-label small fw-bold">{{ _('Material') }}</label>
+            <input type="hidden" name="material" id="material" required>
+            <div id="material-container" class="d-flex flex-column gap-1 border rounded p-2 bg-light"
+              style="height:auto;min-height:140px;max-height:300px;overflow-y:auto;">
+              {% for mat in materiales %}
+              <button type="button" class="btn btn-sm btn-outline-secondary btn-material-pill text-start ps-2"
+                data-value="{{ mat }}">
+                {{ mat }}
+              </button>
               {% endfor %}
-            </select>
+            </div>
           </div>
+
+          <!-- Shade (Grid/Cols) -->
           <div class="col-md-3">
-            <label class="form-label">{{ _('Brand') }}</label>
-            <select class="form-select" name="marca" id="marca" size="6" required style="height:auto;min-height:120px;">
-              <option value="">-- {{ _('Select') }} --</option>
-              {% for m in marcas %}
-                <option value="{{ m }}" {% if request.form.get('marca', '') == m %}selected{% endif %}>{{ m }}</option>
-              {% endfor %}
-            </select>
+            <label class="form-label small fw-bold">{{ _('Shade') }}</label>
+            <input type="hidden" name="shade" id="shade-input" required>
+            <div id="shade-container" class="border rounded p-2 bg-light"
+              style="height:auto;min-height:85px;max-height:225px;overflow-y:auto;">
+              <div class="text-muted small text-center mt-4">{{ _('Select Mat.') }}</div>
+            </div>
           </div>
-          <div class="col-md-2">
-            <label class="form-label">{{ _('Thickness') }}</label>
-            <select class="form-select" name="grosor" id="grosor" size="6" required style="height:auto;min-height:120px;">
-              <option value="">-- {{ _('Select') }} --</option>
-              {% for g in grosores %}
-                <option value="{{ g }}" {% if request.form.get('grosor', '') == g %}selected{% endif %}>{{ g }}</option>
-              {% endfor %}
-            </select>
+
+          <!-- Brand (Vertical) -->
+          <div class="col-md-3">
+            <label class="form-label small fw-bold">{{ _('Brand') }}</label>
+            <input type="hidden" name="marca" id="marca" required>
+            <div id="marca-container" class="d-flex flex-column gap-1 border rounded p-2 bg-light"
+              style="height:auto;min-height:85px;max-height:225px;overflow-y:auto;">
+              <div class="text-muted small text-center mt-4">-</div>
+            </div>
           </div>
-          <div class="col-md-1">
-            <label class="form-label">{{ _('Count') }}</label>
-            <input type="number" name="cantidad" class="form-control" min="1" value="{{ request.form.get('cantidad', '1') }}" required>
+
+          <!-- Thickness + Count (Grid + Input) -->
+          <div class="col-md-3 d-flex flex-column">
+            <div class="mb-2 flex-grow-1">
+              <label class="form-label small fw-bold">{{ _('Thickness') }}</label>
+              <input type="hidden" name="grosor" id="grosor" required>
+              <div id="grosor-container" class="border rounded p-2 bg-light"
+                style="max-height: 140px; overflow-y: auto;">
+                <div class="thickness-grid">
+                  {% for g in grosores %}
+                  <button type="button" class="btn btn-sm btn-outline-secondary btn-thickness" data-value="{{ g }}">{{ g
+                    }}</button>
+                  {% endfor %}
+                </div>
+              </div>
+            </div>
+            <div>
+              <label class="form-label small fw-bold">{{ _('Count') }}</label>
+              <input type="number" name="cantidad" class="form-control form-control-sm" min="1"
+                value="{{ request.form.get('cantidad', '1') }}" required>
+            </div>
           </div>
-          <div class="col-12 text-end">
-            <button type="submit" class="btn btn-success"><i class="bi bi-plus-circle"></i> {{ _('Add') }}</button>
+
+          <div class="col-12 text-end mt-3">
+            <button type="submit" class="btn btn-success btn-sm px-4"><i class="bi bi-plus-circle"></i> {{ _('Add')
+              }}</button>
           </div>
         </form>
       </div>
@@ -71,7 +143,7 @@
             <select class="form-select form-select-sm filtro-bloques" data-col="3" id="filtro-marca-usados">
               <option value="">{{ _('All Brands') }}</option>
               {% for m in marcas %}
-                <option value="{{ m }}">{{ m }}</option>
+              <option value="{{ m }}">{{ m }}</option>
               {% endfor %}
             </select>
           </div>
@@ -80,7 +152,7 @@
             <select class="form-select form-select-sm filtro-bloques" data-col="2" id="filtro-shade-usados">
               <option value="">{{ _('All Shades') }}</option>
               {% for s in shades %}
-                <option value="{{ s }}">{{ s }}</option>
+              <option value="{{ s }}">{{ s }}</option>
               {% endfor %}
             </select>
           </div>
@@ -89,12 +161,13 @@
             <select class="form-select form-select-sm filtro-bloques" data-col="4" id="filtro-grosor-usados">
               <option value="">{{ _('All Thicknesses') }}</option>
               {% for g in grosores %}
-                <option value="{{ g }}">{{ g }}</option>
+              <option value="{{ g }}">{{ g }}</option>
               {% endfor %}
             </select>
           </div>
           <div class="col-md-1 text-end">
-            <button type="button" class="btn btn-outline-secondary btn-sm" id="reset-filtros-usados" title="{{ _('Reset Filters') }}"><i class="bi bi-x-circle"></i></button>
+            <button type="button" class="btn btn-outline-secondary btn-sm" id="reset-filtros-usados"
+              title="{{ _('Reset Filters') }}"><i class="bi bi-x-circle"></i></button>
           </div>
         </div>
         <div class="table-responsive animate__animated animate__fadeIn">
@@ -122,10 +195,14 @@
                 <td>{{ bloque.modelos_fresados }}</td>
                 <td><span class="fecha-tabla">{{ bloque.fecha_creacion|vancouver }}</span></td>
                 <td>
-                  <form method="post" action="{{ url_for('bloques.eliminar_bloque', bloque_id=bloque.id) }}" style="display:inline;" class="form-eliminar-bloque" data-codigo="{{ bloque.codigo_barra }}" data-material="{{ bloque.material }}" data-marca="{{ bloque.marca }}" data-shade="{{ bloque.shade }}" data-grosor="{{ bloque.grosor }}">
+                  <form method="post" action="{{ url_for('bloques.eliminar_bloque', bloque_id=bloque.id) }}"
+                    style="display:inline;" class="form-eliminar-bloque" data-codigo="{{ bloque.codigo_barra }}"
+                    data-material="{{ bloque.material }}" data-marca="{{ bloque.marca }}"
+                    data-shade="{{ bloque.shade }}" data-grosor="{{ bloque.grosor }}">
                     <button type="submit" class="btn btn-outline-danger btn-sm"><i class="bi bi-trash"></i></button>
                   </form>
-                  <a href="{{ url_for('bloques.editar_bloque', bloque_id=bloque.id) }}" class="btn btn-outline-warning btn-sm"><i class="bi bi-pencil"></i></a>
+                  <a href="{{ url_for('bloques.editar_bloque', bloque_id=bloque.id) }}"
+                    class="btn btn-outline-warning btn-sm"><i class="bi bi-pencil"></i></a>
                 </td>
               </tr>
               {% endfor %}
@@ -146,7 +223,7 @@
             <select class="form-select form-select-sm filtro-bloques" data-col="2" id="filtro-marca-nuevos">
               <option value="">{{ _('All Brands') }}</option>
               {% for m in marcas %}
-                <option value="{{ m }}">{{ m }}</option>
+              <option value="{{ m }}">{{ m }}</option>
               {% endfor %}
             </select>
           </div>
@@ -155,7 +232,7 @@
             <select class="form-select form-select-sm filtro-bloques" data-col="1" id="filtro-shade-nuevos">
               <option value="">{{ _('All Shades') }}</option>
               {% for s in shades %}
-                <option value="{{ s }}">{{ s }}</option>
+              <option value="{{ s }}">{{ s }}</option>
               {% endfor %}
             </select>
           </div>
@@ -164,12 +241,13 @@
             <select class="form-select form-select-sm filtro-bloques" data-col="3" id="filtro-grosor-nuevos">
               <option value="">{{ _('All Thicknesses') }}</option>
               {% for g in grosores %}
-                <option value="{{ g }}">{{ g }}</option>
+              <option value="{{ g }}">{{ g }}</option>
               {% endfor %}
             </select>
           </div>
           <div class="col-md-1 text-end">
-            <button type="button" class="btn btn-outline-secondary btn-sm" id="reset-filtros-nuevos" title="{{ _('Reset Filters') }}"><i class="bi bi-x-circle"></i></button>
+            <button type="button" class="btn btn-outline-secondary btn-sm" id="reset-filtros-nuevos"
+              title="{{ _('Reset Filters') }}"><i class="bi bi-x-circle"></i></button>
           </div>
         </div>
         <div class="table-responsive animate__animated animate__fadeIn">
@@ -194,31 +272,37 @@
                 <td>{{ bloque.grosor }}</td>
                 <td>
                   <div class="d-flex align-items-center gap-1">
-                    <form method="post" action="{{ url_for('bloques.modificar_cantidad', bloque_id=bloque.id) }}" style="display:inline;">
+                    <form method="post" action="{{ url_for('bloques.modificar_cantidad', bloque_id=bloque.id) }}"
+                      style="display:inline;">
                       <input type="hidden" name="accion" value="-1">
-                      <button type="submit" class="btn btn-outline-danger btn-sm fw-bold" style="background:linear-gradient(90deg,#fff 0%,#f8d7da 100%);color:#c82333;border:1px solid #f5c6cb;" title="{{ _('Decrease by 1') }}" {% if bloque.cantidad <= 1 %}disabled{% endif %}>-1</button>
+                      <button type="submit" class="btn btn-outline-danger btn-sm fw-bold"
+                        style="background:linear-gradient(90deg,#fff 0%,#f8d7da 100%);color:#c82333;border:1px solid #f5c6cb;"
+                        title="{{ _('Decrease by 1') }}" {% if bloque.cantidad <=1 %}disabled{% endif %}>-1</button>
                     </form>
                     <span class="mx-1">{{ bloque.cantidad }}</span>
-                    <form method="post" action="{{ url_for('bloques.modificar_cantidad', bloque_id=bloque.id) }}" style="display:inline;">
+                    <form method="post" action="{{ url_for('bloques.modificar_cantidad', bloque_id=bloque.id) }}"
+                      style="display:inline;">
                       <input type="hidden" name="accion" value="+1">
-                      <button type="submit" class="btn btn-outline-success btn-sm fw-bold" style="background:linear-gradient(90deg,#fff 0%,#d4edda 100%);color:#218838;border:1px solid #c3e6cb;" title="{{ _('Increase by 1') }}">+1</button>
+                      <button type="submit" class="btn btn-outline-success btn-sm fw-bold"
+                        style="background:linear-gradient(90deg,#fff 0%,#d4edda 100%);color:#218838;border:1px solid #c3e6cb;"
+                        title="{{ _('Increase by 1') }}">+1</button>
                     </form>
                   </div>
                 </td>
                 <td><span class="fecha-tabla">{{ bloque.fecha_creacion|vancouver }}</span></td>
                 <td>
-                  <form method="post" action="{{ url_for('bloques.eliminar_bloque', bloque_id=bloque.id) }}" style="display:inline;" class="form-eliminar-bloque" data-codigo="{{ bloque.codigo_barra }}" data-material="{{ bloque.material }}" data-marca="{{ bloque.marca }}" data-shade="{{ bloque.shade }}" data-grosor="{{ bloque.grosor }}">
+                  <form method="post" action="{{ url_for('bloques.eliminar_bloque', bloque_id=bloque.id) }}"
+                    style="display:inline;" class="form-eliminar-bloque" data-codigo="{{ bloque.codigo_barra }}"
+                    data-material="{{ bloque.material }}" data-marca="{{ bloque.marca }}"
+                    data-shade="{{ bloque.shade }}" data-grosor="{{ bloque.grosor }}">
                     <button type="submit" class="btn btn-outline-danger btn-sm"><i class="bi bi-trash"></i></button>
                   </form>
-                  <a href="{{ url_for('bloques.editar_bloque', bloque_id=bloque.id) }}" class="btn btn-outline-warning btn-sm"><i class="bi bi-pencil"></i></a>
-                  <button type="button" class="btn btn-outline-primary btn-sm btn-convertir-usado" 
-                    data-bloque-id="{{ bloque.id }}" 
-                    data-material="{{ bloque.material }}" 
-                    data-marca="{{ bloque.marca }}" 
-                    data-grosor="{{ bloque.grosor }}" 
-                    data-shade="{{ bloque.shade }}" 
-                    data-cantidad="{{ bloque.cantidad }}"
-                    title="{{ _('Convert to used block') }}">
+                  <a href="{{ url_for('bloques.editar_bloque', bloque_id=bloque.id) }}"
+                    class="btn btn-outline-warning btn-sm"><i class="bi bi-pencil"></i></a>
+                  <button type="button" class="btn btn-outline-primary btn-sm btn-convertir-usado"
+                    data-bloque-id="{{ bloque.id }}" data-material="{{ bloque.material }}"
+                    data-marca="{{ bloque.marca }}" data-grosor="{{ bloque.grosor }}" data-shade="{{ bloque.shade }}"
+                    data-cantidad="{{ bloque.cantidad }}" title="{{ _('Convert to used block') }}">
                     <i class="bi bi-arrow-repeat"></i>
                   </button>
                 </td>
@@ -232,7 +316,8 @@
   </div>
 </div>
 <!-- Modal para confirmar y editar código al convertir a usado -->
-<div class="modal fade" id="modalConvertirUsado" tabindex="-1" aria-labelledby="modalConvertirUsadoLabel" aria-hidden="true">
+<div class="modal fade" id="modalConvertirUsado" tabindex="-1" aria-labelledby="modalConvertirUsadoLabel"
+  aria-hidden="true">
   <div class="modal-dialog">
     <div class="modal-content">
       <form id="formConvertirUsado" method="post">
@@ -257,215 +342,571 @@
   </div>
 </div>
 <style>
-select.form-select:focus option:checked, select.form-select option:checked {
-  background: #1976d2 !important;
-  color: #fff !important;
-}
-select#shade:focus option:checked, select#shade option:checked {
-  background: #8e24aa !important;
-  color: #fff !important;
-}
-select#marca:focus option:checked, select#marca option:checked {
-  background: #43a047 !important;
-  color: #fff !important;
-}
-select#grosor:focus option:checked, select#grosor option:checked {
-  background: #fbc02d !important;
-  color: #222 !important;
-}
-.table-bloques, .table-bloques td, .table-bloques th {
-  font-size: 0.93em !important;
-}
+  select.form-select:focus option:checked,
+  select.form-select option:checked {
+    background: #1976d2 !important;
+    color: #fff !important;
+  }
+
+  /* Custom Red Selection Class */
+  .btn-custom-red {
+    background-color: #dc3545 !important;
+    color: #fff !important;
+    /* Maintain white for legible contrast */
+    border-color: #dc3545 !important;
+  }
+
+  /* Style for shade buttons */
+  .btn-shade {
+    width: 100%;
+    font-weight: 600;
+    font-size: 0.75em;
+    padding: 8px 1px;
+    border-radius: 3px;
+    line-height: 1.1;
+    border: 1px solid #ced4da;
+    color: #212529;
+  }
+
+  .btn-shade:hover {
+    background-color: #e9ecef;
+  }
+
+  /* Style for Material buttons (Vertical Stack) */
+  .btn-material-pill {
+    font-size: 0.9em;
+    padding: 6px 10px;
+    border-radius: 4px;
+    font-weight: 600;
+    text-align: left;
+    white-space: nowrap;
+    width: 100%;
+    border: 1px solid #ced4da;
+    color: #212529;
+    background-color: transparent;
+  }
+
+  .btn-material-pill:hover {
+    background-color: #e9ecef;
+  }
+
+  /* Main flex container for columns */
+  .shade-columns-container {
+    display: flex;
+    gap: 4px;
+    width: 100%;
+    align-items: flex-start;
+    overflow-x: auto;
+  }
+
+  /* Individual column */
+  .shade-col {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    flex: 1;
+    min-width: 0;
+  }
+
+  select#marca:focus option:checked,
+  select#marca option:checked {
+    background: #43a047 !important;
+    color: #fff !important;
+  }
+
+  select#grosor:focus option:checked,
+  select#grosor option:checked {
+    background: #fbc02d !important;
+    color: #222 !important;
+  }
+
+  .table-bloques,
+  .table-bloques td,
+  .table-bloques th {
+    font-size: 0.93em !important;
+  }
+
+  /* Style for Brand buttons - Same as Material */
+  .btn-brand-pill {
+    font-size: 0.9em;
+    padding: 6px 10px;
+    border-radius: 4px;
+    font-weight: 600;
+    text-align: left;
+    white-space: nowrap;
+    width: 100%;
+    border: 1px solid #ced4da;
+    color: #212529;
+    background-color: transparent;
+  }
+
+  .btn-brand-pill:hover {
+    background-color: #e9ecef;
+  }
+
+  /* Grid for Thickness */
+  .thickness-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 4px;
+    width: 100%;
+  }
+
+  /* Style for Thickness buttons - Similar to Shade but grid adapted */
+  .btn-thickness {
+    width: 100%;
+    font-weight: 600;
+    font-size: 0.9em;
+    padding: 8px 1px;
+    border-radius: 3px;
+    line-height: 1.1;
+    border: 1px solid #ced4da;
+    color: #212529;
+  }
+
+  .btn-thickness:hover {
+    background-color: #e9ecef;
+  }
 </style>
 {% endblock %}
+
 {% block scripts %}
 {{ super() }}
+<!-- 1. Confirmation when deleting a block -->
 <script>
-// Confirmation when deleting a block
-$(document).on('submit', '.form-eliminar-bloque', function(e) {
-  const codigo = $(this).data('codigo');
-  const material = $(this).data('material');
-  const marca = $(this).data('marca');
-  const shade = $(this).data('shade');
-  const grosor = $(this).data('grosor');
-  const msg = `{{ _('Are you sure you want to delete this block?') }}\n\n{{ _('Code') }}: ${codigo}\n{{ _('Material') }}: ${material}\n{{ _('Brand') }}: ${marca}\n{{ _('Shade') }}: ${shade}\n{{ _('Thickness') }}: ${grosor}`;
-  if(!confirm(msg)) e.preventDefault();
-});
+  $(document).on('submit', '.form-eliminar-bloque', function (e) {
+    const codigo = $(this).data('codigo');
+    const material = $(this).data('material');
+    const marca = $(this).data('marca');
+    const shade = $(this).data('shade');
+    const grosor = $(this).data('grosor');
+    const msg = `{{ _('Are you sure you want to delete this block?') }}\n\n{{ _('Code') }}: ${codigo}\n{{ _('Material') }}: ${material}\n{{ _('Brand') }}: ${marca}\n{{ _('Shade') }}: ${shade}\n{{ _('Thickness') }}: ${grosor}`;
+    if (!confirm(msg)) e.preventDefault();
+  });
 </script>
+
+<!-- 2. HISTORICAL CONSUMPTION TABLE LOGIC (Sorted) -->
 <script>
-// Pasar la configuración avanzada de materiales al JS
-const materialesAvanzado = {{ materiales_avanzado|default({})|tojson|safe }};
-$(document).ready(function() {
-  // Al cambiar el material, actualizar shades y marcas
-  $('#material').on('change', function() {
-    const mat = $(this).val();
-    // Shades
-    let shades = materialesAvanzado[mat] ? materialesAvanzado[mat]['shades'] : [];
-    let $shade = $('#shade');
-    $shade.empty();
-    $shade.append('<option value="">-- Select --</option>');
-    shades.forEach(function(s) {
-      $shade.append('<option value="'+s+'">'+s+'</option>');
+  $(document).ready(function () {
+    let historicalData = [];
+    let currentSort = { field: 'count', dir: 'desc' }; // Default sort
+
+    function renderHistoricalTable() {
+      const $tbody = $('#tabla-consumo-body');
+      $tbody.empty();
+
+      if (!historicalData || historicalData.length === 0) {
+        $tbody.html(`<tr><td colspan="5" class="text-center text-muted">{{ _("No data available") }}</td></tr>`);
+        return;
+      }
+
+      // Sort Data
+      historicalData.sort((a, b) => {
+        let valA = a[currentSort.field];
+        let valB = b[currentSort.field];
+
+        // Numeric fields
+        if (['count', 'fresados', 'inventory', 'forecast'].includes(currentSort.field)) {
+          if (valA === '∞') valA = 999999;
+          if (valB === '∞') valB = 999999;
+          valA = parseFloat(valA) || 0;
+          valB = parseFloat(valB) || 0;
+        } else {
+          // Text fields
+          valA = (valA || '').toString().toLowerCase();
+          valB = (valB || '').toString().toLowerCase();
+        }
+
+        if (valA < valB) return currentSort.dir === 'asc' ? -1 : 1;
+        if (valA > valB) return currentSort.dir === 'asc' ? 1 : -1;
+        return 0;
+      });
+
+      // Render
+      historicalData.forEach(r => {
+        $tbody.append(`
+             <tr>
+                 <td><span class="badge bg-light text-dark border">${r.shade}</span></td>
+                 <td class="text-center fw-bold">${r.count}</td>
+                 <td class="text-center text-primary fw-bold">${r.fresados}</td>
+                 <td class="text-center fw-bold text-success">${r.inventory}</td>
+                 <td class="text-center fw-bold text-secondary">${r.forecast}</td>
+             </tr>
+         `);
+      });
+
+      // Update header icons
+      $('.sortable-header i').removeClass('text-dark').addClass('text-muted');
+      const activeHeader = $(`.sortable-header[data-sort="${currentSort.field}"]`);
+      activeHeader.find('i').removeClass('text-muted').addClass('text-dark');
+    }
+
+    function loadHistoricalTable() {
+      const material = $('#table-filter-material').val();
+      const days = $('#table-filter-days').val() || '30';
+      const daysVal = parseInt(days, 10) || 30;
+
+      if (!material) {
+        if (!$('#table-filter-material option').length) return;
+      }
+      const safeMat = material || 'Zirconia';
+
+      const $tbody = $('#tabla-consumo-body');
+      $tbody.html(`<tr><td colspan="5" class="text-center text-muted">{{ _("Loading data for") }} ${safeMat}...</td></tr>`);
+
+      const apiUrl = `{{ url_for('ordenes.api_analytics_shade_distribution') }}?material=${safeMat}&limit=${days}`;
+
+      $.getJSON(apiUrl, function (data) {
+        const hasLabels = data.labels && Array.isArray(data.labels) && data.labels.length > 0;
+        historicalData = []; // Clear current data
+
+        if (hasLabels) {
+          for (let i = 0; i < data.labels.length; i++) {
+            let shadeRaw = data.labels[i] || 'Unknown';
+            let cleanShade = shadeRaw.toString().split(' (')[0];
+
+            let count = data.values && data.values[i] !== undefined ? data.values[i] : 0;
+            let fresados = parseFloat((count / 19).toFixed(1));
+
+            let inventory = 0;
+            if (data.inventory && data.inventory[i] !== undefined) {
+              inventory = parseInt(data.inventory[i], 10) || 0;
+            }
+
+            let forecast = '0.0';
+            if (daysVal > 0) {
+              let denominator = fresados / (daysVal / 5.0);
+              if (denominator > 0.001) {
+                forecast = (inventory / denominator).toFixed(1);
+              } else {
+                if (inventory > 0) forecast = '∞';
+                else forecast = '0.0';
+              }
+            }
+
+            historicalData.push({
+              shade: cleanShade,
+              count: count,
+              fresados: fresados.toFixed(1),
+              inventory: inventory,
+              forecast: forecast
+            });
+          }
+          renderHistoricalTable();
+        } else {
+          $tbody.html(`<tr><td colspan="5" class="text-center text-muted">{{ _("No data for") }} ${safeMat} (${days} days)</td></tr>`);
+        }
+      }).fail(function (jqxhr, textStatus, error) {
+        console.error("API Error:", textStatus, error);
+        $tbody.html('<tr><td colspan="5" class="text-center text-danger">{{ _("Error loading data") }}: ' + error + '</td></tr>');
+      });
+    }
+
+    // Event Listeners for Filters
+    $('#table-filter-material, #table-filter-days').on('change', function () {
+      loadHistoricalTable();
     });
-    // Marcas
-    let marcas = materialesAvanzado[mat] ? materialesAvanzado[mat]['marcas'] : [];
-    let $marca = $('#marca');
-    $marca.empty();
-    $marca.append('<option value="">-- Select --</option>');
-    marcas.forEach(function(m) {
-      if (typeof m === 'string') {
-        $marca.append('<option value="'+m+'">'+m+'</option>');
-      } else if (typeof m === 'object' && m.nombre) {
-        $marca.append('<option value="'+m.nombre+'">'+m.nombre+'</option>');
+
+    // Sort Click Handler
+    $('.sortable-header').on('click', function () {
+      const field = $(this).data('sort');
+      if (currentSort.field === field) {
+        currentSort.dir = currentSort.dir === 'asc' ? 'desc' : 'asc';
+      } else {
+        currentSort.field = field;
+        currentSort.dir = (field === 'shade') ? 'asc' : 'desc';
+      }
+      renderHistoricalTable();
+    });
+
+    // Load table immediately
+    loadHistoricalTable();
+  });
+</script>
+
+<!-- 3. ADD BLOCK FORM LOGIC -->
+<script>
+  // Pasar la configuración avanzada de materiales al JS
+  const materialesAvanzado = {{ materiales_avanzado|default ({}) | tojson | safe }};
+
+  // Helper para agrupar shades
+  function agruparShades(shades) {
+    const grupos = {
+      'A': [], 'B': [], 'C': [], 'D': [], 'OM': [], 'BL': [], 'Others': []
+    };
+
+    shades.forEach(s => {
+      let u = s.toUpperCase();
+      if (u.startsWith('A') && /^[A-D][0-9\.]+$/.test(u)) grupos['A'].push(s);
+      else if (u.startsWith('B') && /^[A-D][0-9\.]+$/.test(u)) grupos['B'].push(s);
+      else if (u.startsWith('C') && /^[A-D][0-9\.]+$/.test(u)) grupos['C'].push(s);
+      else if (u.startsWith('D') && /^[A-D][0-9\.]+$/.test(u)) grupos['D'].push(s);
+      else if (u.startsWith('OM')) grupos['OM'].push(s);
+      else if (u.startsWith('BL')) grupos['BL'].push(s);
+      else grupos['Others'].push(s);
+    });
+
+    return grupos;
+  }
+
+  $(document).ready(function () {
+    // Delegación de eventos para los botones de material
+    $(document).on('click', '.btn-material-pill', function () {
+      const mat = $(this).data('value');
+
+      // UI Update - Custom Red Theme
+      $('.btn-material-pill').removeClass('btn-custom-red');
+      $(this).addClass('btn-custom-red');
+
+      // Update Hidden Input and Trigger Change
+      $('#material').val(mat).trigger('change');
+    });
+
+    // Delegación de eventos para los botones de Brand
+    $(document).on('click', '.btn-brand-pill', function () {
+      const val = $(this).data('value');
+      $('.btn-brand-pill').removeClass('btn-custom-red');
+      $(this).addClass('btn-custom-red');
+      $('#marca').val(val);
+    });
+
+    // Delegación de eventos para los botones de Thickness
+    $(document).on('click', '.btn-thickness', function () {
+      const val = $(this).data('value');
+      $('.btn-thickness').removeClass('btn-custom-red');
+      $(this).addClass('btn-custom-red');
+      $('#grosor').val(val);
+    });
+
+    // Al cambiar el material (ya sea por click o evento), actualizar shades y marcas
+    $('#material').on('change', function () {
+      const mat = $(this).val();
+
+      // --- RENDER SHADES ---
+      let shades = (materialesAvanzado && materialesAvanzado[mat]) ? materialesAvanzado[mat]['shades'] : [];
+      let $shadeContainer = $('#shade-container');
+      let $shadeInput = $('#shade-input');
+
+      $shadeContainer.empty();
+      $shadeInput.val('');
+
+      if (!shades || shades.length === 0) {
+        $shadeContainer.html('<div class="text-muted small text-center mt-4">{{ _("No shades available") }}</div>');
+      } else {
+        const grupos = agruparShades(shades);
+        const orden = ['A', 'B', 'C', 'D', 'OM', 'BL', 'Others'];
+
+        let htmlContainer = `<div class="shade-columns-container">`;
+        orden.forEach(key => {
+          if (grupos[key].length > 0) {
+            htmlContainer += `<div class="shade-col">`;
+            grupos[key].forEach(s => {
+              htmlContainer += `<button type="button" class="btn btn-sm btn-shade" data-value="${s}">${s}</button>`;
+            });
+            htmlContainer += `</div>`;
+          }
+        });
+        htmlContainer += `</div>`;
+        $shadeContainer.append(htmlContainer);
+      }
+
+      // --- RENDER BRANDS ---
+      let marcas = (materialesAvanzado && materialesAvanzado[mat]) ? materialesAvanzado[mat]['marcas'] : [];
+      let $marcaContainer = $('#marca-container');
+      let $marcaInput = $('#marca');
+
+      $marcaContainer.empty();
+      $marcaInput.val('');
+
+      if (!marcas || marcas.length === 0) {
+        $marcaContainer.html('<div class="text-muted small text-center mt-4">{{ _("No brands available") }}</div>');
+      } else {
+        marcas.forEach(function (m) {
+          let nombre = (typeof m === 'object' && m.nombre) ? m.nombre : m;
+          $marcaContainer.append(`<button type="button" class="btn btn-sm btn-outline-secondary btn-brand-pill" data-value="${nombre}">${nombre}</button>`);
+        });
       }
     });
+
+    // Click handler para botones de shade
+    $(document).on('click', '.btn-shade', function () {
+      $('.btn-shade').removeClass('btn-custom-red');
+      $(this).addClass('btn-custom-red');
+      $('#shade-input').val($(this).data('value'));
+    });
+
+    // Restore selections on load
+    let matVal = $('#material').val();
+    if (!matVal) {
+      const defaultMat = "{{ request.form.get('material', '') or 'Zirconia' }}";
+      matVal = defaultMat;
+    }
+
+    if (matVal) {
+      let btn = $(`.btn-material-pill[data-value="${matVal}"]`);
+      if (btn.length) {
+        btn.trigger('click');
+      } else {
+        $('#material').val(matVal).trigger('change');
+      }
+
+      const shadeSel = "{{ request.form.get('shade', '') }}";
+      if (shadeSel) {
+        setTimeout(function () {
+          let btn = $(`.btn-shade[data-value="${shadeSel}"]`);
+          if (btn.length) btn.trigger('click');
+          else $('#shade-input').val(shadeSel);
+        }, 50);
+      }
+
+      const marcaSel = "{{ request.form.get('marca', '') }}";
+      if (marcaSel) {
+        setTimeout(function () {
+          let btn = $(`.btn-brand-pill[data-value="${marcaSel}"]`);
+          if (btn.length) btn.trigger('click');
+          else $('#marca').val(marcaSel);
+        }, 50);
+      }
+
+      const grosorSel = "{{ request.form.get('grosor', '') }}";
+      if (grosorSel) {
+        let btn = $(`.btn-thickness[data-value="${grosorSel}"]`);
+        if (btn.length) btn.trigger('click');
+        else $('#grosor').val(grosorSel);
+      }
+    }
   });
-  // Si ya hay un material seleccionado (por validación fallida), disparar el evento para poblar shades/marcas
-  if($('#material').val()) {
-    $('#material').trigger('change');
-    // Seleccionar shade y marca si estaban en el form
-    const shadeSel = "{{ request.form.get('shade', '') }}";
-    if(shadeSel) $('#shade').val(shadeSel);
-    const marcaSel = "{{ request.form.get('marca', '') }}";
-    if(marcaSel) $('#marca').val(marcaSel);
+</script>
+
+<!-- 4. DataTables Initialization -->
+<script>
+  $(document).ready(function () {
+    // Para bloques nuevos: columna 5 (fecha)
+    var tablaNuevos = $('#tabla-bloques-nuevos').DataTable({
+      language: { url: window.getDataTablesLangUrl() },
+      "order": [[5, "desc"]],
+      "dom": '<"datatable-top"f>t<"datatable-bottom d-flex justify-content-between align-items-center"lip>'
+    });
+    // Para bloques usados: columna 6 (fecha)
+    var tablaUsados = $('#tabla-bloques-usados').DataTable({
+      language: { url: window.getDataTablesLangUrl() },
+      "order": [[6, "desc"]],
+      "dom": '<"datatable-top"f>t<"datatable-bottom d-flex justify-content-between align-items-center"lip>'
+    });
+    // Filtros para usados
+    $('#filtro-marca-usados, #filtro-shade-usados, #filtro-grosor-usados').on('change', function () {
+      var col = $(this).data('col');
+      var val = $(this).val();
+      tablaUsados.column(col).search(val, false, false).draw();
+    });
+    // Filtros para nuevos
+    $('#filtro-marca-nuevos, #filtro-shade-nuevos, #filtro-grosor-nuevos').on('change', function () {
+      var col = $(this).data('col');
+      var val = $(this).val();
+      tablaNuevos.column(col).search(val, false, false).draw();
+    });
+  });
+</script>
+
+<!-- 5. Convert to Used Block Logic -->
+<script>
+  $(document).on('click', '.btn-convertir-usado', function () {
+    const bloqueId = $(this).data('bloque-id');
+    $.getJSON('/bloques/api/generar-codigo-usado', {
+      bloque_id: bloqueId
+    }, function (data) {
+      $('#codigoUsado').val(data.codigo);
+      $('#bloqueIdUsar').val(bloqueId);
+      $('#formConvertirUsado').attr('action', '/bloques/usar_bloque_nuevo/' + bloqueId);
+      var modal = new bootstrap.Modal(document.getElementById('modalConvertirUsado'));
+      modal.show();
+      setTimeout(function () { $('#codigoUsado').focus(); }, 500);
+    });
+  });
+</script>
+
+<!-- 6. Dynamic Filters Logic -->
+<script>
+  function llenarFiltrosDinamicos(tablaId, filtroMarca, filtroShade, filtroGrosor, colMarca, colShade, colGrosor) {
+    var tabla = $(tablaId).DataTable();
+    var marcas = new Set();
+    tabla.column(colMarca, { search: 'applied' }).data().each(function (val) { if (val) marcas.add(val); });
+    var $marca = $(filtroMarca);
+    var marcaSel = $marca.val();
+    $marca.empty().append('<option value="">' + "{{ _('All Brands') }}" + '</option>');
+    Array.from(marcas).sort().forEach(function (m) { $marca.append('<option value="' + m + '">' + m + '</option>'); });
+    if (marcaSel) $marca.val(marcaSel);
+
+    var shades = new Set();
+    tabla.column(colShade, { search: 'applied' }).data().each(function (val) { if (val) shades.add(val); });
+    var $shade = $(filtroShade);
+    var shadeSel = $shade.val();
+    $shade.empty().append('<option value="">' + "{{ _('All Shades') }}" + '</option>');
+    Array.from(shades).sort().forEach(function (s) { $shade.append('<option value="' + s + '">' + s + '</option>'); });
+    if (shadeSel) $shade.val(shadeSel);
+
+    var grosores = new Set();
+    tabla.column(colGrosor, { search: 'applied' }).data().each(function (val) { if (val) grosores.add(val); });
+    var $grosor = $(filtroGrosor);
+    var grosorSel = $grosor.val();
+    $grosor.empty().append('<option value="">' + "{{ _('All Thicknesses') }}" + '</option>');
+    Array.from(grosores).sort().forEach(function (g) { $grosor.append('<option value="' + g + '">' + g + '</option>'); });
+    if (grosorSel) $grosor.val(grosorSel);
   }
-});
-</script>
-<script>
-$(document).ready(function(){
-  // Para bloques nuevos: columna 5 (fecha)
-  var tablaNuevos = $('#tabla-bloques-nuevos').DataTable({
-    language: { url: window.getDataTablesLangUrl() },
-    "order": [[5, "desc"]],
-    "dom": '<"datatable-top"f>t<"datatable-bottom d-flex justify-content-between align-items-center"lip>'
-  });
-  // Para bloques usados: columna 6 (fecha)
-  var tablaUsados = $('#tabla-bloques-usados').DataTable({
-    language: { url: window.getDataTablesLangUrl() },
-    "order": [[6, "desc"]],
-    "dom": '<"datatable-top"f>t<"datatable-bottom d-flex justify-content-between align-items-center"lip>'
-  });
-  // Filtros para usados
-  $('#filtro-marca-usados, #filtro-shade-usados, #filtro-grosor-usados').on('change', function(){
-    var col = $(this).data('col');
-    var val = $(this).val();
-    tablaUsados.column(col).search(val, false, false).draw();
-  });
-  // Filtros para nuevos
-  $('#filtro-marca-nuevos, #filtro-shade-nuevos, #filtro-grosor-nuevos').on('change', function(){
-    var col = $(this).data('col');
-    var val = $(this).val();
-    tablaNuevos.column(col).search(val, false, false).draw();
-  });
-});
-</script>
-<script>
-// Conversión de bloque nuevo a usado con confirmación y edición de código
-$(document).on('click', '.btn-convertir-usado', function() {
-  const bloqueId = $(this).data('bloque-id');
-  const material = $(this).data('material');
-  const marca = $(this).data('marca');
-  const grosor = $(this).data('grosor');
-  // Llamar a un endpoint para obtener el código sugerido (puede ser vía AJAX, aquí ejemplo simple)
-  $.getJSON('/bloques/api/generar-codigo-usado', {
-    bloque_id: bloqueId
-  }, function(data) {
-    $('#codigoUsado').val(data.codigo);
-    $('#bloqueIdUsar').val(bloqueId);
-    // CORREGIDO: usar la ruta correcta
-    $('#formConvertirUsado').attr('action', '/bloques/usar_bloque_nuevo/' + bloqueId);
-    var modal = new bootstrap.Modal(document.getElementById('modalConvertirUsado'));
-    modal.show();
-    setTimeout(function(){ $('#codigoUsado').focus(); }, 500);
-  });
-});
-</script>
-<script>
-function llenarFiltrosDinamicos(tablaId, filtroMarca, filtroShade, filtroGrosor, colMarca, colShade, colGrosor) {
-  var tabla = $(tablaId).DataTable();
-  // Marca
-  var marcas = new Set();
-  tabla.column(colMarca, {search:'applied'}).data().each(function(val){ if(val) marcas.add(val); });
-  var $marca = $(filtroMarca);
-  var marcaSel = $marca.val();
-  $marca.empty().append('<option value="">'+"{{ _('All Brands') }}"+'</option>');
-  Array.from(marcas).sort().forEach(function(m){ $marca.append('<option value="'+m+'">'+m+'</option>'); });
-  if(marcaSel) $marca.val(marcaSel);
-  // Shade
-  var shades = new Set();
-  tabla.column(colShade, {search:'applied'}).data().each(function(val){ if(val) shades.add(val); });
-  var $shade = $(filtroShade);
-  var shadeSel = $shade.val();
-  $shade.empty().append('<option value="">'+"{{ _('All Shades') }}"+'</option>');
-  Array.from(shades).sort().forEach(function(s){ $shade.append('<option value="'+s+'">'+s+'</option>'); });
-  if(shadeSel) $shade.val(shadeSel);
-  // Grosor
-  var grosores = new Set();
-  tabla.column(colGrosor, {search:'applied'}).data().each(function(val){ if(val) grosores.add(val); });
-  var $grosor = $(filtroGrosor);
-  var grosorSel = $grosor.val();
-  $grosor.empty().append('<option value="">'+"{{ _('All Thicknesses') }}"+'</option>');
-  Array.from(grosores).sort().forEach(function(g){ $grosor.append('<option value="'+g+'">'+g+'</option>'); });
-  if(grosorSel) $grosor.val(grosorSel);
-}
-$(document).ready(function(){
-  // Llenar filtros dinámicamente al cargar
-  llenarFiltrosDinamicos('#tabla-bloques-usados', '#filtro-marca-usados', '#filtro-shade-usados', '#filtro-grosor-usados', 3, 2, 4);
-  llenarFiltrosDinamicos('#tabla-bloques-nuevos', '#filtro-marca-nuevos', '#filtro-shade-nuevos', '#filtro-grosor-nuevos', 2, 1, 3);
-  // Al cambiar un filtro, volver a llenar los otros según el filtrado actual
-  $('#filtro-marca-usados, #filtro-shade-usados, #filtro-grosor-usados').on('change', function(){
-    var tabla = $('#tabla-bloques-usados').DataTable();
-    var col = $(this).data('col');
-    var val = $(this).val();
-    tabla.column(col).search(val, false, false).draw();
+  $(document).ready(function () {
     llenarFiltrosDinamicos('#tabla-bloques-usados', '#filtro-marca-usados', '#filtro-shade-usados', '#filtro-grosor-usados', 3, 2, 4);
-  });
-  $('#filtro-marca-nuevos, #filtro-shade-nuevos, #filtro-grosor-nuevos').on('change', function(){
-    var tabla = $('#tabla-bloques-nuevos').DataTable();
-    var col = $(this).data('col');
-    var val = $(this).val();
-    tabla.column(col).search(val, false, false).draw();
     llenarFiltrosDinamicos('#tabla-bloques-nuevos', '#filtro-marca-nuevos', '#filtro-shade-nuevos', '#filtro-grosor-nuevos', 2, 1, 3);
+
+    $('#filtro-marca-usados, #filtro-shade-usados, #filtro-grosor-usados').on('change', function () {
+      var tabla = $('#tabla-bloques-usados').DataTable();
+      var col = $(this).data('col');
+      var val = $(this).val();
+      tabla.column(col).search(val, false, false).draw();
+      llenarFiltrosDinamicos('#tabla-bloques-usados', '#filtro-marca-usados', '#filtro-shade-usados', '#filtro-grosor-usados', 3, 2, 4);
+    });
+    $('#filtro-marca-nuevos, #filtro-shade-nuevos, #filtro-grosor-nuevos').on('change', function () {
+      var tabla = $('#tabla-bloques-nuevos').DataTable();
+      var col = $(this).data('col');
+      var val = $(this).val();
+      tabla.column(col).search(val, false, false).draw();
+      llenarFiltrosDinamicos('#tabla-bloques-nuevos', '#filtro-marca-nuevos', '#filtro-shade-nuevos', '#filtro-grosor-nuevos', 2, 1, 3);
+    });
   });
-});
 </script>
+
+<!-- 7. Filter Persistence -->
 <script>
-// --- Persistencia de filtros en localStorage y restauración ---
-function guardarFiltros(tabla) {
-  localStorage.setItem('filtros_'+tabla, JSON.stringify({
-    marca: $('#filtro-marca-'+tabla).val() || '',
-    shade: $('#filtro-shade-'+tabla).val() || '',
-    grosor: $('#filtro-grosor-'+tabla).val() || ''
-  }));
-}
-function restaurarFiltros(tabla) {
-  var filtros = localStorage.getItem('filtros_'+tabla);
-  if (filtros) {
-    try {
-      filtros = JSON.parse(filtros);
-      $('#filtro-marca-'+tabla).val(filtros.marca).trigger('change');
-      $('#filtro-shade-'+tabla).val(filtros.shade).trigger('change');
-      $('#filtro-grosor-'+tabla).val(filtros.grosor).trigger('change');
-    } catch(e) {}
+  function guardarFiltros(tabla) {
+    localStorage.setItem('filtros_' + tabla, JSON.stringify({
+      marca: $('#filtro-marca-' + tabla).val() || '',
+      shade: $('#filtro-shade-' + tabla).val() || '',
+      grosor: $('#filtro-grosor-' + tabla).val() || ''
+    }));
   }
-}
-$(document).ready(function(){
-  // Restaurar filtros al cargar
-  restaurarFiltros('usados');
-  restaurarFiltros('nuevos');
-  // Guardar filtros al cambiar
-  $('#filtro-marca-usados, #filtro-shade-usados, #filtro-grosor-usados').on('change', function(){ guardarFiltros('usados'); });
-  $('#filtro-marca-nuevos, #filtro-shade-nuevos, #filtro-grosor-nuevos').on('change', function(){ guardarFiltros('nuevos'); });
-  // Botón reset filtros usados
-  $('#reset-filtros-usados').on('click', function(){
-    $('#filtro-marca-usados, #filtro-shade-usados, #filtro-grosor-usados').val('').trigger('change');
-    guardarFiltros('usados');
+  function restaurarFiltros(tabla) {
+    var filtros = localStorage.getItem('filtros_' + tabla);
+    if (filtros) {
+      try {
+        filtros = JSON.parse(filtros);
+        $('#filtro-marca-' + tabla).val(filtros.marca).trigger('change');
+        $('#filtro-shade-' + tabla).val(filtros.shade).trigger('change');
+        $('#filtro-grosor-' + tabla).val(filtros.grosor).trigger('change');
+      } catch (e) { }
+    }
+  }
+  $(document).ready(function () {
+    restaurarFiltros('usados');
+    restaurarFiltros('nuevos');
+    $('#filtro-marca-usados, #filtro-shade-usados, #filtro-grosor-usados').on('change', function () { guardarFiltros('usados'); });
+    $('#filtro-marca-nuevos, #filtro-shade-nuevos, #filtro-grosor-nuevos').on('change', function () { guardarFiltros('nuevos'); });
+    $('#reset-filtros-usados').on('click', function () {
+      $('#filtro-marca-usados, #filtro-shade-usados, #filtro-grosor-usados').val('').trigger('change');
+      guardarFiltros('usados');
+    });
+    $('#reset-filtros-nuevos').on('click', function () {
+      $('#filtro-marca-nuevos, #filtro-shade-nuevos, #filtro-grosor-nuevos').val('').trigger('change');
+      guardarFiltros('nuevos');
+    });
   });
-  // Botón reset filtros nuevos
-  $('#reset-filtros-nuevos').on('click', function(){
-    $('#filtro-marca-nuevos, #filtro-shade-nuevos, #filtro-grosor-nuevos').val('').trigger('change');
-    guardarFiltros('nuevos');
-  });
-});
 </script>
 {% endblock %}
