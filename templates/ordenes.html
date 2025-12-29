@@ -3,7 +3,8 @@
 {% block instructions %}
 <div class="alert alert-primary d-flex align-items-center" role="alert">
   <i class="bi bi-list-check me-2"></i>
-  {{ _('Here you can manage and analyze all milling orders. Use filters to explore data and access details with one click.') }}
+  {{ _('Here you can manage and analyze all milling orders. Use filters to explore data and access details with one
+  click.') }}
 </div>
 {% endblock %}
 {% block content %}
@@ -13,137 +14,228 @@
       <div class="card-body">
         <h5 class="mb-3"><i class="bi bi-plus-circle"></i> {{ _('Create New Order') }}</h5>
         {% if error %}
-          <div class="alert alert-danger">{{ error }}</div>
+        <div class="alert alert-danger">{{ error }}</div>
         {% endif %}
         <form method="post" class="row g-2 align-items-end" id="orden-form">
-          <input type="hidden" name="modelos_por_caso" id="modelos-por-caso-hidden" value="{{ request.form.get('modelos_por_caso', '') }}">
-          <input type="hidden" name="pendientes_seleccionados" id="pendientes-seleccionados-hidden" value="{{ request.form.get('pendientes_seleccionados', pendientes_seleccionados|default('')) }}">
-          <!-- Primera fila: Material, Shade, Máquina -->
-          <div class="col-md-4">
-            <label class="form-label">{{ _('Material') }}</label>
-            <select class="form-select" name="material" id="material" size="6" required style="height:auto;min-height:120px;">
-              <option value="">-- {{ _('Select') }} --</option>
-              {% for tipo in tipos_material %}
-                <option value="{{ tipo }}" {% if (request.form.get('material', material) == tipo) or (not request.form.get('material') and request.args.get('material') == tipo) %}selected{% endif %}>{{ tipo }}</option>
-              {% endfor %}
-            </select>
-          </div>
-          <div class="col-md-4">
-            <label class="form-label">{{ _('Shade') }}</label>
-            <select class="form-select" name="shade" id="shade" size="6" required style="height:auto;min-height:120px;">
-              <option value="">-- {{ _('Select') }} --</option>
-              {% for s in shades_disponibles %}
-                <option value="{{ s }}" {% if (request.form.get('shade', shade) == s) or (not request.form.get('shade') and request.args.get('shade') == s) %}selected{% endif %}>{{ s }}</option>
-              {% endfor %}
-            </select>
-          </div>
-          <div class="col-md-4">
-            <label class="form-label">{{ _('Machine') }}</label>
-            <select class="form-select" name="maquina" id="maquina" size="6" required style="height:auto;min-height:120px;">
-              <option value="">-- {{ _('Select') }} --</option>
-              {% for m in maquinas %}
-                <option value="{{ m }}" {% if request.form.get('maquina', maquina) == m %}selected{% endif %}>{{ m }}</option>
-              {% endfor %}
-            </select>
-          </div>
-          <style>
-            select#material:focus option:checked, select#material option:checked {
-              background: #1976d2 !important;
-              color: #fff !important;
-            }
-            select#shade:focus option:checked, select#shade option:checked {
-              background: #8e24aa !important;
-              color: #fff !important;
-            }
-            select#maquina:focus option:checked, select#maquina option:checked {
-              background: #43a047 !important;
-              color: #fff !important;
-            }
-          </style>
-          <!-- Segunda fila: Bloques Usados y Bloques Nuevos -->
-          <div class="col-md-6">
-            <label class="form-label">{{ _('Used Blocks') }}</label>
-            <select name="bloque_usado_id" class="form-select">
-              <option value="">-- {{ _('Select') }} --</option>
-              {% for bloque in bloques_usados %}
-                <option value="{{ bloque.id }}" {% if (request.form.get('bloque_usado_id') and request.form.get('bloque_usado_id')|int == bloque.id) or (not request.form.get('bloque_usado_id') and request.args.get('bloque_usado_id') and request.args.get('bloque_usado_id')|int == bloque.id) %}selected{% endif %}>
-                  {{ bloque.codigo_barra }} | {{ bloque.material }} | {{ _('Brand') }}: {{ bloque.marca if bloque.marca else '-' }} | {{ _('Shade') }}: {{ bloque.shade }} | {{ _('Thickness') }}: {{ bloque.grosor if bloque.grosor else '-' }} | {{ _('# Units') }}: {{ bloque.modelos_fresados }}
-                </option>
-              {% endfor %}
-            </select>
-          </div>
-          <div class="col-md-6">
-            <label class="form-label">{{ _('New Blocks') }}</label>
-            <select name="bloque_nuevo_id" class="form-select">
-              <option value="">-- {{ _('Select') }} --</option>
-              {% for bloque in bloques_nuevos %}
-                <option value="{{ bloque.id }}" {% if (request.form.get('bloque_nuevo_id') and request.form.get('bloque_nuevo_id')|int == bloque.id) or (not request.form.get('bloque_nuevo_id') and request.args.get('bloque_nuevo_id') and request.args.get('bloque_nuevo_id')|int == bloque.id) %}selected{% endif %}>
-                  {{ _('Shade') }}: {{ bloque.shade }} | {{ _('Brand') }}: {{ bloque.marca if bloque.marca else '-' }} | {{ _('Thickness') }}: {{ bloque.grosor if bloque.grosor else '-' }} | {{ _('Count') }}: {{ bloque.cantidad }}
-                </option>
-              {% endfor %}
-            </select>
-          </div>
-          <!-- Tercera fila: Código de Orden, Cantidad de Modelos, Botón -->
-          <div class="col-md-5">
-            <label class="form-label">{{ _('Order Codes') }}</label>
-            <input type="text" name="codigo_orden" class="form-control" required placeholder="ABC123, DEF456, GHI789" id="codigo-orden-input">
-            <small class="text-muted">{{ _('Enter one or more case codes separated by commas.') }}</small>
-          </div>
-          <div class="col-md-4">
-            <label class="form-label">{{ _('# Units') }}</label>
-            <input type="number" name="cantidad_modelos" class="form-control" min="1" value="1" required>
-          </div>
-          <div class="col-md-3 text-end">
-            <button type="submit" class="btn btn-success"><i class="bi bi-plus-circle"></i> {{ _('Add') }}</button>
+          <input type="hidden" name="modelos_por_caso" id="modelos-por-caso-hidden"
+            value="{{ request.form.get('modelos_por_caso', '') }}">
+          <input type="hidden" name="pendientes_seleccionados" id="pendientes-seleccionados-hidden"
+            value="{{ request.form.get('pendientes_seleccionados', pendientes_seleccionados|default('')) }}">
+          <!-- Material, Shade, Machine, New Blocks y Used Blocks juntos sin espacio -->
+          <div class="col-12">
+            <div class="d-flex flex-nowrap gap-2 align-items-start">
+              <div class="col-auto">
+                <label class="form-label small fw-bold">{{ _('Material') }}</label>
+                <input type="hidden" name="material" id="material" required
+                  value="{{ request.form.get('material', material) or request.args.get('material', 'Zirconia') }}">
+                <div id="material-container" class="d-flex flex-column gap-1 border rounded p-2 bg-light"
+                  style="height:auto;min-height:120px;max-height:300px;overflow-y:auto;width:fit-content;">
+                  {% for tipo in tipos_material %}
+                  <button type="button" class="btn btn-sm btn-outline-secondary btn-material-pill text-start ps-2"
+                    data-value="{{ tipo }}" {% if (request.form.get('material', material)==tipo) or (not
+                    request.form.get('material') and request.args.get('material')==tipo) %}data-selected="true" {% endif
+                    %}>
+                    {{ tipo }}
+                  </button>
+                  {% endfor %}
+                </div>
+              </div>
+              <div class="col-auto">
+                <label class="form-label small fw-bold">{{ _('Shade') }}</label>
+                <input type="hidden" name="shade" id="shade" required
+                  value="{{ request.form.get('shade', shade) or request.args.get('shade', '') }}">
+                <div id="shade-container" class="border rounded p-2 bg-light"
+                  style="height:auto;min-height:120px;max-height:300px;overflow-y:auto;min-width:200px;">
+                  <div class="text-muted small text-center mt-4">{{ _('Select Material') }}</div>
+                </div>
+              </div>
+              <div class="col-auto">
+                <label class="form-label small fw-bold">{{ _('Machine') }}</label>
+                <input type="hidden" name="maquina" id="maquina" required
+                  value="{{ request.form.get('maquina', maquina) or '' }}">
+                <div id="maquina-container" class="d-flex flex-column gap-1 border rounded p-2 bg-light"
+                  style="height:auto;min-height:120px;max-height:300px;overflow-y:auto;width:fit-content;">
+                  {% for m in maquinas %}
+                  <button type="button" class="btn btn-sm btn-outline-secondary btn-maquina-pill text-start ps-2"
+                    data-value="{{ m }}" {% if request.form.get('maquina', maquina)==m %}data-selected="true" {% endif
+                    %}>
+                    {{ m }}
+                  </button>
+                  {% endfor %}
+                </div>
+              </div>
+              <div class="col-auto">
+                <div class="d-flex flex-column gap-2">
+                  <div>
+                    <label class="form-label small fw-bold">{{ _('New Blocks') }}</label>
+                    <select name="bloque_nuevo_id" class="form-select" style="width:380px;">
+                      <option value="">-- {{ _('Select') }} --</option>
+                      {% for bloque in bloques_nuevos %}
+                      <option value="{{ bloque.id }}" {% if (request.form.get('bloque_nuevo_id') and
+                        request.form.get('bloque_nuevo_id')|int==bloque.id) or (not request.form.get('bloque_nuevo_id')
+                        and request.args.get('bloque_nuevo_id') and request.args.get('bloque_nuevo_id')|int==bloque.id)
+                        %}selected{% endif %}>
+                        {{ _('Shade') }}: {{ bloque.shade }} | {{ _('Brand') }}: {{ bloque.marca if bloque.marca else
+                        '-' }}
+                        |
+                        {{ _('Thickness') }}: {{ bloque.grosor if bloque.grosor else '-' }} | {{ _('Count') }}: {{
+                        bloque.cantidad }}
+                      </option>
+                      {% endfor %}
+                    </select>
+                  </div>
+                  <div>
+                    <label class="form-label small fw-bold">{{ _('Used Blocks') }}</label>
+                    <select name="bloque_usado_id" class="form-select" style="width:380px;">
+                      <option value="">-- {{ _('Select') }} --</option>
+                      {% for bloque in bloques_usados %}
+                      <option value="{{ bloque.id }}" {% if (request.form.get('bloque_usado_id') and
+                        request.form.get('bloque_usado_id')|int==bloque.id) or (not request.form.get('bloque_usado_id')
+                        and request.args.get('bloque_usado_id') and request.args.get('bloque_usado_id')|int==bloque.id)
+                        %}selected{% endif %}>
+                        {{ bloque.codigo_barra }} | {{ bloque.material }} | {{ _('Brand') }}: {{ bloque.marca if
+                        bloque.marca
+                        else '-' }} | {{ _('Shade') }}: {{ bloque.shade }} | {{ _('Thickness') }}: {{ bloque.grosor if
+                        bloque.grosor else '-' }} | {{ _('# Units') }}: {{ bloque.modelos_fresados }}
+                      </option>
+                      {% endfor %}
+                    </select>
+                  </div>
+                  <div>
+                    <label class="form-label small fw-bold">{{ _('Order Codes') }}</label>
+                    <input type="text" name="codigo_orden" class="form-control" required
+                      placeholder="ABC123, DEF456, GHI789" id="codigo-orden-input" style="width:456px;">
+                    <small class="text-muted">{{ _('Enter one or more case codes separated by commas.') }}</small>
+                  </div>
+                </div>
+              </div>
+              <div class="col-auto">
+                <div class="d-flex flex-column gap-2">
+                  <div>
+                    <label class="form-label small fw-bold">{{ _('# Units') }}</label>
+                    <input type="number" name="cantidad_modelos" class="form-control" min="1" value="1" required
+                      style="width:120px;">
+                  </div>
+                  <div>
+                    <button type="submit" class="btn btn-success" style="padding-top:12px;padding-bottom:12px;">
+                      <i class="bi bi-plus-circle"></i> {{ _('Add') }}
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
         </form>
         <script>
-        // Validar solo al submit, no al cambiar selects
-        $(function() {
-          $('#orden-form').off('submit').on('submit', function(e) {
-            var usado = document.querySelector('[name="bloque_usado_id"]').value;
-            var nuevo = document.querySelector('[name="bloque_nuevo_id"]').value;
-            if (!usado && !nuevo) {
-              alert("{{ _('You must select a block (used or new) to continue.') }}");
-              e.preventDefault();
-              return false;
-            }
-            if (nuevo && !usado) {
-              e.preventDefault();
-              var formData = $(this).serialize();
-              $.post(window.location.pathname, formData, function(resp) {
-                if (resp && resp.status === 'ok' && resp.bloque_usado) {
-                  // Mostrar modal para confirmar código usando AJAX (carga el contenido del modal desde el backend)
-                  var bloque = resp.bloque_usado;
-                  var ordenData = '';
-                  // Si el backend necesita datos extra, puedes serializarlos aquí
-                  $.get('/ordenes/confirmar-codigo-bloque/' + bloque.id + '?orden_data=', function(html) {
-                    $('#modalConfirmarCodigoContent').html(html);
-                    $('#modalConfirmarCodigo').modal('show');
-                  });
-                } else {
-                  alert('Error al crear el bloque usado.');
-                }
-              });
-              return false;
-            }
-            // Si es bloque usado, submit normal
-            return true;
-          });
-          // Actualizar shades disponibles al cambiar material
-          $('#material').on('change', function() {
-            var material = $(this).val();
-            $.getJSON('/ordenes/api/shades', {material: material}, function(data) {
-              var $shade = $('#shade');
-              $shade.empty();
-              $shade.append('<option value="">-- {{ _('Select') }} --</option>');
-              data.shades.forEach(function(s) {
-                $shade.append('<option value="'+s+'">'+s+'</option>');
-              });
+          // Validar solo al submit, no al cambiar selects
+          $(function () {
+            $('#orden-form').off('submit').on('submit', function (e) {
+              var usado = document.querySelector('[name="bloque_usado_id"]').value;
+              var nuevo = document.querySelector('[name="bloque_nuevo_id"]').value;
+              if (!usado && !nuevo) {
+                alert("{{ _('You must select a block (used or new) to continue.') }}");
+                e.preventDefault();
+                return false;
+              }
+              if (nuevo && !usado) {
+                e.preventDefault();
+                var formData = $(this).serialize();
+                $.post(window.location.pathname, formData, function (resp) {
+                  if (resp && resp.status === 'ok' && resp.bloque_usado) {
+                    // Mostrar modal para confirmar código usando AJAX (carga el contenido del modal desde el backend)
+                    var bloque = resp.bloque_usado;
+                    var ordenData = '';
+                    // Si el backend necesita datos extra, puedes serializarlos aquí
+                    $.get('/ordenes/confirmar-codigo-bloque/' + bloque.id + '?orden_data=', function (html) {
+                      $('#modalConfirmarCodigoContent').html(html);
+                      $('#modalConfirmarCodigo').modal('show');
+                    });
+                  } else {
+                    alert('Error al crear el bloque usado.');
+                  }
+                });
+                return false;
+              }
+              // Si es bloque usado, submit normal
+              return true;
             });
+
           });
-        });
         </script>
+        <style>
+          .btn-material-pill {
+            font-size: 0.9em;
+            padding: 5px 10px;
+            border-radius: 4px;
+            font-weight: 600;
+            text-align: left;
+            white-space: nowrap;
+            width: 100%;
+            border: 1px solid #ced4da;
+            color: #212529;
+            background-color: transparent;
+          }
+
+          .btn-material-pill:hover {
+            background-color: #e9ecef;
+          }
+
+          .btn-custom-red {
+            background-color: #dc3545 !important;
+            color: #fff !important;
+            border-color: #dc3545 !important;
+          }
+
+          /* Machine buttons - same style as Material */
+          .btn-maquina-pill {
+            font-size: 0.9em;
+            padding: 5px 10px;
+            border-radius: 4px;
+            font-weight: 600;
+            text-align: left;
+            white-space: nowrap;
+            width: 100%;
+            border: 1px solid #ced4da;
+            color: #212529;
+            background-color: transparent;
+          }
+
+          .btn-maquina-pill:hover {
+            background-color: #e9ecef;
+          }
+
+          /* Shade buttons and columns */
+          .btn-shade {
+            width: 100%;
+            font-weight: 600;
+            font-size: 0.75em;
+            padding: 8px 1px;
+            border-radius: 3px;
+            line-height: 1.1;
+            border: 1px solid #ced4da;
+            color: #212529;
+          }
+
+          .btn-shade:hover {
+            background-color: #e9ecef;
+          }
+
+          .shade-columns-container {
+            display: flex;
+            gap: 4px;
+            width: 100%;
+            align-items: flex-start;
+            overflow-x: auto;
+          }
+
+          .shade-col {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            flex: 1;
+            min-width: 0;
+          }
+        </style>
       </div>
     </div>
     <div class="card border-0 shadow-sm animate__animated animate__fadeInUp">
@@ -170,7 +262,7 @@
                 <td>{{ orden.id }}</td>
                 <td>
                   {% for code in orden.get_codigos_caso() %}
-                    <span class="badge bg-info text-dark me-1">{{ code }}</span>
+                  <span class="badge bg-info text-dark me-1">{{ code }}</span>
                   {% endfor %}
                 </td>
                 <td>{{ orden.codigo_barra }}</td>
@@ -181,8 +273,12 @@
                 <td>{{ orden.cantidad_modelos }}</td>
                 <td><span class="fecha-tabla">{{ orden.fecha_creacion|vancouver }}</span></td>
                 <td>
-                  <a href="{{ url_for('ordenes.editar_orden', orden_id=orden.id) }}" class="btn btn-outline-secondary btn-sm"><i class="bi bi-pencil"></i></a>
-                  <form method="post" action="{{ url_for('ordenes.eliminar_orden', orden_id=orden.id) }}" style="display:inline;" class="form-eliminar-orden" data-codigo="{{ orden.codigos_caso }}" data-material="{{ orden.material }}" data-marca="{{ orden.marca }}" data-shade="{{ orden.shade }}" data-maquina="{{ orden.maquina }}">
+                  <a href="{{ url_for('ordenes.editar_orden', orden_id=orden.id) }}"
+                    class="btn btn-outline-secondary btn-sm"><i class="bi bi-pencil"></i></a>
+                  <form method="post" action="{{ url_for('ordenes.eliminar_orden', orden_id=orden.id) }}"
+                    style="display:inline;" class="form-eliminar-orden" data-codigo="{{ orden.codigos_caso }}"
+                    data-material="{{ orden.material }}" data-marca="{{ orden.marca }}" data-shade="{{ orden.shade }}"
+                    data-maquina="{{ orden.maquina }}">
                     <button type="submit" class="btn btn-outline-danger btn-sm"><i class="bi bi-trash"></i></button>
                   </form>
                 </td>
@@ -195,58 +291,72 @@
     </div>
   </div>
   <div class="col-lg-4 order-lg-2 d-flex flex-column" style="height:100%;">
-    <div class="card border-0 shadow-sm mb-4 animate__animated animate__fadeInUp flex-grow-1 d-flex flex-column" style="min-height:500px; height:100%;">
+    <div class="card border-0 shadow-sm mb-4 animate__animated animate__fadeInUp flex-grow-1 d-flex flex-column"
+      style="min-height:500px; height:100%;">
       <div class="card-body d-flex flex-column" style="flex:1 1 auto;">
         <h5 class="card-title mb-3"><i class="bi bi-hourglass-split"></i> {{ _('Pending Cases') }}</h5>
         <form method="post" class="mb-2 d-flex">
-          <input type="text" name="codigo_orden_pendiente" class="form-control me-2" placeholder="{{ _('Scan or enter code') }}" required>
+          <input type="text" name="codigo_orden_pendiente" class="form-control me-2"
+            placeholder="{{ _('Scan or enter code') }}" required>
           <input type="hidden" name="material" value="{{ request.form.get('material', material) }}">
           <input type="hidden" name="shade" value="{{ request.form.get('shade', shade) }}">
-          <input type="hidden" name="bloque_usado_id" value="{{ request.form.get('bloque_usado_id', bloque_usado_id) }}">
-          <input type="hidden" name="bloque_nuevo_id" value="{{ request.form.get('bloque_nuevo_id', bloque_nuevo_id) }}">
+          <input type="hidden" name="bloque_usado_id"
+            value="{{ request.form.get('bloque_usado_id', bloque_usado_id) }}">
+          <input type="hidden" name="bloque_nuevo_id"
+            value="{{ request.form.get('bloque_nuevo_id', bloque_nuevo_id) }}">
           <button type="submit" class="btn btn-outline-primary"><i class="bi bi-plus"></i></button>
         </form>
         <div class="d-flex mb-2 gap-2">
-          <button type="button" class="btn btn-outline-secondary btn-xs px-2 py-1" id="btn-select-all" title="{{ _('Select All') }}"><i class="bi bi-check2-square"></i></button>
-          <button type="button" class="btn btn-outline-secondary btn-xs px-2 py-1" id="btn-deselect-all" title="{{ _('Deselect All') }}"><i class="bi bi-square"></i></button>
+          <button type="button" class="btn btn-outline-secondary btn-xs px-2 py-1" id="btn-select-all"
+            title="{{ _('Select All') }}"><i class="bi bi-check2-square"></i></button>
+          <button type="button" class="btn btn-outline-secondary btn-xs px-2 py-1" id="btn-deselect-all"
+            title="{{ _('Deselect All') }}"><i class="bi bi-square"></i></button>
         </div>
         <div class="table-responsive" style="flex:1 1 auto; overflow:auto; min-height:300px; max-height:none;">
           <form id="pendientes-select-form" onsubmit="return false;">
-          <table class="table table-sm table-hover table-bordered mb-0 pendientes-table-font" id="tabla-pendientes">
-            <thead class="table-light">
-              <tr>
-                <th style="width:2em;"></th>
-                <th>{{ _('Code') }}</th>
-                <th>{{ _('Date') }}</th>
-                <th style="width:6em;">{{ _('# Units') }}</th>
-                <th></th>
-              </tr>
-            </thead>
-            <tbody>
-              {% for pendiente in pendientes_orden %}
-              <tr>
-                <td class="text-center align-middle">
-                  <input type="checkbox" class="form-check-input pendiente-checkbox" value="{{ pendiente.codigo_orden }}" data-codigo="{{ pendiente.codigo_orden }}" id="pendiente-{{ pendiente.id }}">
-                </td>
-                <td class="align-middle">
-                  <label for="pendiente-{{ pendiente.id }}" style="cursor:pointer;">{{ pendiente.codigo_orden }}</label>
-                </td>
-                <td class="align-middle">{{ pendiente.fecha_escaneo.strftime('%Y-%m-%d %H:%M') }}</td>
-                <td class="align-middle">
-                  <input type="number" min="1" class="form-control form-control-sm modelos-input" style="width:70px;" data-codigo="{{ pendiente.codigo_orden }}" disabled>
-                </td>
-                <td class="align-middle">
-                  <form method="post" action="{{ url_for('ordenes.editar_pendiente', pendiente_id=pendiente.id) }}" style="display:inline;">
-                    <button type="button" class="btn btn-outline-secondary btn-sm btn-editar-pendiente" data-id="{{ pendiente.id }}" data-codigo="{{ pendiente.codigo_orden }}"><i class="bi bi-pencil"></i></button>
-                  </form>
-                  <form method="post" action="{{ url_for('ordenes.eliminar_pendiente', pendiente_id=pendiente.id) }}" style="display:inline;">
-                    <button type="submit" class="btn btn-outline-danger btn-sm"><i class="bi bi-trash"></i></button>
-                  </form>
-                </td>
-              </tr>
-              {% endfor %}
-            </tbody>
-          </table>
+            <table class="table table-sm table-hover table-bordered mb-0 pendientes-table-font" id="tabla-pendientes">
+              <thead class="table-light">
+                <tr>
+                  <th style="width:2em;"></th>
+                  <th>{{ _('Code') }}</th>
+                  <th>{{ _('Date') }}</th>
+                  <th style="width:6em;">{{ _('# Units') }}</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for pendiente in pendientes_orden %}
+                <tr>
+                  <td class="text-center align-middle">
+                    <input type="checkbox" class="form-check-input pendiente-checkbox"
+                      value="{{ pendiente.codigo_orden }}" data-codigo="{{ pendiente.codigo_orden }}"
+                      id="pendiente-{{ pendiente.id }}">
+                  </td>
+                  <td class="align-middle">
+                    <label for="pendiente-{{ pendiente.id }}" style="cursor:pointer;">{{ pendiente.codigo_orden
+                      }}</label>
+                  </td>
+                  <td class="align-middle">{{ pendiente.fecha_escaneo.strftime('%Y-%m-%d %H:%M') }}</td>
+                  <td class="align-middle">
+                    <input type="number" min="1" class="form-control form-control-sm modelos-input" style="width:70px;"
+                      data-codigo="{{ pendiente.codigo_orden }}" disabled>
+                  </td>
+                  <td class="align-middle">
+                    <form method="post" action="{{ url_for('ordenes.editar_pendiente', pendiente_id=pendiente.id) }}"
+                      style="display:inline;">
+                      <button type="button" class="btn btn-outline-secondary btn-sm btn-editar-pendiente"
+                        data-id="{{ pendiente.id }}" data-codigo="{{ pendiente.codigo_orden }}"><i
+                          class="bi bi-pencil"></i></button>
+                    </form>
+                    <form method="post" action="{{ url_for('ordenes.eliminar_pendiente', pendiente_id=pendiente.id) }}"
+                      style="display:inline;">
+                      <button type="submit" class="btn btn-outline-danger btn-sm"><i class="bi bi-trash"></i></button>
+                    </form>
+                  </td>
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
           </form>
         </div>
       </div>
@@ -254,18 +364,16 @@
   </div>
 </div>
 <style>
-.pendientes-table-font, .pendientes-table-font td, .pendientes-table-font th {
-  font-size: 0.89em !important;
-}
+  .pendientes-table-font,
+  .pendientes-table-font td,
+  .pendientes-table-font th {
+    font-size: 0.89em !important;
+  }
 </style>
 
-<div id="ordenes-msgs"
-  data-msg-edit-code="{{ _('Edit order code:') }}"
-  data-msg-delete-order="{{ _('Are you sure you want to delete this order?') }}"
-  data-label-code="{{ _('Code') }}"
-  data-label-material="{{ _('Material') }}"
-  data-label-brand="{{ _('Brand') }}"
-  data-label-shade="{{ _('Shade') }}"
+<div id="ordenes-msgs" data-msg-edit-code="{{ _('Edit order code:') }}"
+  data-msg-delete-order="{{ _('Are you sure you want to delete this order?') }}" data-label-code="{{ _('Code') }}"
+  data-label-material="{{ _('Material') }}" data-label-brand="{{ _('Brand') }}" data-label-shade="{{ _('Shade') }}"
   data-label-machine="{{ _('Machine') }}">
 </div>
 
@@ -282,239 +390,362 @@
 {% block scripts %}
 {{ super() }}
 <script>
-// Dataset messages for orders
-const ordenesMsgsEl = document.getElementById('ordenes-msgs');
-const ds = ordenesMsgsEl ? ordenesMsgsEl.dataset : {};
-const MSG_DELETE_ORDER = ds.msgDeleteOrder || 'Are you sure you want to delete this order?';
-const LABEL_CODE = ds.labelCode || 'Code';
-const LABEL_MATERIAL = ds.labelMaterial || 'Material';
-const LABEL_BRAND = ds.labelBrand || 'Brand';
-const LABEL_SHADE = ds.labelShade || 'Shade';
-const LABEL_MACHINE = ds.labelMachine || 'Machine';
-// Función para abrir el modal de confirmación de código de bloque
-function abrirModalConfirmarCodigo(bloqueId, ordenData) {
-  $.get('/ordenes/confirmar-codigo-bloque/' + bloqueId + '?orden_data=' + encodeURIComponent(ordenData), function(html) {
-    $('#modalConfirmarCodigoContent').html(html);
-    $('#modalConfirmarCodigo').modal('show');
-  });
-}
-// Intercepta el submit del formulario de confirmación para enviarlo por AJAX
-$(document).on('submit', '#formConfirmarCodigoBloque', function(e) {
-  e.preventDefault();
-  var $form = $(this);
-  $.post($form.attr('action'), $form.serialize(), function(response) {
-    $('#modalConfirmarCodigo').modal('hide');
-    // Opcional: recargar la tabla/lista de órdenes o mostrar mensaje de éxito
-    location.reload();
-  });
-});
-// Intercepta redirección a confirmar-codigo-bloque y abre el modal en vez de navegar
-$(document).on('click', 'a[data-confirmar-codigo-bloque], button[data-confirmar-codigo-bloque]', function(e) {
-  e.preventDefault();
-  var bloqueId = $(this).data('bloque-id');
-  var ordenData = $(this).data('orden-data');
-  abrirModalConfirmarCodigo(bloqueId, ordenData);
-});
-// Si usas location.href o window.location para redirigir, reemplázalo por esta función:
-function redirigirAConfirmarCodigoBloque(bloqueId, ordenData) {
-  abrirModalConfirmarCodigo(bloqueId, ordenData);
-}
-</script>
-<script>
-// Confirmación al eliminar orden
-$(document).on('submit', '.form-eliminar-orden', function(e) {
-  const codigo = $(this).data('codigo');
-  const material = $(this).data('material');
-  const marca = $(this).data('marca');
-  const shade = $(this).data('shade');
-  const maquina = $(this).data('maquina');
-  const msg = `${MSG_DELETE_ORDER}\n\n${LABEL_CODE}: ${codigo}\n${LABEL_MATERIAL}: ${material}\n${LABEL_BRAND}: ${marca}\n${LABEL_SHADE}: ${shade}\n${LABEL_MACHINE}: ${maquina}`;
-  if(!confirm(msg)) e.preventDefault();
-});
-</script>
-<script>
-$(document).ready(function(){
-  // DataTable para tabla de pendientes (ordenar y filtrar)
-  $('#tabla-pendientes').DataTable({
-    language: { url: window.getDataTablesLangUrl() },
-    paging: false,
-    info: false,
-    searching: true,
-    order: [[2, 'asc']]
-  });
+  // Material and Shade handlers - consolidated
+  $(document).ready(function () {
+    // Handler for Material change - MUST be defined first
+    $('#material').on('change', function () {
+      var material = $(this).val();
+      console.log('Material changed to:', material);
 
-  // Botón editar pendiente (modal simple prompt)
-  $(document).on('click', '.btn-editar-pendiente', function(){
-    var id = $(this).data('id');
-    var codigoActual = $(this).data('codigo');
-    var msg = (document.getElementById('ordenes-msgs').dataset.msgEditCode) || 'Edit order code:';
-    var nuevoCodigo = prompt(msg, codigoActual);
-    if(nuevoCodigo && nuevoCodigo !== codigoActual) {
-      var form = $(this).closest('form');
-      // Crea input oculto para el nuevo código
-      if(form.find('input[name="codigo_orden"]').length === 0) {
-        form.append('<input type="hidden" name="codigo_orden" value="'+nuevoCodigo+'">');
-      } else {
-        form.find('input[name="codigo_orden"]').val(nuevoCodigo);
-      }
-      form.submit();
-    }
-  });
-});
-</script>
-<script>
-$(document).ready(function(){
-  // DataTable para tabla de órdenes
-  $('#tabla-ordenes').DataTable({
-    language: { url: window.getDataTablesLangUrl() },
-    order: [[0, 'desc']], // Ordenar por ID descendente por defecto
-    paging: true,
-    searching: true,
-    info: true
-  });
-});
-</script>
-<script>
-$(document).ready(function(){
-  // --- Filtro dinámico de bloques por Material y Shade ---
-  $('#material, #shade').on('change', function() {
-    var codigoOrdenInput = $("input[name='codigo_orden']");
-    var modelosPorCasoInput = $("input[name='modelos_por_caso']");
-    var cantidadModelosInput = $("input[name='cantidad_modelos']");
-    var pendientesSeleccionados = $(".pendiente-checkbox:checked");
-    // Solo guardar el código de orden si NO hay pendientes seleccionados y el input NO está vacío
-    if(pendientesSeleccionados.length === 0 && codigoOrdenInput.val().trim() !== "") {
-      localStorage.setItem('ordenes_codigo_orden', codigoOrdenInput.val());
-    } else {
-      // Si hay pendientes seleccionados o el input está vacío, no guardar el código de orden
-      localStorage.removeItem('ordenes_codigo_orden');
-    }
-    localStorage.setItem('ordenes_modelos_por_caso', modelosPorCasoInput.val());
-    localStorage.setItem('ordenes_cantidad_modelos', cantidadModelosInput.val());
-    var pendientes = [];
-    $(".pendiente-checkbox:checked").each(function(){ pendientes.push($(this).val()); });
-    localStorage.setItem('ordenes_pendientes', pendientes.join(","));
-    var modelos = [];
-    $(".modelos-input").each(function(){ modelos.push($(this).val()); });
-    localStorage.setItem('ordenes_modelos_inputs', modelos.join(","));
-    var form = $('#orden-form');
-    form.attr('method', 'post');
-    form.submit();
-  });
+      $.getJSON('/ordenes/api/shades', { material: material }, function (data) {
+        var $shadeContainer = $('#shade-container');
+        var $shadeInput = $('#shade');
 
-  // Al cargar, si hay valores en localStorage, restáuralos (espera a que los inputs existan)
-  setTimeout(function() {
-    if(localStorage.getItem('ordenes_codigo_orden')) {
-      // Solo restaurar si NO hay pendientes seleccionados y el input está vacío
-      if($(".pendiente-checkbox:checked").length === 0 && $("input[name='codigo_orden']").val().trim() === "") {
-        $("input[name='codigo_orden']").val(localStorage.getItem('ordenes_codigo_orden'));
-      }
-      localStorage.removeItem('ordenes_codigo_orden');
-    }
-    if(localStorage.getItem('ordenes_modelos_por_caso')) {
-      $("input[name='modelos_por_caso']").val(localStorage.getItem('ordenes_modelos_por_caso'));
-      localStorage.removeItem('ordenes_modelos_por_caso');
-    }
-    if(localStorage.getItem('ordenes_cantidad_modelos')) {
-      $("input[name='cantidad_modelos']").val(localStorage.getItem('ordenes_cantidad_modelos'));
-      localStorage.removeItem('ordenes_cantidad_modelos');
-    }
-    if(localStorage.getItem('ordenes_pendientes')) {
-      var pendientesSeleccionados = localStorage.getItem('ordenes_pendientes').split(',');
-      pendientesSeleccionados.forEach(function(codigo){
-        $(".pendiente-checkbox[value='"+codigo+"']").prop('checked', true).trigger('change');
+        $shadeContainer.empty();
+        $shadeInput.val('');
+
+        console.log('Shades received:', data.shades);
+
+        if (!data.shades || data.shades.length === 0) {
+          $shadeContainer.html('<div class="text-muted small text-center mt-4">{{ _("No shades available") }}</div>');
+        } else {
+          // Group shades by prefix
+          var grupos = { 'A': [], 'B': [], 'C': [], 'D': [], 'OM': [], 'BL': [], 'Others': [] };
+          data.shades.forEach(function (s) {
+            var u = s.toUpperCase();
+            if (u.startsWith('A') && /^[A-D][0-9\.]+$/.test(u)) grupos['A'].push(s);
+            else if (u.startsWith('B') && /^[A-D][0-9\.]+$/.test(u)) grupos['B'].push(s);
+            else if (u.startsWith('C') && /^[A-D][0-9\.]+$/.test(u)) grupos['C'].push(s);
+            else if (u.startsWith('D') && /^[A-D][0-9\.]+$/.test(u)) grupos['D'].push(s);
+            else if (u.startsWith('OM')) grupos['OM'].push(s);
+            else if (u.startsWith('BL')) grupos['BL'].push(s);
+            else grupos['Others'].push(s);
+          });
+
+          // Render columns
+          var htmlContainer = '<div class="shade-columns-container">';
+          var orden = ['A', 'B', 'C', 'D', 'OM', 'BL', 'Others'];
+          orden.forEach(function (key) {
+            if (grupos[key].length > 0) {
+              htmlContainer += '<div class="shade-col">';
+              grupos[key].forEach(function (s) {
+                htmlContainer += '<button type="button" class="btn btn-sm btn-shade" data-value="' + s + '">' + s + '</button>';
+              });
+              htmlContainer += '</div>';
+            }
+          });
+          htmlContainer += '</div>';
+          $shadeContainer.append(htmlContainer);
+
+          // Restore shade selection if it exists
+          const currentShade = $('#shade').val();
+          if (currentShade) {
+            $(`.btn-shade[data-value="${currentShade}"]`).addClass('btn-custom-red');
+          }
+        }
+      }).fail(function (jqXHR, textStatus, errorThrown) {
+        console.error('Error loading shades:', textStatus, errorThrown);
       });
-      localStorage.removeItem('ordenes_pendientes');
-    }
-    if(localStorage.getItem('ordenes_modelos_inputs')) {
-      var modelos = localStorage.getItem('ordenes_modelos_inputs').split(',');
-      $(".modelos-input").each(function(idx){
-        if(modelos[idx]) $(this).val(modelos[idx]);
-      });
-      localStorage.removeItem('ordenes_modelos_inputs');
-    }
-  }, 100);
-});
-</script>
-<script>
-$(function(){
-  // Selección de casos pendientes: llena el input de código de orden automáticamente
-  function updateCodigoOrdenYModelos() {
-    var codigos = [];
-    var modelos = [];
-    $(".pendiente-checkbox:checked").each(function(){
-      var codigo = $(this).data('codigo');
-      codigos.push(codigo);
-      var modelosVal = $(".modelos-input[data-codigo='"+codigo+"']").val();
-      modelos.push(modelosVal ? modelosVal : '');
     });
-    if(codigos.length > 0) {
-      $("input[name='codigo_orden']").val(codigos.join(", "));
-    } // Solo sobreescribe si hay pendientes seleccionados
-    $("input[name='modelos_por_caso']").val(modelos.join(", "));
-  }
-  $(document).on('change', '.pendiente-checkbox', function(){
-    var codigo = $(this).data('codigo');
-    var modelosInput = $(".modelos-input[data-codigo='"+codigo+"']");
-    if($(this).is(':checked')) {
-      modelosInput.prop('disabled', false).val(1);
-    } else {
-      modelosInput.prop('disabled', true).val("");
+
+    // Handler for Material button clicks
+    $(document).on('click', '.btn-material-pill', function () {
+      const mat = $(this).data('value');
+      const currentMat = $('#material').val();
+
+      // Only submit if material actually changed
+      if (mat !== currentMat) {
+        // UI Update - Custom Red Theme
+        $('.btn-material-pill').removeClass('btn-custom-red');
+        $(this).addClass('btn-custom-red');
+        // Update Hidden Input and Trigger Change (which loads shades via AJAX)
+        $('#material').val(mat).trigger('change');
+
+        // After shades load, submit form to filter blocks
+        setTimeout(function () {
+          $('#shade').trigger('change'); // This will submit the form
+        }, 500);
+      }
+    });
+
+    // Handler for Shade button clicks
+    $(document).on('click', '.btn-shade', function () {
+      $('.btn-shade').removeClass('btn-custom-red');
+      $(this).addClass('btn-custom-red');
+      $('#shade').val($(this).data('value')).trigger('change');
+    });
+
+    // Handler for Machine button clicks
+    $(document).on('click', '.btn-maquina-pill', function () {
+      const maq = $(this).data('value');
+      $('.btn-maquina-pill').removeClass('btn-custom-red');
+      $(this).addClass('btn-custom-red');
+      $('#maquina').val(maq);
+    });
+
+    // Initialize: Restore material selection and load shades
+    const initialMat = $('#material').val();
+    const initialShade = $('#shade').val();
+    console.log('Initial material:', initialMat);
+    console.log('Initial shade:', initialShade);
+
+    if (initialMat) {
+      $(`.btn-material-pill[data-value="${initialMat}"]`).addClass('btn-custom-red');
+      // Trigger change to load shades
+      setTimeout(function () {
+        $('#material').trigger('change');
+
+        // After shades load, restore shade selection
+        if (initialShade) {
+          setTimeout(function () {
+            $(`.btn-shade[data-value="${initialShade}"]`).addClass('btn-custom-red');
+            console.log('Restored shade:', initialShade);
+          }, 800);
+        }
+      }, 100);
     }
-    updateCodigoOrdenYModelos();
+
+    // Initialize: Restore machine selection
+    const initialMaq = $('#maquina').val();
+    if (initialMaq) {
+      $(`.btn-maquina-pill[data-value="${initialMaq}"]`).addClass('btn-custom-red');
+    }
   });
-  $(document).on('input', '.modelos-input', function(){
-    updateCodigoOrdenYModelos();
-  });
-  // Inicializa input oculto para modelos_por_caso si no existe
-  if($("input[name='modelos_por_caso']").length === 0) {
-    $("input[name='codigo_orden']").after('<input type="hidden" name="modelos_por_caso" value="">');
-  }
-});
 </script>
 <script>
-  $(document).ready(function(){
+  // Dataset messages for orders
+  const ordenesMsgsEl = document.getElementById('ordenes-msgs');
+  const ds = ordenesMsgsEl ? ordenesMsgsEl.dataset : {};
+  const MSG_DELETE_ORDER = ds.msgDeleteOrder || 'Are you sure you want to delete this order?';
+  const LABEL_CODE = ds.labelCode || 'Code';
+  const LABEL_MATERIAL = ds.labelMaterial || 'Material';
+  const LABEL_BRAND = ds.labelBrand || 'Brand';
+  const LABEL_SHADE = ds.labelShade || 'Shade';
+  const LABEL_MACHINE = ds.labelMachine || 'Machine';
+  // Función para abrir el modal de confirmación de código de bloque
+  function abrirModalConfirmarCodigo(bloqueId, ordenData) {
+    $.get('/ordenes/confirmar-codigo-bloque/' + bloqueId + '?orden_data=' + encodeURIComponent(ordenData), function (html) {
+      $('#modalConfirmarCodigoContent').html(html);
+      $('#modalConfirmarCodigo').modal('show');
+    });
+  }
+  // Intercepta el submit del formulario de confirmación para enviarlo por AJAX
+  $(document).on('submit', '#formConfirmarCodigoBloque', function (e) {
+    e.preventDefault();
+    var $form = $(this);
+    $.post($form.attr('action'), $form.serialize(), function (response) {
+      $('#modalConfirmarCodigo').modal('hide');
+      // Opcional: recargar la tabla/lista de órdenes o mostrar mensaje de éxito
+      location.reload();
+    });
+  });
+  // Intercepta redirección a confirmar-codigo-bloque y abre el modal en vez de navegar
+  $(document).on('click', 'a[data-confirmar-codigo-bloque], button[data-confirmar-codigo-bloque]', function (e) {
+    e.preventDefault();
+    var bloqueId = $(this).data('bloque-id');
+    var ordenData = $(this).data('orden-data');
+    abrirModalConfirmarCodigo(bloqueId, ordenData);
+  });
+  // Si usas location.href o window.location para redirigir, reemplázalo por esta función:
+  function redirigirAConfirmarCodigoBloque(bloqueId, ordenData) {
+    abrirModalConfirmarCodigo(bloqueId, ordenData);
+  }
+</script>
+<script>
+  // Confirmación al eliminar orden
+  $(document).on('submit', '.form-eliminar-orden', function (e) {
+    const codigo = $(this).data('codigo');
+    const material = $(this).data('material');
+    const marca = $(this).data('marca');
+    const shade = $(this).data('shade');
+    const maquina = $(this).data('maquina');
+    const msg = `${MSG_DELETE_ORDER}\n\n${LABEL_CODE}: ${codigo}\n${LABEL_MATERIAL}: ${material}\n${LABEL_BRAND}: ${marca}\n${LABEL_SHADE}: ${shade}\n${LABEL_MACHINE}: ${maquina}`;
+    if (!confirm(msg)) e.preventDefault();
+  });
+</script>
+<script>
+  $(document).ready(function () {
+    // DataTable para tabla de pendientes (ordenar y filtrar)
+    $('#tabla-pendientes').DataTable({
+      language: { url: window.getDataTablesLangUrl() },
+      paging: false,
+      info: false,
+      searching: true,
+      order: [[2, 'asc']]
+    });
+
+    // Botón editar pendiente (modal simple prompt)
+    $(document).on('click', '.btn-editar-pendiente', function () {
+      var id = $(this).data('id');
+      var codigoActual = $(this).data('codigo');
+      var msg = (document.getElementById('ordenes-msgs').dataset.msgEditCode) || 'Edit order code:';
+      var nuevoCodigo = prompt(msg, codigoActual);
+      if (nuevoCodigo && nuevoCodigo !== codigoActual) {
+        var form = $(this).closest('form');
+        // Crea input oculto para el nuevo código
+        if (form.find('input[name="codigo_orden"]').length === 0) {
+          form.append('<input type="hidden" name="codigo_orden" value="' + nuevoCodigo + '">');
+        } else {
+          form.find('input[name="codigo_orden"]').val(nuevoCodigo);
+        }
+        form.submit();
+      }
+    });
+  });
+</script>
+<script>
+  $(document).ready(function () {
+    // DataTable para tabla de órdenes
+    $('#tabla-ordenes').DataTable({
+      language: { url: window.getDataTablesLangUrl() },
+      order: [[0, 'desc']], // Ordenar por ID descendente por defecto
+      paging: true,
+      searching: true,
+      info: true
+    });
+  });
+</script>
+<script>
+  $(document).ready(function () {
+    // --- Filtro dinámico de bloques por Shade (Material now handled via AJAX) ---
+    $('#shade').on('change', function () {
+      var codigoOrdenInput = $("input[name='codigo_orden']");
+      var modelosPorCasoInput = $("input[name='modelos_por_caso']");
+      var cantidadModelosInput = $("input[name='cantidad_modelos']");
+      var pendientesSeleccionados = $(".pendiente-checkbox:checked");
+      // Solo guardar el código de orden si NO hay pendientes seleccionados y el input NO está vacío
+      if (pendientesSeleccionados.length === 0 && codigoOrdenInput.val().trim() !== "") {
+        localStorage.setItem('ordenes_codigo_orden', codigoOrdenInput.val());
+      } else {
+        // Si hay pendientes seleccionados o el input está vacío, no guardar el código de orden
+        localStorage.removeItem('ordenes_codigo_orden');
+      }
+      localStorage.setItem('ordenes_modelos_por_caso', modelosPorCasoInput.val());
+      localStorage.setItem('ordenes_cantidad_modelos', cantidadModelosInput.val());
+      var pendientes = [];
+      $(".pendiente-checkbox:checked").each(function () { pendientes.push($(this).val()); });
+      localStorage.setItem('ordenes_pendientes', pendientes.join(","));
+      var modelos = [];
+      $(".modelos-input").each(function () { modelos.push($(this).val()); });
+      localStorage.setItem('ordenes_modelos_inputs', modelos.join(","));
+      var form = $('#orden-form');
+      form.attr('method', 'post');
+      form.submit();
+    });
+
+    // Al cargar, si hay valores en localStorage, restáuralos (espera a que los inputs existan)
+    setTimeout(function () {
+      if (localStorage.getItem('ordenes_codigo_orden')) {
+        // Solo restaurar si NO hay pendientes seleccionados y el input está vacío
+        if ($(".pendiente-checkbox:checked").length === 0 && $("input[name='codigo_orden']").val().trim() === "") {
+          $("input[name='codigo_orden']").val(localStorage.getItem('ordenes_codigo_orden'));
+        }
+        localStorage.removeItem('ordenes_codigo_orden');
+      }
+      if (localStorage.getItem('ordenes_modelos_por_caso')) {
+        $("input[name='modelos_por_caso']").val(localStorage.getItem('ordenes_modelos_por_caso'));
+        localStorage.removeItem('ordenes_modelos_por_caso');
+      }
+      if (localStorage.getItem('ordenes_cantidad_modelos')) {
+        $("input[name='cantidad_modelos']").val(localStorage.getItem('ordenes_cantidad_modelos'));
+        localStorage.removeItem('ordenes_cantidad_modelos');
+      }
+      if (localStorage.getItem('ordenes_pendientes')) {
+        var pendientesSeleccionados = localStorage.getItem('ordenes_pendientes').split(',');
+        pendientesSeleccionados.forEach(function (codigo) {
+          $(".pendiente-checkbox[value='" + codigo + "']").prop('checked', true).trigger('change');
+        });
+        localStorage.removeItem('ordenes_pendientes');
+      }
+      if (localStorage.getItem('ordenes_modelos_inputs')) {
+        var modelos = localStorage.getItem('ordenes_modelos_inputs').split(',');
+        $(".modelos-input").each(function (idx) {
+          if (modelos[idx]) $(this).val(modelos[idx]);
+        });
+        localStorage.removeItem('ordenes_modelos_inputs');
+      }
+    }, 100);
+  });
+</script>
+<script>
+  $(function () {
+    // Selección de casos pendientes: llena el input de código de orden automáticamente
+    function updateCodigoOrdenYModelos() {
+      var codigos = [];
+      var modelos = [];
+      $(".pendiente-checkbox:checked").each(function () {
+        var codigo = $(this).data('codigo');
+        codigos.push(codigo);
+        var modelosVal = $(".modelos-input[data-codigo='" + codigo + "']").val();
+        modelos.push(modelosVal ? modelosVal : '');
+      });
+      if (codigos.length > 0) {
+        $("input[name='codigo_orden']").val(codigos.join(", "));
+      } // Solo sobreescribe si hay pendientes seleccionados
+      $("input[name='modelos_por_caso']").val(modelos.join(", "));
+    }
+    $(document).on('change', '.pendiente-checkbox', function () {
+      var codigo = $(this).data('codigo');
+      var modelosInput = $(".modelos-input[data-codigo='" + codigo + "']");
+      if ($(this).is(':checked')) {
+        modelosInput.prop('disabled', false).val(1);
+      } else {
+        modelosInput.prop('disabled', true).val("");
+      }
+      updateCodigoOrdenYModelos();
+    });
+    $(document).on('input', '.modelos-input', function () {
+      updateCodigoOrdenYModelos();
+    });
+    // Inicializa input oculto para modelos_por_caso si no existe
+    if ($("input[name='modelos_por_caso']").length === 0) {
+      $("input[name='codigo_orden']").after('<input type="hidden" name="modelos_por_caso" value="">');
+    }
+  });
+</script>
+<script>
+  $(document).ready(function () {
     // Foco automático al input de casos pendientes al cargar la página
     $("input[name='codigo_orden_pendiente']").focus();
     // Seleccionar todos
-    $('#btn-select-all').click(function(){
+    $('#btn-select-all').click(function () {
       $('.pendiente-checkbox').prop('checked', true);
     });
     // Deseleccionar todos
-    $('#btn-deselect-all').click(function(){
+    $('#btn-deselect-all').click(function () {
       $('.pendiente-checkbox').prop('checked', false);
     });
   });
 </script>
 <script>
-// Evitar submit del form al presionar Enter en el input de Order Codes
-$(document).ready(function(){
-  $('#codigo-orden-input').on('keydown', function(e) {
-    if (e.key === 'Enter') {
-      e.preventDefault();
-      let val = $(this).val();
-      if (val && !val.trim().endsWith(',')) {
-        // Si ya termina en coma, solo agrega espacio si falta
-        if (val.trim().endsWith(',')) {
-          $(this).val(val + ' ');
-        } else {
-          $(this).val(val + ', ');
+  // Evitar submit del form al presionar Enter en el input de Order Codes
+  $(document).ready(function () {
+    $('#codigo-orden-input').on('keydown', function (e) {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        let val = $(this).val();
+        if (val && !val.trim().endsWith(',')) {
+          // Si ya termina en coma, solo agrega espacio si falta
+          if (val.trim().endsWith(',')) {
+            $(this).val(val + ' ');
+          } else {
+            $(this).val(val + ', ');
+          }
         }
       }
-    }
+    });
   });
-});
 </script>
 <script>
-// Delegación segura para botones de inventario (+1 y -1)
-$(document).on('submit', 'form[action*="modificar_cantidad"]', function(e){
-  var $btn = $(this).find('button[type="submit"]');
-  if ($btn.prop('disabled')) {
-    e.preventDefault();
-    return false;
-  }
-  $btn.prop('disabled', true);
-  setTimeout(function(){ $btn.prop('disabled', false); }, 800);
-});
+  // Delegación segura para botones de inventario (+1 y -1)
+  $(document).on('submit', 'form[action*="modificar_cantidad"]', function (e) {
+    var $btn = $(this).find('button[type="submit"]');
+    if ($btn.prop('disabled')) {
+      e.preventDefault();
+      return false;
+    }
+    $btn.prop('disabled', true);
+    setTimeout(function () { $btn.prop('disabled', false); }, 800);
+  });
 </script>
 {% endblock %}

@@ -7,28 +7,90 @@
 </div>
 {% endblock %}
 {% block content %}
+<div class="row g-3 mb-4">
+  <!-- Download Section -->
+  <div class="col-lg-6">
+    <div class="card border-0 shadow-sm h-100 animate__animated animate__fadeInLeft">
+      <div class="card-header bg-white border-0 py-3">
+        <h6 class="mb-0 fw-bold fs-5 text-secondary"><i class="bi bi-download me-2"></i> {{ _('General Download') }}
+        </h6>
+      </div>
+      <div class="card-body py-3 d-flex align-items-center">
+        <form method="get" action="{{ url_for('historial.descargar_historial') }}"
+          class="d-flex flex-wrap gap-2 align-items-center w-100" id="form-descarga">
+          <select name="tablas" class="form-select form-select-sm flex-grow-1" multiple style="min-width:140px;">
+            <option value="bloques_historial">{{ _('Block History') }}</option>
+            <option value="ordenes">{{ _('Orders') }}</option>
+            <option value="bloques">{{ _('Blocks') }}</option>
+            <option value="fresa_inventario">{{ _('Milling Inventory') }}</option>
+            <option value="fresa_instalada">{{ _('Installed Milling Tools') }}</option>
+            <option value="mantenimiento">{{ _('Maintenance') }}</option>
+            <option value="orden_pendiente">{{ _('Pending Orders') }}</option>
+          </select>
+          <button type="submit" class="btn btn-success btn-sm shadow-sm"><i
+              class="bi bi-file-earmark-excel"></i></button>
+          <div class="form-check ms-2">
+            <input class="form-check-input" type="checkbox" value="1" id="descargar_bd" name="descargar_bd">
+            <label class="form-check-label small text-muted" for="descargar_bd">{{ _('All') }}</label>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- Weekly Report Section -->
+  <div class="col-lg-6">
+    <div class="card border-0 shadow-sm h-100 animate__animated animate__fadeInRight">
+      <div class="card-header bg-white border-0 py-3">
+        <h6 class="mb-0 fw-bold fs-5 text-secondary"><i class="bi bi-calendar3-week me-2"></i> {{ _('Weekly Block Usage
+          Report') }}
+        </h6>
+      </div>
+      <div class="card-body py-3">
+        <form method="get" action="{{ url_for('historial.reporte_semanal') }}" class="d-flex gap-3 align-items-stretch">
+
+          <!-- Materials Checkboxes (Left) -->
+          <div class="border rounded p-2 bg-light" style="width: 280px;">
+            <label class="form-label small fw-bold text-muted mb-2 bg-light" style="display:block;">{{
+              _('Materials') }}</label>
+            <div style="column-count: 2; column-gap: 0.5rem;">
+              {% for mat in materiales %}
+              <div class="form-check form-check-sm mb-1" style="break-inside: avoid;">
+                <input class="form-check-input" type="checkbox" name="materiales" value="{{ mat }}" id="m_{{ mat }}" {%
+                  if mat=='Zirconia' or 'ML Zircon' in mat %}checked{% endif %}>
+                <label class="form-check-label small" for="m_{{ mat }}">{{ mat }}</label>
+              </div>
+              {% endfor %}
+            </div>
+          </div>
+
+          <!-- From/To (Center) -->
+          <div class="d-flex flex-column justify-content-center flex-grow-1 gap-2">
+            <div class="d-flex align-items-center justify-content-between">
+              <label class="form-label small mb-0 fw-bold text-muted me-2" style="width: 45px;">{{ _('From') }}</label>
+              <input type="week" name="start_week" class="form-control form-control-sm" required style="width: 140px;">
+            </div>
+            <div class="d-flex align-items-center justify-content-between">
+              <label class="form-label small mb-0 fw-bold text-muted me-2" style="width: 45px;">{{ _('To') }}</label>
+              <input type="week" name="end_week" class="form-control form-control-sm" style="width: 140px;">
+            </div>
+          </div>
+
+          <!-- Button (Right) -->
+          <button type="submit"
+            class="btn btn-success btn-sm shadow-sm px-3 d-flex align-items-center justify-content-center"><i
+              class="bi bi-file-earmark-spreadsheet fs-5"></i></button>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+
 <div class="card border-0 shadow-sm animate__animated animate__fadeInUp">
   <div class="card-body">
     <h3 class="mb-3"><i class="bi bi-clock-history"></i> {{ _('Block History') }}</h3>
-    <div class="d-flex flex-wrap gap-2 mb-3 align-items-center">
-      <form method="get" action="{{ url_for('historial.descargar_historial') }}" class="d-flex flex-wrap gap-2 align-items-center" id="form-descarga">
-        <label class="form-label mb-0 me-2">{{ _('Download:') }}</label>
-        <select name="tablas" class="form-select form-select-sm" multiple style="min-width:180px;max-width:260px;">
-          <option value="bloques_historial">{{ _('Block History') }}</option>
-          <option value="ordenes">{{ _('Orders') }}</option>
-          <option value="bloques">{{ _('Blocks') }}</option>
-          <option value="fresa_inventario">{{ _('Milling Inventory') }}</option>
-          <option value="fresa_instalada">{{ _('Installed Milling Tools') }}</option>
-          <option value="mantenimiento">{{ _('Maintenance') }}</option>
-          <option value="orden_pendiente">{{ _('Pending Orders') }}</option>
-        </select>
-        <button type="submit" class="btn btn-outline-success btn-sm"><i class="bi bi-file-earmark-excel"></i> {{ _('Download Excel') }}</button>
-        <div class="form-check ms-2">
-          <input class="form-check-input" type="checkbox" value="1" id="descargar_bd" name="descargar_bd">
-          <label class="form-check-label" for="descargar_bd">{{ _('All tables') }}</label>
-        </div>
-      </form>
-    </div>
+
+
     <div class="row g-0">
       <div class="col-md-6 pe-md-2 mb-3 mb-md-0">
         <div class="table-responsive animate__animated animate__fadeIn mb-4 h-100">
@@ -52,8 +114,10 @@
                 <td class="text-truncate" style="max-width:55px;">{{ bloque.shade }}</td>
                 <td class="text-truncate" style="max-width:60px;">{{ bloque.marca }}</td>
                 <td class="text-truncate" style="max-width:55px;">{{ bloque.grosor }}</td>
-                <td class="text-truncate" style="max-width:90px;"><span class="fecha-tabla">{{ bloque.fecha_creacion|vancouver }}</span></td>
-                <td class="text-truncate" style="max-width:90px;"><span class="fecha-tabla">{{ bloque.fecha_eliminacion|vancouver }}</span></td>
+                <td class="text-truncate" style="max-width:90px;"><span class="fecha-tabla">{{
+                    bloque.fecha_creacion|vancouver }}</span></td>
+                <td class="text-truncate" style="max-width:90px;"><span class="fecha-tabla">{{
+                    bloque.fecha_eliminacion|vancouver }}</span></td>
               </tr>
               {% endfor %}
             </tbody>
@@ -61,11 +125,11 @@
         </div>
       </div>
       <div class="col-md-6 ps-md-2">
-        <div id="historial-msgs"
-             data-msg-delete-used="{{ _('Delete this used block?') }}"
-             data-msg-delete-selected="{{ _('Delete selected blocks?') }}">
+        <div id="historial-msgs" data-msg-delete-used="{{ _('Delete this used block?') }}"
+          data-msg-delete-selected="{{ _('Delete selected blocks?') }}">
         </div>
-        <form method="post" id="form-eliminar-bloques-usados" action="{{ url_for('bloques.eliminar_varios_bloques_usados') }}">
+        <form method="post" id="form-eliminar-bloques-usados"
+          action="{{ url_for('bloques.eliminar_varios_bloques_usados') }}">
           <div class="table-responsive animate__animated animate__fadeIn mb-4 h-100">
             <h5 class="mb-2"><i class="bi bi-cpu"></i> {{ _('Used Blocks (by # Units)') }}</h5>
             <div class="d-flex align-items-center mb-2 gap-2">
@@ -73,11 +137,12 @@
               <select id="filtro-material-usados" class="form-select form-select-sm" style="width:120px;">
                 {% set materiales = bloques_usados_ordenados|map(attribute='material')|list|unique %}
                 {% for mat in materiales %}
-                  <option value="{{ mat }}" {% if mat == 'Zirconia' %}selected{% endif %}>{{ mat }}</option>
+                <option value="{{ mat }}" {% if mat=='Zirconia' %}selected{% endif %}>{{ mat }}</option>
                 {% endfor %}
               </select>
               <label class="form-label mb-0 ms-2">{{ _('Highlight limit:') }}</label>
-              <input type="number" id="limite-modelos" class="form-control form-control-sm" style="width:70px;" min="1" value="{{ limite_modelos or 17 }}">
+              <input type="number" id="limite-modelos" class="form-control form-control-sm" style="width:70px;" min="1"
+                value="{{ limite_modelos or 17 }}">
               <span class="text-muted small">{{ _('Rows with # units above this value will be highlighted.') }}</span>
             </div>
             <table class="table table-bordered table-hover" id="tabla-usados-modelos">
@@ -104,15 +169,17 @@
                   <td>{{ bloque.grosor }}</td>
                   <td>{{ bloque.modelos_fresados }}</td>
                   <td>
-                        <form method="post" action="{{ url_for('bloques.eliminar_bloque_usado', bloque_id=bloque.id) }}" style="display:inline;" class="form-eliminar-bloque-usado">
-                          <button type="submit" class="btn btn-outline-danger btn-sm"><i class="bi bi-trash"></i></button>
-                        </form>
+                    <form method="post" action="{{ url_for('bloques.eliminar_bloque_usado', bloque_id=bloque.id) }}"
+                      style="display:inline;" class="form-eliminar-bloque-usado">
+                      <button type="submit" class="btn btn-outline-danger btn-sm"><i class="bi bi-trash"></i></button>
+                    </form>
                   </td>
                 </tr>
                 {% endfor %}
               </tbody>
             </table>
-              <button type="submit" class="btn btn-danger btn-sm mt-2" id="btn-eliminar-seleccion"><i class="bi bi-trash"></i> {{ _('Delete Selected') }}</button>
+            <button type="submit" class="btn btn-danger btn-sm mt-2" id="btn-eliminar-seleccion"><i
+                class="bi bi-trash"></i> {{ _('Delete Selected') }}</button>
             <div class="small text-muted mt-2">{{ _('Rows highlighted mean the block should be replaced soon.') }}</div>
           </div>
         </form>
@@ -124,59 +191,59 @@
 {% block scripts %}
 {{ super() }}
 <script>
-$(document).ready(function(){
-  // Confirmations (single used block and bulk delete)
-  const msgsEl = document.getElementById('historial-msgs');
-  const MSG_DELETE_USED = (msgsEl && msgsEl.dataset.msgDeleteUsed) || 'Delete this used block?';
-  const MSG_DELETE_SELECTED = (msgsEl && msgsEl.dataset.msgDeleteSelected) || 'Delete selected blocks?';
-  $(document).on('submit', '.form-eliminar-bloque-usado', function(e){
-    if(!confirm(MSG_DELETE_USED)) { e.preventDefault(); }
-  });
-  $('#form-eliminar-bloques-usados').on('submit', function(e){
-    if(!confirm(MSG_DELETE_SELECTED)) { e.preventDefault(); }
-  });
-  // DataTable para tabla de historial
-  $('#tabla-historial').DataTable({
-    language: { url: window.getDataTablesLangUrl() }
-  });
-  // DataTable para tabla de usados por modelos
-  var limiteModelos = parseInt($('#limite-modelos').val()) || 17;
-  var tablaUsados = $('#tabla-usados-modelos').DataTable({
-    language: { url: window.getDataTablesLangUrl() },
-    order: [[6, 'desc']]
-  });
-  function resaltarFilas() {
-    $('#tabla-usados-modelos tbody tr').each(function(){
-      var modelos = parseInt($(this).data('modelos')) || 0;
-      if(modelos > limiteModelos) {
-        $(this).addClass('table-warning fw-bold');
-      } else {
-        $(this).removeClass('table-warning fw-bold');
-      }
+  $(document).ready(function () {
+    // Confirmations (single used block and bulk delete)
+    const msgsEl = document.getElementById('historial-msgs');
+    const MSG_DELETE_USED = (msgsEl && msgsEl.dataset.msgDeleteUsed) || 'Delete this used block?';
+    const MSG_DELETE_SELECTED = (msgsEl && msgsEl.dataset.msgDeleteSelected) || 'Delete selected blocks?';
+    $(document).on('submit', '.form-eliminar-bloque-usado', function (e) {
+      if (!confirm(MSG_DELETE_USED)) { e.preventDefault(); }
     });
-  }
-  resaltarFilas();
-  $('#limite-modelos').on('input change', function(){
-    limiteModelos = parseInt($(this).val()) || 17;
+    $('#form-eliminar-bloques-usados').on('submit', function (e) {
+      if (!confirm(MSG_DELETE_SELECTED)) { e.preventDefault(); }
+    });
+    // DataTable para tabla de historial
+    $('#tabla-historial').DataTable({
+      language: { url: window.getDataTablesLangUrl() }
+    });
+    // DataTable para tabla de usados por modelos
+    var limiteModelos = parseInt($('#limite-modelos').val()) || 17;
+    var tablaUsados = $('#tabla-usados-modelos').DataTable({
+      language: { url: window.getDataTablesLangUrl() },
+      order: [[6, 'desc']]
+    });
+    function resaltarFilas() {
+      $('#tabla-usados-modelos tbody tr').each(function () {
+        var modelos = parseInt($(this).data('modelos')) || 0;
+        if (modelos > limiteModelos) {
+          $(this).addClass('table-warning fw-bold');
+        } else {
+          $(this).removeClass('table-warning fw-bold');
+        }
+      });
+    }
     resaltarFilas();
-  });
-  // Check all
-  $('#check-all-bloques').on('change', function(){
-    $('input[name="bloques_ids"]').prop('checked', this.checked);
-  });
-  // Filtro de material para usados
-  $('#filtro-material-usados').on('change', function(){
-    var mat = $(this).val();
-    $('#tabla-usados-modelos tbody tr').each(function(){
-      if(mat === '' || $(this).data('material') === mat) {
-        $(this).show();
-      } else {
-        $(this).hide();
-      }
+    $('#limite-modelos').on('input change', function () {
+      limiteModelos = parseInt($(this).val()) || 17;
+      resaltarFilas();
     });
+    // Check all
+    $('#check-all-bloques').on('change', function () {
+      $('input[name="bloques_ids"]').prop('checked', this.checked);
+    });
+    // Filtro de material para usados
+    $('#filtro-material-usados').on('change', function () {
+      var mat = $(this).val();
+      $('#tabla-usados-modelos tbody tr').each(function () {
+        if (mat === '' || $(this).data('material') === mat) {
+          $(this).show();
+        } else {
+          $(this).hide();
+        }
+      });
+    });
+    // Disparar filtro al cargar (Zirconia por defecto)
+    $('#filtro-material-usados').trigger('change');
   });
-  // Disparar filtro al cargar (Zirconia por defecto)
-  $('#filtro-material-usados').trigger('change');
-});
 </script>
 {% endblock %}

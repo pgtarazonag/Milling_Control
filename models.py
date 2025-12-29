@@ -57,6 +57,7 @@ class Bloque(db.Model):
     cantidad = db.Column(db.Integer, default=1)
     codigo_barra = db.Column(db.String(100))
     estado = db.Column(db.String(20), default='nuevo')
+    codigo_referencia = db.Column(db.String(100)) # Manufacturer SKU
     modelos_fresados = db.Column(db.Integer, default=0)
     codigos_orden_fresados = db.Column(db.Text)
     fecha_creacion = db.Column(db.DateTime, default=datetime.utcnow)
@@ -77,6 +78,7 @@ class BloqueHistorial(db.Model):
     grosor = db.Column(db.Integer)
     cantidad = db.Column(db.Integer)
     codigo_barra = db.Column(db.String(100))
+    codigo_referencia = db.Column(db.String(100)) # Manufacturer SKU
     estado = db.Column(db.String(20))
     modelos_fresados = db.Column(db.Integer)
     codigos_orden_fresados = db.Column(db.Text)

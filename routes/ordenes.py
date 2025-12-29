@@ -625,6 +625,25 @@ def api_cases():
         'xLabel': 'Fecha'
     })
 
+@ordenes_bp.route('/api/shades')
+def api_shades():
+    """
+    Returns available shades for a given material
+    """
+    material = request.args.get('material', '').strip()
+    
+    if not material:
+        return jsonify({'shades': []})
+    
+    # Query shades for the specified material
+    shades = db.session.query(Bloque.shade).filter(
+        db.func.lower(Bloque.material) == material.lower()
+    ).distinct().all()
+    
+    shade_list = [s[0] for s in shades if s[0]]
+    
+    return jsonify({'shades': sorted(shade_list)})
+
 @ordenes_bp.route('/api/record-cases')
 def api_record_cases():
     """
@@ -723,9 +742,11 @@ def confirmar_codigo_bloque(bloque_id):
                 cantidad_modelos = datos.get('cantidad_modelos', 1)
                 material_form = datos.get('material_form') or ''
                 shade_form = datos.get('shade_form') or ''
-                for codigo_orden in codigos_seleccionados:
+                
+                # Crear una ÚNICA orden con todos los códigos concatenados
+                if codigos_seleccionados:
                     nueva_orden = Orden(
-                        codigos_caso=codigo_orden,
+                        codigos_caso=','.join(codigos_seleccionados),
                         material=bloque.material,
                         marca=bloque.marca if hasattr(bloque, 'marca') else None,
                         shade=bloque.shade,
@@ -735,9 +756,13 @@ def confirmar_codigo_bloque(bloque_id):
                         fecha_creacion=datetime.now(VANCOUVER_TZ)
                     )
                     db.session.add(nueva_orden)
-                    pendiente = OrdenPendiente.query.filter_by(codigo_orden=codigo_orden).first()
-                    if pendiente:
-                        db.session.delete(pendiente)
+                    
+                    # Eliminar de pendientes cada código individualmente
+                    for codigo_orden in codigos_seleccionados:
+                        pendiente = OrdenPendiente.query.filter_by(codigo_orden=codigo_orden).first()
+                        if pendiente:
+                            db.session.delete(pendiente)
+                
                 db.session.commit()
             # Si es AJAX, responde con un simple 'ok', si no, redirige
             if is_ajax:

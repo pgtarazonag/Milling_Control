@@ -58,6 +58,7 @@ def bloques():
             try:
                 grosor = int(grosor_str)
                 cantidad = int(cantidad_str)
+                codigo_referencia = request.form.get('codigo_referencia', '').strip()
                 from datetime import datetime
                 import pytz
                 VANCOUVER_TZ = pytz.timezone('America/Vancouver')
@@ -69,6 +70,9 @@ def bloques():
                     .first()
                 )
                 if existente:
+                    # Update reference code if provided
+                    if codigo_referencia:
+                        existente.codigo_referencia = codigo_referencia
                     existente.cantidad = (existente.cantidad or 0) + cantidad
                     # Guardar la fecha en UTC para consistencia con la vista
                     try:
@@ -85,6 +89,7 @@ def bloques():
                         shade=shade,
                         grosor=grosor,
                         cantidad=cantidad,
+                        codigo_referencia=codigo_referencia,
                         estado='nuevo',
                         fecha_creacion=ahora_van.astimezone(pytz.utc)
                     )
@@ -176,6 +181,7 @@ def editar_bloque(bloque_id):
         if bloque.estado == 'nuevo' and 'cantidad' in request.form:
             bloque.cantidad = int(request.form['cantidad'])
         bloque.estado = request.form['estado']
+        bloque.codigo_referencia = request.form.get('codigo_referencia')
         bloque.codigo_barra = request.form.get('codigo_barra') if bloque.estado == 'usado' else None
         bloque.modelos_fresados = int(request.form.get('modelos_fresados', bloque.modelos_fresados or 0))
         # Si editas los códigos de orden fresados, actualízalos aquí
@@ -217,6 +223,7 @@ def eliminar_bloque(bloque_id):
         grosor=bloque.grosor,
         cantidad=bloque.cantidad,
         codigo_barra=bloque.codigo_barra,
+        codigo_referencia=bloque.codigo_referencia,
         estado=bloque.estado,
         modelos_fresados=bloque.modelos_fresados,
         codigos_orden_fresados=bloque.codigos_orden_fresados,
