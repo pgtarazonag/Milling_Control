@@ -43,6 +43,20 @@ def bloques():
                 materiales_avanzado = {}
     except Exception:
         materiales_avanzado = {}
+
+    # Mapa de referencias existentes: {(Material, Marca, Shade, Grosor): RefCode}
+    # Solo bloques nuevos que tengan código de referencia
+    bloques_ref = Bloque.query.filter(
+        Bloque.estado == 'nuevo', 
+        Bloque.codigo_referencia != None, 
+        Bloque.codigo_referencia != ''
+    ).all()
+    mapa_referencias = {}
+    for b in bloques_ref:
+        # Clave compuesta para identificar el tipo de bloque
+        # Asegurar tipos string/int consistentes
+        key = f"{b.material}|{b.marca}|{b.shade}|{b.grosor}"
+        mapa_referencias[key] = b.codigo_referencia
     error = None
     # Si se envía el formulario para agregar un bloque nuevo
     if request.method == 'POST':
@@ -103,10 +117,14 @@ def bloques():
     material = request.args.get('material')
     shade = request.args.get('shade')
     estado = request.args.get('estado')
+    mostrar_ceros = request.args.get('mostrar_ceros') == '1'
 
     # Consultas para obtener bloques usados y nuevos según los filtros
     query_usados = Bloque.query.filter_by(estado='usado')
     query_nuevos = Bloque.query.filter_by(estado='nuevo')
+    
+    if not mostrar_ceros:
+        query_nuevos = query_nuevos.filter(Bloque.cantidad > 0)
 
     if material:
         query_usados = query_usados.filter_by(material=material)
@@ -141,15 +159,16 @@ def bloques():
 
     # Renderizamos la plantilla HTML con los bloques encontrados
     return render_template(
-        'bloques.html',
-        materiales=materiales,
-        shades=shades,
-        marcas=marcas,
+        'bloques.html', 
+        materiales=materiales, 
+        shades=shades, 
+        marcas=marcas, 
         grosores=grosores,
         bloques_usados=bloques_usados,
         bloques_nuevos=bloques_nuevos,
         error=error,
-        materiales_avanzado=materiales_avanzado
+        materiales_avanzado=materiales_avanzado,
+        mapa_referencias=mapa_referencias # DATA FOR JS
     )
 
 # Ruta para editar un bloque existente
@@ -287,8 +306,7 @@ def usar_bloque_nuevo(bloque_id):
     # ACTUALIZAR FECHA DE CREACIÓN DEL BLOQUE NUEVO SI SIGUE EN INVENTARIO
     if bloque.cantidad > 0:
         bloque.fecha_creacion = datetime.now(VANCOUVER_TZ)
-    else:
-        db.session.delete(bloque)
+    # else: bloque.cantidad is 0, keep it (do not delete) for reference
     db.session.commit()
     # Antes: Redirigir a la pantalla de confirmación de código de bloque (sin orden_data)
     # return redirect(url_for('ordenes.confirmar_codigo_bloque', bloque_id=bloque_usado.id))
@@ -357,31 +375,41 @@ def modificar_cantidad(bloque_id):
 @bloques_bp.route('/eliminar_usado/<int:bloque_id>', methods=['POST'])
 def eliminar_bloque_usado(bloque_id):
     """
-    Elimina un bloque usado, moviéndolo al historial antes de borrar.
+    Elimina un bloque usado. 
+    Si 'permanente' está en form/args, borra sin historial.
+    De lo contrario, mueve al historial antes de borrar.
     """
     bloque = Bloque.query.get_or_404(bloque_id)
     if bloque.estado != 'usado':
         flash('Solo se pueden eliminar bloques usados.', 'warning')
         return redirect(url_for('historial.historial_bloques'))
-    historial = BloqueHistorial(
-        bloque_id=bloque.id,
-        material=bloque.material,
-        marca=bloque.marca,
-        shade=bloque.shade,
-        grosor=bloque.grosor,
-        cantidad=bloque.cantidad,
-        codigo_barra=bloque.codigo_barra,
-        estado=bloque.estado,
-        modelos_fresados=bloque.modelos_fresados,
-        codigos_orden_fresados=bloque.codigos_orden_fresados,
-        fecha_creacion=bloque.fecha_creacion,
-        fecha_eliminacion=datetime.now(VANCOUVER_TZ)
-    )
-    db.session.add(historial)
+    
+    permanente = request.form.get('permanente') == '1' or request.args.get('permanente') == '1'
+
+    if not permanente:
+        historial = BloqueHistorial(
+            bloque_id=bloque.id,
+            material=bloque.material,
+            marca=bloque.marca,
+            shade=bloque.shade,
+            grosor=bloque.grosor,
+            cantidad=bloque.cantidad,
+            codigo_barra=bloque.codigo_barra,
+            estado=bloque.estado,
+            modelos_fresados=bloque.modelos_fresados,
+            codigos_orden_fresados=bloque.codigos_orden_fresados,
+            fecha_creacion=bloque.fecha_creacion,
+            fecha_eliminacion=datetime.now(VANCOUVER_TZ)
+        )
+        db.session.add(historial)
+        msg = 'Bloque usado eliminado correctamente (archivado en historial).'
+    else:
+        msg = 'Bloque usado eliminado permanentemente.'
+
     db.session.delete(bloque)
     db.session.commit()
-    flash('Bloque usado eliminado correctamente.', 'success')
-    return redirect(url_for('historial.historial_bloques'))
+    flash(msg, 'success')
+    return redirect(url_for('bloques.bloques'))
 
 @bloques_bp.route('/eliminar_varios_usados', methods=['POST'])
 def eliminar_varios_bloques_usados():

@@ -117,6 +117,7 @@ class Mantenimiento(db.Model):
     actividad = db.Column(db.String(200))
     descripcion = db.Column(db.String(200))
     fecha = db.Column(db.DateTime, default=datetime.utcnow)
+    proxima_fecha = db.Column(db.DateTime)
 
 """
 Modelo para almacenar los códigos de orden que han sido escaneados y están pendientes de ser fresados.

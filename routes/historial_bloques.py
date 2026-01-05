@@ -35,11 +35,69 @@ def historial_bloques():
     
     # Get materials for filter
     materiales = Configuracion.get_lista('materiales', default=['Zirconia','Disilicato','PMMA','Cera','Wax','Composite'])
+    shades = Configuracion.get_lista('shades', default=['A1','A2','A3','B1','B2','C1','C2'])
+    marcas = Configuracion.get_lista('marcas', default=['Vita','Ivoclar','Aidite'])
+    grosores = Configuracion.get_lista('grosores', default=['14','16','18','20','22','25'])
     
     return render_template('historial_bloques.html', 
                            bloques_historial=bloques_historial, 
                            bloques_usados_ordenados=bloques_usados_ordenados,
-                           materiales=materiales)
+                           materiales=materiales,
+                           shades=shades,
+                           marcas=marcas,
+                           grosores=grosores)
+
+@historial_bp.route('/eliminar/<int:historial_id>', methods=['POST'])
+def eliminar_historial_permanente(historial_id):
+    from flask import flash, redirect, url_for
+    registro = BloqueHistorial.query.get_or_404(historial_id)
+    db.session.delete(registro)
+    db.session.commit()
+    flash('Registro de historial eliminado permanentemente.', 'success')
+    return redirect(url_for('historial.historial_bloques'))
+
+@historial_bp.route('/editar/<int:historial_id>', methods=['POST'])
+def editar_historial(historial_id):
+    from flask import flash, redirect, url_for
+    registro = BloqueHistorial.query.get_or_404(historial_id)
+    
+    registro.material = request.form.get('material')
+    registro.marca = request.form.get('marca')
+    registro.shade = request.form.get('shade')
+    registro.grosor = request.form.get('grosor')
+    registro.codigo_barra = request.form.get('codigo_barra')
+    # Optional: modelo, etc.
+    
+    db.session.commit()
+    flash('Registro de historial actualizado.', 'success')
+    return redirect(url_for('historial.historial_bloques'))
+
+@historial_bp.route('/restaurar/<int:historial_id>', methods=['POST'])
+def restaurar_bloque(historial_id):
+    from flask import flash, redirect, url_for
+    registro = BloqueHistorial.query.get_or_404(historial_id)
+    
+    # Create new Block from History
+    nuevo_bloque = Bloque(
+        material=registro.material,
+        marca=registro.marca,
+        shade=registro.shade,
+        grosor=registro.grosor,
+        cantidad=registro.cantidad if registro.cantidad is not None else 1,
+        codigo_barra=registro.codigo_barra,
+        codigo_referencia=registro.codigo_referencia,
+        estado='usado', # Restore as 'Used' per request
+        modelos_fresados=registro.modelos_fresados,
+        codigos_orden_fresados=registro.codigos_orden_fresados,
+        fecha_creacion=registro.fecha_creacion if registro.fecha_creacion else datetime.utcnow()
+    )
+    
+    db.session.add(nuevo_bloque)
+    db.session.delete(registro)
+    db.session.commit()
+    
+    flash('Bloque restaurado exitosamente a la lista de usados.', 'success')
+    return redirect(url_for('historial.historial_bloques'))
 
 @historial_bp.route('/descargar', methods=['GET'])
 def descargar_historial():
@@ -80,6 +138,40 @@ def descargar_historial():
                             item[col] = val
                         data.append(item)
                     df = pd.DataFrame(data, columns=cols)
+                    
+                    # Translation Mapping
+                    column_map = {
+                        'id': 'ID',
+                        'bloque_id': 'Block ID',
+                        'codigos_caso': 'Case Codes',
+                        'material': 'Material',
+                        'marca': 'Brand',
+                        'shade': 'Shade',
+                        'codigo_barra': 'Barcode',
+                        'maquina': 'Machine',
+                        'cantidad_modelos': 'Model Count',
+                        'fecha_creacion': 'Creation Date',
+                        'grosor': 'Thickness',
+                        'cantidad': 'Quantity',
+                        'estado': 'Status',
+                        'codigo_referencia': 'Reference Code',
+                        'modelos_fresados': 'Milled Models',
+                        'codigos_orden_fresados': 'Milled Order Codes',
+                        'fecha_eliminacion': 'Deletion Date',
+                        'tipo': 'Type',
+                        'diametro': 'Diameter',
+                        'materiales': 'Materials',
+                        'fecha_instalacion': 'Installation Date',
+                        'fecha_reemplazo': 'Replacement Date',
+                        'posicion': 'Position',
+                        'vida_util_estimada': 'Est. Lifespan',
+                        'uso_acumulado': 'Accumulated Usage',
+                        'descripcion': 'Description',
+                        'usuario': 'User',
+                        'fecha': 'Date',
+                        'orden_id': 'Order ID'
+                    }
+                    df.rename(columns=column_map, inplace=True)
                 except Exception:
                     cols = [c.name for c in modelo.__table__.columns]
                     df = pd.DataFrame(columns=cols)

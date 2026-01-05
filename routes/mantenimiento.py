@@ -80,29 +80,33 @@ def mantenimiento():
                 maquina=maquina,
                 actividad=f"{actividad} (cada {intervalo} {unidad})" if intervalo and unidad else actividad,
                 descripcion=descripcion,
-                fecha=fecha
+                fecha=fecha,
+                proxima_fecha=proxima_fecha
             )
             db.session.add(nuevo)
             db.session.commit()
-            nuevo.proxima_fecha = proxima_fecha
             flash('Mantenimiento registrado correctamente.')
             return redirect(url_for('mantenimiento.mantenimiento', grupo=grupo))
 
     registros = Mantenimiento.query.order_by(Mantenimiento.fecha.desc()).all()
     # Calcular próxima fecha para cada registro y extraer intervalo/unidad para edición
     for reg in registros:
-        match = re.search(r'cada (\d+) (semana|mes|año)', reg.actividad)
+        if reg.proxima_fecha:
+            continue
+            
+        # Fallback parsing for legacy records without proxima_fecha
+        match = re.search(r'(?:cada|every) (\d+) (semana|week|mes|month|año|year)', reg.actividad, re.IGNORECASE)
         if match:
             intervalo_int = int(match.group(1))
-            unidad = match.group(2)
+            unidad = match.group(2).lower()
             reg.intervalo_edit = intervalo_int
             reg.unidad_edit = unidad
             # Próxima fecha
-            if unidad == 'semana':
+            if unidad in ['semana', 'week']:
                 reg.proxima_fecha = reg.fecha + timedelta(weeks=intervalo_int)
-            elif unidad == 'mes':
+            elif unidad in ['mes', 'month']:
                 reg.proxima_fecha = reg.fecha + timedelta(days=30*intervalo_int)
-            elif unidad == 'año':
+            elif unidad in ['año', 'year']:
                 reg.proxima_fecha = reg.fecha + timedelta(days=365*intervalo_int)
             else:
                 reg.proxima_fecha = None
@@ -115,10 +119,17 @@ def mantenimiento():
     # Para cada máquina y actividad, mostrar la próxima a realizar (la más próxima en el futuro)
     proximas = {}
     for reg in registros:
-        if reg.proxima_fecha and reg.proxima_fecha >= datetime.utcnow():
-            key = (reg.maquina, reg.actividad)
-            if key not in proximas or reg.proxima_fecha < proximas[key].proxima_fecha:
-                proximas[key] = reg
+        if reg.proxima_fecha:
+            # Normalizar a UTC si es ingenuo para comparar
+            if reg.proxima_fecha.tzinfo is None:
+                p_f = VANCOUVER_TZ.localize(reg.proxima_fecha).astimezone(pytz.utc)
+            else:
+                p_f = reg.proxima_fecha.astimezone(pytz.utc)
+                
+            if p_f >= datetime.now(pytz.utc):
+                key = (reg.maquina, reg.actividad)
+                if key not in proximas or reg.proxima_fecha < proximas[key].proxima_fecha:
+                    proximas[key] = reg
     proximas_actividades = sorted(proximas.values(), key=lambda r: r.proxima_fecha)
 
     # Si la petición viene de home, devolver solo la lista (API)
@@ -156,28 +167,31 @@ def descartar_proxima(mant_id):
 @mantenimiento_bp.route('/realizar_proxima/<int:mant_id>', methods=['POST'])
 def realizar_proxima(mant_id):
     mant = Mantenimiento.query.get_or_404(mant_id)
-    # Extraer intervalo y unidad
-    match = re.search(r'cada (\d+) (semana|mes|año)', mant.actividad)
+    # Extraer intervalo y unidad (Soporte bilingüe)
+    match = re.search(r'(?:cada|every) (\d+) (semana|week|mes|month|año|year)', mant.actividad, re.IGNORECASE)
     if match:
         intervalo_int = int(match.group(1))
-        unidad = match.group(2)
+        unidad = match.group(2).lower()
     else:
         intervalo_int = 1
         unidad = 'semana'
-    fecha = datetime.utcnow()
-    if unidad == 'semana':
+    
+    fecha = datetime.now(VANCOUVER_TZ)
+    if unidad in ['semana', 'week']:
         proxima_fecha = fecha + timedelta(weeks=intervalo_int)
-    elif unidad == 'mes':
+    elif unidad in ['mes', 'month']:
         proxima_fecha = fecha + timedelta(days=30*intervalo_int)
-    elif unidad == 'año':
+    elif unidad in ['año', 'year']:
         proxima_fecha = fecha + timedelta(days=365*intervalo_int)
     else:
         proxima_fecha = None
+        
     nuevo = Mantenimiento(
         maquina=mant.maquina,
         actividad=mant.actividad,
         descripcion=mant.descripcion,
-        fecha=fecha
+        fecha=fecha,
+        proxima_fecha=proxima_fecha
     )
     db.session.add(nuevo)
     db.session.commit()
@@ -208,11 +222,11 @@ def editar_mantenimiento(mant_id):
         grupo = 'hornos'
     elif mant.maquina in aspiradoras:
         grupo = 'aspiradoras'
-    # Pre-fill frequency fields from activity string
-    match = re.search(r'cada (\d+) (semana|mes|año)', mant.actividad or '')
+    # Pre-fill frequency fields from activity string (Bilingual Support)
+    match = re.search(r'(?:cada|every) (\d+) (semana|week|mes|month|año|year)', mant.actividad or '', re.IGNORECASE)
     if match:
         intervalo_edit = int(match.group(1))
-        unidad_edit = match.group(2)
+        unidad_edit = match.group(2).lower()
     else:
         intervalo_edit = 1
         unidad_edit = 'semana'
@@ -248,10 +262,27 @@ def editar_mantenimiento(mant_id):
     except Exception:
         fecha = mant.fecha
     mant.maquina = maquina
-    if intervalo and unidad:
-        mant.actividad = f"{actividad} (cada {intervalo} {unidad})"
-    else:
-        mant.actividad = actividad
+    
+    # Recalculate proxima_fecha
+    try:
+        if intervalo and unidad:
+            intervalo_int = int(intervalo)
+            if unidad in ['semana', 'week']:
+                proxima_fecha = fecha + timedelta(weeks=intervalo_int)
+            elif unidad in ['mes', 'month']:
+                proxima_fecha = fecha + timedelta(days=30*intervalo_int)
+            elif unidad in ['año', 'year']:
+                proxima_fecha = fecha + timedelta(days=365*intervalo_int)
+            else:
+                proxima_fecha = None
+            mant.actividad = f"{actividad} (cada {intervalo} {unidad})"
+            mant.proxima_fecha = proxima_fecha
+        else:
+            mant.actividad = actividad
+            mant.proxima_fecha = None
+    except Exception:
+        pass
+        
     mant.descripcion = descripcion
     mant.fecha = fecha
     db.session.commit()

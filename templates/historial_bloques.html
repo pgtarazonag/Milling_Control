@@ -91,8 +91,51 @@
     <h3 class="mb-3"><i class="bi bi-clock-history"></i> {{ _('Block History') }}</h3>
 
 
+    <div class="row g-2 mb-3">
+      <div class="col-md-3">
+        <label class="form-label small fw-bold">{{ _('Material') }}</label>
+        <select class="form-select form-select-sm filtro-historial" data-col="1">
+          <option value="">{{ _('All Materials') }}</option>
+          {% for m in bloques_historial|map(attribute='material')|reject('none')|unique|sort %}
+          <option value="{{ m }}">{{ m }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="col-md-2">
+        <label class="form-label small fw-bold">{{ _('Shade') }}</label>
+        <select class="form-select form-select-sm filtro-historial" data-col="2">
+          <option value="">{{ _('All Shades') }}</option>
+          {% for s in bloques_historial|map(attribute='shade')|reject('none')|unique|sort %}
+          <option value="{{ s }}">{{ s }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="col-md-2">
+        <label class="form-label small fw-bold">{{ _('Brand') }}</label>
+        <select class="form-select form-select-sm filtro-historial" data-col="3">
+          <option value="">{{ _('All Brands') }}</option>
+          {% for b in bloques_historial|map(attribute='marca')|reject('none')|unique|sort %}
+          <option value="{{ b }}">{{ b }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="col-md-2">
+        <label class="form-label small fw-bold">{{ _('Thickness') }}</label>
+        <select class="form-select form-select-sm filtro-historial" data-col="4">
+          <option value="">{{ _('All Thicknesses') }}</option>
+          {% for g in bloques_historial|map(attribute='grosor')|reject('none')|unique|sort %}
+          <option value="{{ g }}">{{ g }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="col-md-3 d-flex align-items-end justify-content-end">
+        <button class="btn btn-outline-secondary btn-sm" id="reset-filtros-historial"
+          title="{{ _('Reset Filters') }}"><i class="bi bi-x-circle"></i> {{ _('Reset') }}</button>
+      </div>
+    </div>
+
     <div class="row g-0">
-      <div class="col-md-6 pe-md-2 mb-3 mb-md-0">
+      <div class="col-12">
         <div class="table-responsive animate__animated animate__fadeIn mb-4 h-100">
           <table class="table table-striped table-hover align-middle" id="tabla-historial" style="font-size:0.93em;">
             <thead class="table-secondary">
@@ -102,8 +145,10 @@
                 <th style="width:55px;"> <i class="bi bi-palette"></i> {{ _('Shade') }}</th>
                 <th style="width:60px;"> <i class="bi bi-award"></i> {{ _('Brand') }}</th>
                 <th style="width:55px;"> <i class="bi bi-rulers"></i> {{ _('Thickness') }}</th>
+                <th style="width:120px;"> <i class="bi bi-list-check"></i> {{ _('Milled Cases') }}</th>
                 <th style="width:90px;"> <i class="bi bi-calendar"></i> {{ _('Creation Date') }}</th>
                 <th style="width:90px;"> <i class="bi bi-calendar-x"></i> {{ _('Deletion Date') }}</th>
+                <th style="width:100px;"> <i class="bi bi-gear"></i> {{ _('Actions') }}</th>
               </tr>
             </thead>
             <tbody>
@@ -114,136 +159,282 @@
                 <td class="text-truncate" style="max-width:55px;">{{ bloque.shade }}</td>
                 <td class="text-truncate" style="max-width:60px;">{{ bloque.marca }}</td>
                 <td class="text-truncate" style="max-width:55px;">{{ bloque.grosor }}</td>
+                <td class="text-truncate" style="max-width:120px;" title="{{ bloque.codigos_orden_fresados }}">
+                  {{ bloque.get_codigos_orden_fresados()|join(', ') }}
+                </td>
                 <td class="text-truncate" style="max-width:90px;"><span class="fecha-tabla">{{
                     bloque.fecha_creacion|vancouver }}</span></td>
                 <td class="text-truncate" style="max-width:90px;"><span class="fecha-tabla">{{
                     bloque.fecha_eliminacion|vancouver }}</span></td>
+                <td>
+                  <form method="post" action="{{ url_for('historial.restaurar_bloque', historial_id=bloque.id) }}"
+                    style="display:inline;"
+                    onsubmit="return confirm('{{ _('Are you sure you want to restore this block to the Used list?') }}');">
+                    <button type="submit" class="btn btn-outline-success btn-sm" title="{{ _('Restore') }}"><i
+                        class="bi bi-arrow-counterclockwise"></i></button>
+                  </form>
+                  <button class="btn btn-outline-primary btn-sm btn-edit-historial" data-id="{{ bloque.id }}"
+                    data-codigo="{{ bloque.codigo_barra }}" data-material="{{ bloque.material }}"
+                    data-marca="{{ bloque.marca }}" data-shade="{{ bloque.shade }}" data-grosor="{{ bloque.grosor }}"
+                    title="{{ _('Edit') }}">
+                    <i class="bi bi-pencil"></i>
+                  </button>
+                  <form method="post"
+                    action="{{ url_for('historial.eliminar_historial_permanente', historial_id=bloque.id) }}"
+                    style="display:inline;"
+                    onsubmit="return confirm('{{ _('Are you sure you want to permanently delete this history record?') }}');">
+                    <button type="submit" class="btn btn-outline-danger btn-sm" title="{{ _('Delete Permanently') }}"><i
+                        class="bi bi-trash"></i></button>
+                  </form>
+                </td>
               </tr>
               {% endfor %}
             </tbody>
           </table>
         </div>
       </div>
-      <div class="col-md-6 ps-md-2">
-        <div id="historial-msgs" data-msg-delete-used="{{ _('Delete this used block?') }}"
-          data-msg-delete-selected="{{ _('Delete selected blocks?') }}">
-        </div>
-        <form method="post" id="form-eliminar-bloques-usados"
-          action="{{ url_for('bloques.eliminar_varios_bloques_usados') }}">
-          <div class="table-responsive animate__animated animate__fadeIn mb-4 h-100">
-            <h5 class="mb-2"><i class="bi bi-cpu"></i> {{ _('Used Blocks (by # Units)') }}</h5>
-            <div class="d-flex align-items-center mb-2 gap-2">
-              <label class="form-label mb-0">{{ _('Material:') }}</label>
-              <select id="filtro-material-usados" class="form-select form-select-sm" style="width:120px;">
-                {% set materiales = bloques_usados_ordenados|map(attribute='material')|list|unique %}
-                {% for mat in materiales %}
-                <option value="{{ mat }}" {% if mat=='Zirconia' %}selected{% endif %}>{{ mat }}</option>
-                {% endfor %}
-              </select>
-              <label class="form-label mb-0 ms-2">{{ _('Highlight limit:') }}</label>
-              <input type="number" id="limite-modelos" class="form-control form-control-sm" style="width:70px;" min="1"
-                value="{{ limite_modelos or 17 }}">
-              <span class="text-muted small">{{ _('Rows with # units above this value will be highlighted.') }}</span>
-            </div>
-            <table class="table table-bordered table-hover" id="tabla-usados-modelos">
-              <thead class="table-info">
-                <tr>
-                  <th><i class="bi bi-check-square"></i></th>
-                  <th><i class="bi bi-hash"></i> {{ _('Code') }}</th>
-                  <th><i class="bi bi-box"></i> {{ _('Material') }}</th>
-                  <th><i class="bi bi-award"></i> {{ _('Brand') }}</th>
-                  <th><i class="bi bi-palette"></i> {{ _('Shade') }}</th>
-                  <th><i class="bi bi-rulers"></i> {{ _('Thickness') }}</th>
-                  <th><i class="bi bi-bar-chart"></i> {{ _('# Units') }}</th>
-                  <th><i class="bi bi-gear"></i> {{ _('Action') }}</th>
-                </tr>
-              </thead>
-              <tbody>
-                {% for bloque in bloques_usados_ordenados %}
-                <tr data-modelos="{{ bloque.modelos_fresados }}" data-material="{{ bloque.material }}">
-                  <td><input type="checkbox" name="bloques_ids" value="{{ bloque.id }}"></td>
-                  <td>{{ bloque.codigo_barra }}</td>
-                  <td>{{ bloque.material }}</td>
-                  <td>{{ bloque.marca }}</td>
-                  <td>{{ bloque.shade }}</td>
-                  <td>{{ bloque.grosor }}</td>
-                  <td>{{ bloque.modelos_fresados }}</td>
-                  <td>
-                    <form method="post" action="{{ url_for('bloques.eliminar_bloque_usado', bloque_id=bloque.id) }}"
-                      style="display:inline;" class="form-eliminar-bloque-usado">
-                      <button type="submit" class="btn btn-outline-danger btn-sm"><i class="bi bi-trash"></i></button>
-                    </form>
-                  </td>
-                </tr>
-                {% endfor %}
-              </tbody>
-            </table>
-            <button type="submit" class="btn btn-danger btn-sm mt-2" id="btn-eliminar-seleccion"><i
-                class="bi bi-trash"></i> {{ _('Delete Selected') }}</button>
-            <div class="small text-muted mt-2">{{ _('Rows highlighted mean the block should be replaced soon.') }}</div>
-          </div>
-        </form>
-      </div>
+
+
     </div>
   </div>
+</div>
+</div>
+
+<!-- Modal Edit History -->
+<div class="modal fade" id="modalEditHistorial" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <form method="post" id="formEditHistorial">
+        <div class="modal-header">
+          <h5 class="modal-title">{{ _('Edit History Record') }}</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <div class="mb-2">
+            <label class="form-label">{{ _('Code') }}</label>
+            <input type="text" class="form-control" name="codigo_barra" id="edit_codigo" required>
+          </div>
+          <div class="mb-2">
+            <label class="form-label">{{ _('Material') }}</label>
+            <select class="form-select" name="material" id="edit_material">
+              {% for m in materiales %}<option value="{{ m }}">{{ m }}</option>{% endfor %}
+            </select>
+          </div>
+          <div class="mb-2">
+            <label class="form-label">{{ _('Brand') }}</label>
+            <select class="form-select" name="marca" id="edit_marca">
+              {% for m in marcas %}<option value="{{ m }}">{{ m }}</option>{% endfor %}
+            </select>
+          </div>
+          <div class="mb-2">
+            <label class="form-label">{{ _('Shade') }}</label>
+            <select class="form-select" name="shade" id="edit_shade">
+              {% for s in shades %}<option value="{{ s }}">{{ s }}</option>{% endfor %}
+            </select>
+          </div>
+          <div class="mb-2">
+            <label class="form-label">{{ _('Thickness') }}</label>
+            <select class="form-select" name="grosor" id="edit_grosor">
+              {% for g in grosores %}<option value="{{ g }}">{{ g }}</option>{% endfor %}
+            </select>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{{ _('Cancel') }}</button>
+          <button type="submit" class="btn btn-primary">{{ _('Save Changes') }}</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
 </div>
 {% endblock %}
 {% block scripts %}
 {{ super() }}
 <script>
   $(document).ready(function () {
-    // Confirmations (single used block and bulk delete)
-    const msgsEl = document.getElementById('historial-msgs');
-    const MSG_DELETE_USED = (msgsEl && msgsEl.dataset.msgDeleteUsed) || 'Delete this used block?';
-    const MSG_DELETE_SELECTED = (msgsEl && msgsEl.dataset.msgDeleteSelected) || 'Delete selected blocks?';
-    $(document).on('submit', '.form-eliminar-bloque-usado', function (e) {
-      if (!confirm(MSG_DELETE_USED)) { e.preventDefault(); }
-    });
-    $('#form-eliminar-bloques-usados').on('submit', function (e) {
-      if (!confirm(MSG_DELETE_SELECTED)) { e.preventDefault(); }
-    });
     // DataTable para tabla de historial
-    $('#tabla-historial').DataTable({
-      language: { url: window.getDataTablesLangUrl() }
-    });
-    // DataTable para tabla de usados por modelos
-    var limiteModelos = parseInt($('#limite-modelos').val()) || 17;
-    var tablaUsados = $('#tabla-usados-modelos').DataTable({
+    var table = $('#tabla-historial').DataTable({
       language: { url: window.getDataTablesLangUrl() },
-      order: [[6, 'desc']]
+      order: [[7, 'desc']]
     });
-    function resaltarFilas() {
-      $('#tabla-usados-modelos tbody tr').each(function () {
-        var modelos = parseInt($(this).data('modelos')) || 0;
-        if (modelos > limiteModelos) {
-          $(this).addClass('table-warning fw-bold');
-        } else {
-          $(this).removeClass('table-warning fw-bold');
+
+    // --- CASCADING FILTERS LOGIC ---
+
+    // 1. Capture all table data on load
+    var allData = [];
+
+    // API data gives us the strings. Indices: 1=Material, 2=Shade, 3=Brand, 4=Thickness
+    table.rows().every(function (rowIdx, tableLoop, rowLoop) {
+      var d = this.data();
+      if (d) {
+        // Direct extraction to avoid blank strings on untrimmed text
+        allData.push({
+          material: d[1],
+          shade: d[2],
+          marca: d[3],
+          grosor: d[4]
+        });
+      }
+    });
+
+    // Helper to safely extract text
+    function safeText(val) {
+      if (!val) return '';
+      var str = String(val); // Ensure string
+      // Check if looks like HTML tag
+      if (str.includes('<') && str.includes('>')) {
+        var div = document.createElement('div');
+        div.innerHTML = str;
+        return (div.textContent || div.innerText || '').trim();
+      }
+      return str.trim();
+    }
+
+    // Clean data (HTML stripping)
+    allData = allData.map(function (item) {
+      return {
+        material: safeText(item.material),
+        shade: safeText(item.shade),
+        marca: safeText(item.marca),
+        grosor: safeText(item.grosor)
+      };
+    });
+
+    function getUniqueValues(data, key) {
+      var unique = [];
+      data.forEach(function (item) {
+        var val = item[key];
+        if (val && !unique.includes(val)) {
+          unique.push(val);
         }
+      });
+      return unique.sort();
+    }
+
+    function updateDropdown(selector, validValues, currentVal) {
+      var $el = $(selector);
+      $el.empty();
+      $el.append('<option value="">' + ($el.data('label') || 'All') + '</option>');
+
+      validValues.forEach(function (v) {
+        var selected = (v == currentVal) ? 'selected' : '';
+        $el.append('<option value="' + v + '" ' + selected + '>' + v + '</option>');
       });
     }
-    resaltarFilas();
-    $('#limite-modelos').on('input change', function () {
-      limiteModelos = parseInt($(this).val()) || 17;
-      resaltarFilas();
+
+    function updateFiltersState(triggerColIdx) {
+      var selMaterial = $('.filtro-historial[data-col="1"]').val();
+      var selShade = $('.filtro-historial[data-col="2"]').val();
+      var selBrand = $('.filtro-historial[data-col="3"]').val();
+      var selThickness = $('.filtro-historial[data-col="4"]').val();
+
+      function filterData(ignoreKey) {
+        return allData.filter(function (item) {
+          var match = true;
+          if (ignoreKey !== 'material' && selMaterial && item.material != selMaterial) match = false;
+          if (ignoreKey !== 'shade' && selShade && item.shade != selShade) match = false;
+          if (ignoreKey !== 'marca' && selBrand && item.marca != selBrand) match = false;
+          if (ignoreKey !== 'grosor' && selThickness && item.grosor != selThickness) match = false;
+          return match;
+        });
+      }
+
+      // Skip update of the trigger column to prevent resetting selection/focus
+      if (triggerColIdx !== 1) {
+        var validMaterials = getUniqueValues(filterData('material'), 'material');
+        updateDropdown('.filtro-historial[data-col="1"]', validMaterials, selMaterial);
+      }
+
+      if (triggerColIdx !== 2) {
+        var validShades = getUniqueValues(filterData('shade'), 'shade');
+        updateDropdown('.filtro-historial[data-col="2"]', validShades, selShade);
+      }
+
+      if (triggerColIdx !== 3) {
+        var validBrands = getUniqueValues(filterData('marca'), 'marca');
+        updateDropdown('.filtro-historial[data-col="3"]', validBrands, selBrand);
+      }
+
+      if (triggerColIdx !== 4) {
+        var validThickness = getUniqueValues(filterData('grosor'), 'grosor');
+        updateDropdown('.filtro-historial[data-col="4"]', validThickness, selThickness);
+      }
+    }
+
+    // Save initial label
+    $('.filtro-historial').each(function () {
+      $(this).data('label', $(this).find('option:first').text());
     });
-    // Check all
-    $('#check-all-bloques').on('change', function () {
-      $('input[name="bloques_ids"]').prop('checked', this.checked);
+
+    // Event Listener
+    $(document).on('change', '.filtro-historial', function () {
+      var colIdx = $(this).data('col');
+      var val = $(this).val();
+
+      // Save to LocalStorage
+      localStorage.setItem('historial_filter_' + colIdx, val);
+
+      // 1. Apply Search
+      table.column(colIdx).search(val).draw();
+
+      // 2. Update Options
+      updateFiltersState(colIdx);
     });
-    // Filtro de material para usados
-    $('#filtro-material-usados').on('change', function () {
-      var mat = $(this).val();
-      $('#tabla-usados-modelos tbody tr').each(function () {
-        if (mat === '' || $(this).data('material') === mat) {
-          $(this).show();
-        } else {
-          $(this).hide();
-        }
+
+    // Reset Filters
+    $('#reset-filtros-historial').on('click', function () {
+      $('.filtro-historial').val('');
+
+      // Clear LocalStorage
+      [1, 2, 3, 4].forEach(function (i) {
+        localStorage.removeItem('historial_filter_' + i);
       });
+
+      table.columns().search('').draw();
+      updateFiltersState(null);
     });
-    // Disparar filtro al cargar (Zirconia por defecto)
-    $('#filtro-material-usados').trigger('change');
+
+    // Restore Filters from LocalStorage on Load
+    var restored = false;
+    $('.filtro-historial').each(function () {
+      var colIdx = $(this).data('col');
+      var savedVal = localStorage.getItem('historial_filter_' + colIdx);
+      if (savedVal) {
+        $(this).val(savedVal);
+        table.column(colIdx).search(savedVal);
+        restored = true;
+      }
+    });
+
+    if (restored) {
+      table.draw();
+      updateFiltersState(null);
+    }
+
+    // Edit History Modal
+    $(document).on('click', '.btn-edit-historial', function () {
+      var id = $(this).data('id');
+      var codigo = $(this).data('codigo');
+      var material = $(this).data('material');
+      var marca = $(this).data('marca');
+      var shade = $(this).data('shade');
+      var grosor = $(this).data('grosor');
+
+      $('#edit_codigo').val(codigo);
+      $('#edit_material').val(material);
+      $('#edit_marca').val(marca);
+      $('#edit_shade').val(shade);
+      $('#edit_grosor').val(grosor);
+
+      // Update Form Action
+      // Use a dummy ID '0' and replace it, assuming ID is integer
+      var actionUrl = "{{ url_for('historial.editar_historial', historial_id=0) }}".replace('0', id);
+      $('#formEditHistorial').attr('action', actionUrl);
+
+      var modal = new bootstrap.Modal(document.getElementById('modalEditHistorial'));
+      modal.show();
+    });
   });
 </script>
 {% endblock %}
