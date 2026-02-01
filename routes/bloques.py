@@ -14,16 +14,15 @@ Este archivo organiza toda la lógica para el manejo de bloques en el sistema.
 
 # Importamos los módulos necesarios y los modelos de datos
 from flask import Blueprint, render_template, request, redirect, url_for, flash
-from models import Bloque, BloqueHistorial, Configuracion
+from models import Bloque, BloqueHistorial, Configuracion, LogInventario
 from extensions import db
 from datetime import datetime
 import pytz
+import json
 VANCOUVER_TZ = pytz.timezone('America/Vancouver')
 
 # Definimos el blueprint para las rutas de bloques
 bloques_bp = Blueprint('bloques', __name__, url_prefix='/bloques')
-
-# Ruta principal para ver, filtrar y agregar bloques
 @bloques_bp.route('/', methods=['GET', 'POST'])
 def bloques():
     materiales = Configuracion.get_lista('materiales', default=['Zirconia','Disilicato','PMMA','Cera','Wax','Composite'])
@@ -85,6 +84,7 @@ def bloques():
                 )
                 if existente:
                     # Update reference code if provided
+                    old_qty = existente.cantidad
                     if codigo_referencia:
                         existente.codigo_referencia = codigo_referencia
                     existente.cantidad = (existente.cantidad or 0) + cantidad
@@ -94,6 +94,24 @@ def bloques():
                         existente.fecha_creacion = ahora_van.astimezone(_p.utc)
                     except Exception:
                         existente.fecha_creacion = ahora_van
+                    
+                    # LOG
+                    log = LogInventario(
+                        accion='ALTA_INCREMENTO',
+                        bloque_id=existente.id,
+                        descripcion=f"Quantity increased (+{cantidad}) for: {material} {shade} {grosor}mm",
+                        detalles=json.dumps({
+                            'old_qty': old_qty, 
+                            'new_qty': existente.cantidad, 
+                            'added': cantidad,
+                            'material': material,
+                            'shade': shade,
+                            'marca': marca,
+                            'grosor': grosor
+                        }),
+                        usuario='System'
+                    )
+                    db.session.add(log)
                     db.session.commit()
                 else:
                     # Guardar la fecha en UTC pero mostrarla en Vancouver
@@ -108,6 +126,43 @@ def bloques():
                         fecha_creacion=ahora_van.astimezone(pytz.utc)
                     )
                     db.session.add(nuevo)
+                    db.session.commit() # Commit first to get ID
+                    
+                    # LOG
+                    log = LogInventario(
+                        accion='ALTA_NUEVO',
+                        bloque_id=nuevo.id,
+                        descripcion=f"New block added: {material} {shade} {grosor}mm (Qty: {cantidad})",
+                        detalles=json.dumps({
+                            'material': material, 
+                            'shade': shade, 
+                            'grosor': grosor, 
+                            'cantidad': cantidad,
+                            'marca': marca
+                        }),
+                        usuario='System'
+                    )
+                    db.session.add(log)
+                    db.session.commit()
+                    if codigo_referencia:
+                        existente.codigo_referencia = codigo_referencia
+                    existente.cantidad = (existente.cantidad or 0) + cantidad
+                    # Guardar la fecha en UTC para consistencia con la vista
+                    try:
+                        import pytz as _p
+                        existente.fecha_creacion = ahora_van.astimezone(_p.utc)
+                    except Exception:
+                        existente.fecha_creacion = ahora_van
+                    
+                    # LOG
+                    log = LogInventario(
+                        accion='ALTA_INCREMENTO',
+                        bloque_id=existente.id,
+                        descripcion=f"Increased quantity for existing new block type: {material} {shade} {grosor}mm. ({old_qty} -> {existente.cantidad})",
+                        detalles=json.dumps({'old_qty': old_qty, 'new_qty': existente.cantidad, 'added': cantidad}),
+                        usuario='System'
+                    )
+                    db.session.add(log)
                     db.session.commit()
                 return redirect(url_for('bloques.bloques'))
             except ValueError:
@@ -212,6 +267,23 @@ def editar_bloque(bloque_id):
         import pytz
         VANCOUVER_TZ = pytz.timezone('America/Vancouver')
         bloque.fecha_creacion = datetime.now(VANCOUVER_TZ)
+        
+        # LOG
+        detalles_json = json.dumps({
+            'material': request.form['material'],
+            'shade': request.form['shade'],
+            'grosor': int(request.form['grosor']),
+            'marca': request.form.get('marca')
+        })
+        log = LogInventario(
+            accion='EDICION',
+            bloque_id=bloque.id,
+            descripcion=f"Block edited {bloque.id}: {request.form['material']} {request.form['shade']}",
+            detalles=detalles_json,
+            usuario='System'
+        )
+        db.session.add(log)
+        
         db.session.commit()
         return redirect(url_for('bloques.bloques'))
 
@@ -250,6 +322,24 @@ def eliminar_bloque(bloque_id):
         fecha_eliminacion=datetime.now(VANCOUVER_TZ)
     )
     db.session.add(historial)
+    
+    # LOG
+    log = LogInventario(
+        accion='ELIMINACION',
+        bloque_id=bloque.id,
+        descripcion=f"Block deleted (Archived): {bloque.material} {bloque.shade} (ID: {bloque.id})",
+        detalles=json.dumps({
+            'material': bloque.material,
+            'shade': bloque.shade,
+            'marca': bloque.marca,
+            'grosor': bloque.grosor,
+            'cantidad': bloque.cantidad,
+            'codigo_barra': bloque.codigo_barra
+        }),
+        usuario='System'
+    )
+    db.session.add(log)
+    
     db.session.delete(bloque)
     db.session.commit()
     return redirect(url_for('bloques.bloques'))
@@ -307,6 +397,24 @@ def usar_bloque_nuevo(bloque_id):
     if bloque.cantidad > 0:
         bloque.fecha_creacion = datetime.now(VANCOUVER_TZ)
     # else: bloque.cantidad is 0, keep it (do not delete) for reference
+    db.session.commit() # Commit to get ID
+    
+    # LOG
+    log = LogInventario(
+        accion='CONVERSION_USADO',
+        bloque_id=bloque.id, # Link to original New block
+        descripcion=f"Converted New to Used. Used Block ID: {bloque_usado.id}, Code: {bloque_usado.codigo_barra}",
+        detalles=json.dumps({
+            'material': bloque.material,
+            'shade': bloque.shade,
+            'marca': bloque.marca,
+            'grosor': bloque.grosor,
+            'new_used_id': bloque_usado.id, 
+            'new_used_code': bloque_usado.codigo_barra
+        }),
+        usuario='System'
+    )
+    db.session.add(log)
     db.session.commit()
     # Antes: Redirigir a la pantalla de confirmación de código de bloque (sin orden_data)
     # return redirect(url_for('ordenes.confirmar_codigo_bloque', bloque_id=bloque_usado.id))
@@ -357,6 +465,25 @@ def modificar_cantidad(bloque_id):
         import pytz
         VANCOUVER_TZ = pytz.timezone('America/Vancouver')
         bloque.fecha_creacion = datetime.now(VANCOUVER_TZ)
+        bloque.fecha_creacion = datetime.now(VANCOUVER_TZ)
+        
+        # LOG
+        # LOG
+        log = LogInventario(
+            accion='AJUSTE_CANTIDAD',
+            bloque_id=bloque.id,
+            descripcion=f"Quantity increased (+1) for block {bloque.id}. New Qty: {bloque.cantidad}",
+            detalles=json.dumps({
+                'material': bloque.material,
+                'shade': bloque.shade,
+                'marca': bloque.marca,
+                'grosor': bloque.grosor,
+                'new_qty': bloque.cantidad
+            }),
+            usuario='System'
+        )
+        db.session.add(log)
+        
         db.session.commit()
         flash('Cantidad aumentada.', 'success')
     elif accion == '-1' and bloque.cantidad > 1:
@@ -366,6 +493,25 @@ def modificar_cantidad(bloque_id):
         import pytz
         VANCOUVER_TZ = pytz.timezone('America/Vancouver')
         bloque.fecha_creacion = datetime.now(VANCOUVER_TZ)
+        bloque.fecha_creacion = datetime.now(VANCOUVER_TZ)
+        
+        # LOG
+        # LOG
+        log = LogInventario(
+            accion='AJUSTE_CANTIDAD',
+            bloque_id=bloque.id,
+            descripcion=f"Quantity decreased (-1) for block {bloque.id}. New Qty: {bloque.cantidad}",
+            detalles=json.dumps({
+                'material': bloque.material,
+                'shade': bloque.shade,
+                'marca': bloque.marca,
+                'grosor': bloque.grosor,
+                'new_qty': bloque.cantidad
+            }),
+            usuario='System'
+        )
+        db.session.add(log)
+        
         db.session.commit()
         flash('Cantidad reducida.', 'success')
     else:
@@ -406,6 +552,24 @@ def eliminar_bloque_usado(bloque_id):
     else:
         msg = 'Bloque usado eliminado permanentemente.'
 
+    # LOG
+    tipo_elim = 'Permanente' if permanente else 'Archivado'
+    log = LogInventario(
+        accion=f'ELIMINACION_USADO_{tipo_elim.upper()}',
+        bloque_id=bloque.id,
+        descripcion=f"Deleted Used Block ({tipo_elim}): {bloque.codigo_barra} ({bloque.material} {bloque.shade})",
+        detalles=json.dumps({
+            'material': bloque.material,
+            'shade': bloque.shade,
+            'marca': bloque.marca,
+            'grosor': bloque.grosor,
+            'codigo_barra': bloque.codigo_barra,
+            'tipo_eliminacion': tipo_elim
+        }),
+        usuario='System'
+    )
+    db.session.add(log)
+
     db.session.delete(bloque)
     db.session.commit()
     flash(msg, 'success')
@@ -436,6 +600,23 @@ def eliminar_varios_bloques_usados():
                 fecha_eliminacion=datetime.now(VANCOUVER_TZ)
             )
             db.session.add(historial)
+            
+            # LOG
+            log = LogInventario(
+                accion='ELIMINACION_MASIVA',
+                bloque_id=bloque.id,
+                descripcion=f"Mass Delete (Archived): {bloque.codigo_barra}",
+                detalles=json.dumps({
+                    'material': bloque.material,
+                    'shade': bloque.shade,
+                    'marca': bloque.marca,
+                    'grosor': bloque.grosor,
+                    'codigo_barra': bloque.codigo_barra
+                }),
+                usuario='System'
+            )
+            db.session.add(log)
+            
             db.session.delete(bloque)
             count += 1
     db.session.commit()
@@ -534,3 +715,67 @@ def api_vida_bloques():
         values.append(round(avg, 2))
         counts.append(n)
     return jsonify({'labels': labels, 'values': values, 'counts': counts})
+
+@bloques_bp.route('/api/audit-log')
+def api_audit_log():
+    """Devuelve el log de auditoría en formato JSON para DataTables"""
+    from models import LogInventario
+    from flask import jsonify
+    import pytz as _p
+    
+    logs = LogInventario.query.order_by(LogInventario.fecha.desc()).limit(500).all() # Limit 500 for safety, add pagination later if needed
+    
+    data = []
+    tz_van = _p.timezone('America/Vancouver')
+    
+    for log in logs:
+        fecha_str = ''
+        if log.fecha:
+            # Convert UTC/Naive to Vancouver
+            dt = log.fecha
+            if dt.tzinfo is None:
+                dt = dt.replace(tzinfo=_p.UTC)
+            dt_van = dt.astimezone(tz_van)
+            fecha_str = dt_van.strftime('%Y-%m-%d %H:%M')
+        
+        # Parse details to extract material/shade/brand/thickness
+        detalles = {}
+        if log.detalles:
+            try:
+                import json
+                detalles = json.loads(log.detalles)
+            except:
+                detalles = {}
+            
+        data.append({
+            'id': log.id,
+            'fecha': fecha_str,
+            'accion': log.accion,
+            'descripcion': log.descripcion,
+            'usuario': log.usuario,
+            'material': detalles.get('material', ''),
+            'shade': detalles.get('shade', ''),
+            'marca': detalles.get('marca', ''),
+            'grosor': detalles.get('grosor', '')
+        })
+        
+    return jsonify({'data': data})
+
+@bloques_bp.route('/api/audit-log/eliminar/<int:log_id>', methods=['POST'])
+def eliminar_log(log_id):
+    from models import LogInventario
+    log = LogInventario.query.get_or_404(log_id)
+    db.session.delete(log)
+    db.session.commit()
+    return jsonify({'success': True, 'message': 'Registro eliminado'})
+
+@bloques_bp.route('/api/audit-log/editar/<int:log_id>', methods=['POST'])
+def editar_log(log_id):
+    from models import LogInventario
+    log = LogInventario.query.get_or_404(log_id)
+    nueva_desc = request.form.get('descripcion')
+    if nueva_desc:
+        log.descripcion = nueva_desc
+        db.session.commit()
+        return jsonify({'success': True, 'message': 'Registro actualizado'})
+    return jsonify({'success': False, 'message': 'Descripción vacía'}), 400
