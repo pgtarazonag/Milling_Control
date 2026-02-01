@@ -16,7 +16,7 @@ Este archivo gestiona toda la lógica relacionada con la creación y visualizaci
 
 # Importamos los módulos necesarios y los modelos de datos
 from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify
-from models import Orden, Bloque, BloqueHistorial, FresaInstalada, OrdenPendiente, Configuracion
+from models import Orden, Bloque, BloqueHistorial, FresaInstalada, OrdenPendiente, Configuracion, LogInventario
 from extensions import db
 from datetime import datetime, timedelta
 import random
@@ -215,6 +215,17 @@ def ordenes():
                 db.session.add(nuevo_bloque_usado)
                 db.session.flush()  # Para obtener el ID
                 bloque = nuevo_bloque_usado
+                
+                # LOG
+                log = LogInventario(
+                    accion='CONVERSION_USADO',
+                    bloque_id=bloque_nuevo.id, 
+                    descripcion=f"Converted New Block to Used (Order creation). New Used Block ID: {bloque.id}, Code: {bloque.codigo_barra}",
+                    detalles=json.dumps({'new_used_id': bloque.id, 'new_used_code': bloque.codigo_barra}),
+                    usuario='System'
+                )
+                db.session.add(log)
+                
                 # Crear una sola orden con todos los códigos seleccionados
                 nueva_orden = Orden(
                     codigos_caso=','.join(codigos_seleccionados),
@@ -285,14 +296,27 @@ def ordenes():
     # Si el formulario es para crear una orden individual o múltiple (códigos separados por coma)
     if request.method == 'POST' and 'codigo_orden' in request.form:
         codigos_orden = request.form.get('codigo_orden', '').strip()
-        if codigos_orden:
+        try:
+            cantidad_modelos = int(request.form.get('cantidad_modelos', 1))
+        except ValueError:
+            cantidad_modelos = 0
+            
+        material_form = request.form.get('material')
+        shade_form = request.form.get('shade')
+        maquina = request.form.get('maquina')
+        bloque_usado_id = request.form.get('bloque_usado_id')
+        bloque_nuevo_id = request.form.get('bloque_nuevo_id')
+        
+        # Backend Validation
+        if not material_form or not shade_form or not maquina:
+            error = "You must select Material, Shade, and Machine."
+        elif not codigos_orden:
+            error = "You must enter at least one Order Code."
+        elif cantidad_modelos <= 0:
+            error = "Number of units must be greater than zero."
+            
+        if not error and codigos_orden:
             codigos_lista = [c.strip() for c in codigos_orden.split(',') if c.strip()]
-            cantidad_modelos = int(request.form.get('cantidad_modelos', 1))  # Siempre el valor del form
-            material_form = request.form.get('material')
-            shade_form = request.form.get('shade')
-            maquina = request.form.get('maquina')
-            bloque_usado_id = request.form.get('bloque_usado_id')
-            bloque_nuevo_id = request.form.get('bloque_nuevo_id')
             bloque = None
             if bloque_usado_id:
                 bloque = Bloque.query.get(int(bloque_usado_id))
@@ -350,7 +374,18 @@ def ordenes():
                     db.session.add(nuevo_bloque_usado)
                     bloque = nuevo_bloque_usado
                     if bloque_nuevo.cantidad == 0:
-                        db.session.delete(bloque_nuevo)
+                        db.session.delete(bloque_nuevo) # Consider if we want to delete or keep w/ 0 qty (logic says delete if 0 here in this block) -- actually the logic above handles it inside checks. Wait, line 365 says delete.
+                    
+                    # LOG
+                    log = LogInventario(
+                        accion='CONVERSION_USADO',
+                        bloque_id=bloque_nuevo.id, 
+                        descripcion=f"Converted New Block to Used (Single Order). New Used Block ID: {bloque.id}, Code: {bloque.codigo_barra}",
+                        detalles=json.dumps({'new_used_id': bloque.id, 'new_used_code': bloque.codigo_barra}),
+                        usuario='System'
+                    )
+                    db.session.add(log)
+                    
                     db.session.commit()
                     # Redirigir a la pantalla de confirmación de código de bloque
                     import json

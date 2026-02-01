@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="{{ session.get('lang', 'en') }}">
+
 <head>
     <meta charset="UTF-8">
     <title>{% block title %}{{ _('Dashboard') }}{% endblock %}</title>
@@ -14,19 +15,22 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
     <style>
         /* --- RESET Y FIXES PARA LAYOUT --- */
-        body, html {
+        body,
+        html {
             margin: 0;
             padding: 0;
             box-sizing: border-box;
             height: 100%;
             width: 100%;
         }
+
         .container-fluid {
             margin: 0;
             padding: 0;
             padding-top: 56px !important;
             width: 100vw;
         }
+
         /* --- TOPBAR --- */
         .topbar {
             position: fixed;
@@ -38,10 +42,11 @@
             display: flex;
             align-items: center;
             background: #2E3A46;
-            box-shadow: 0 2px 12px rgba(46,58,70,0.14);
+            box-shadow: 0 2px 12px rgba(46, 58, 70, 0.14);
             border-bottom: 3px solid #E14A4C;
             padding: 0 1.2rem;
         }
+
         .topbar .logo {
             color: #fff !important;
             font-weight: 700;
@@ -52,6 +57,7 @@
             gap: 0.5em;
             min-width: 160px;
         }
+
         .topbar .nav-pills {
             flex: 1 1 auto;
             display: flex;
@@ -59,6 +65,7 @@
             align-items: center;
             gap: 1.2em;
         }
+
         .topbar .nav-pills .nav-link {
             color: #fff !important;
             background: transparent !important;
@@ -69,17 +76,22 @@
             padding: 0.35em 1em;
             border: none;
         }
-        .topbar .nav-pills .nav-link.active, .topbar .nav-pills .nav-link:hover {
-            background: rgba(255,255,255,0.18) !important;
+
+        .topbar .nav-pills .nav-link.active,
+        .topbar .nav-pills .nav-link:hover {
+            background: rgba(255, 255, 255, 0.18) !important;
             color: #fff !important;
         }
+
         .topbar .nav-pills .nav-link:focus {
             outline: 2px solid #fff;
         }
+
         .topbar .nav-pills .bi {
             color: #fff !important;
             font-size: 1.25em;
         }
+
         .topbar .topbar-right {
             min-width: 180px;
             text-align: right;
@@ -88,6 +100,7 @@
             font-weight: 500;
             letter-spacing: 0.02em;
         }
+
         /* --- SIDEBAR --- */
         .sidebar {
             position: fixed !important;
@@ -101,9 +114,10 @@
             background: #212b36 !important;
             color: #fff !important;
             border-right: 1px solid #1a2229;
-            box-shadow: 2px 0 8px rgba(21,101,192,0.04);
+            box-shadow: 2px 0 8px rgba(21, 101, 192, 0.04);
             padding-top: 0;
         }
+
         .sidebar .nav-link {
             color: #b0bec5 !important;
             font-size: 1em;
@@ -117,58 +131,157 @@
             transition: background 0.18s, color 0.18s;
             gap: 0;
         }
-        .sidebar .nav-link.active, .sidebar .nav-link:hover {
+
+        .sidebar .nav-link.active,
+        .sidebar .nav-link:hover {
             background: #263238 !important;
             color: #fff !important;
         }
+
         .sidebar .nav-link span.menu-text {
             display: none !important;
         }
+
         .sidebar .bi {
             font-size: 0.95em !important;
         }
+
         /* --- CONTENIDO --- */
         .content {
             margin-left: 60px !important;
             width: calc(100% - 60px) !important;
             transition: margin-left 0.3s, width 0.3s;
         }
+
+        /* --- NAVBAR STATS --- */
+        .navbar-stats {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            background: rgba(255, 255, 255, 0.08);
+            /* Fondo sutil translúcido */
+            border-radius: 8px;
+            padding: 4px 15px;
+            margin-left: 20px;
+            margin-right: auto;
+            /* Empuja el nav hacia la derecha si se quiere, o ajustar según layout */
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            height: 40px;
+        }
+
+        .navbar-stats .stat-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            line-height: 1;
+            min-width: 50px;
+        }
+
+        .navbar-stats .stat-value {
+            color: #fff;
+            font-weight: 700;
+            font-size: 1.1em;
+            letter-spacing: 0.5px;
+        }
+
+        .navbar-stats .stat-label {
+            color: rgba(255, 255, 255, 0.7);
+            font-size: 0.65em;
+            text-transform: uppercase;
+            margin-top: 2px;
+            font-weight: 500;
+        }
+
         @media (max-width: 991px) {
-            .sidebar { display: none !important; }
-            .content { margin-left: 0 !important; width: 100% !important; }
-            .topbar { position: static; width: 100%; }
-            .container-fluid { padding-top: 0 !important; }
+            .sidebar {
+                display: none !important;
+            }
+
+            .content {
+                margin-left: 0 !important;
+                width: 100% !important;
+            }
+
+            .topbar {
+                position: static;
+                width: 100%;
+            }
+
+            .container-fluid {
+                padding-top: 0 !important;
+            }
         }
     </style>
     <!-- Favicon with cache busting -->
     <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='favicon.svg', v=ASSET_VERSION) }}">
-    <link rel="icon" type="image/png" sizes="32x32" href="{{ url_for('static', filename='favicon-32.png', v=ASSET_VERSION) }}">
-    <link rel="icon" type="image/png" sizes="16x16" href="{{ url_for('static', filename='favicon-16.png', v=ASSET_VERSION) }}">
-    <link rel="apple-touch-icon" sizes="180x180" href="{{ url_for('static', filename='apple-touch-icon.png', v=ASSET_VERSION) }}">
+    <link rel="icon" type="image/png" sizes="32x32"
+        href="{{ url_for('static', filename='favicon-32.png', v=ASSET_VERSION) }}">
+    <link rel="icon" type="image/png" sizes="16x16"
+        href="{{ url_for('static', filename='favicon-16.png', v=ASSET_VERSION) }}">
+    <link rel="apple-touch-icon" sizes="180x180"
+        href="{{ url_for('static', filename='apple-touch-icon.png', v=ASSET_VERSION) }}">
     <link rel="mask-icon" href="{{ url_for('static', filename='favicon.svg', v=ASSET_VERSION) }}" color="#E14A4C">
     <link rel="shortcut icon" href="{{ url_for('static', filename='favicon-32.png', v=ASSET_VERSION) }}">
     {% block head %}{% endblock %}
 </head>
+
 <body>
-<!-- NAVBAR ELIMINADA -->
+    <!-- NAVBAR ELIMINADA -->
     <div class="sidebar-proximity-zone" tabindex="-1"></div>
     <div class="topbar">
         <span class="logo">
-          <img src="{{ url_for('static', filename='favicon.svg', v=ASSET_VERSION) }}" alt="Shanto Dental" style="height:1.25em;width:auto;display:inline-block;vertical-align:middle;"> 
-          Milling Shanto
+            <img src="{{ url_for('static', filename='favicon.svg', v=ASSET_VERSION) }}" alt="Shanto Dental"
+                style="height:1.25em;width:auto;display:inline-block;vertical-align:middle;">
+            Milling Shanto
         </span>
+
+        <!-- Daily Stats in Navbar -->
+        <div class="navbar-stats d-none d-lg-flex" id="navbar-stats-container" title="{{ _('Daily Summary') }}">
+            <div class="stat-item">
+                <span class="stat-value" id="nav-stat-ordenes">-</span>
+                <span class="stat-label">{{ _('Orders') }}</span>
+            </div>
+            <div class="vr bg-secondary opacity-25"></div>
+            <div class="stat-item">
+                <span class="stat-value" id="nav-stat-casos">-</span>
+                <span class="stat-label">{{ _('Cases') }}</span>
+            </div>
+            <div class="vr bg-secondary opacity-25"></div>
+            <div class="stat-item">
+                <span class="stat-value" id="nav-stat-modelos">-</span>
+                <span class="stat-label">{{ _('Units') }}</span>
+            </div>
+        </div>
+
         <nav style="flex:1;display:flex;justify-content:center;align-items:center;">
-                                <ul class="nav nav-pills">
-                                    <li class="nav-item"><a class="nav-link {% if request.endpoint == 'home' %}active{% endif %}" href="{{ url_for('home') }}"><i class="bi bi-house"></i> <span class="menu-text">{{ _('Home') }}</span></a></li>
-                                    <li class="nav-item"><a class="nav-link {% if request.endpoint == 'ordenes.ordenes' %}active{% endif %}" href="{{ url_for('ordenes.ordenes') }}"><i class="bi bi-clipboard-check"></i> <span class="menu-text">{{ _('Orders') }}</span></a></li>
-                                    <li class="nav-item"><a class="nav-link {% if request.endpoint == 'bloques.bloques' %}active{% endif %}" href="{{ url_for('bloques.bloques') }}"><i class="bi bi-box"></i> <span class="menu-text">{{ _('Blocks') }}</span></a></li>
-                                    <li class="nav-item"><a class="nav-link {% if request.endpoint == 'fresas.fresas' %}active{% endif %}" href="{{ url_for('fresas.fresas') }}"><i class="bi bi-gear"></i> <span class="menu-text">{{ _('Milling') }}</span></a></li>
-                                    <li class="nav-item"><a class="nav-link {% if request.endpoint == 'mantenimiento.mantenimiento' %}active{% endif %}" href="{{ url_for('mantenimiento.mantenimiento') }}"><i class="bi bi-tools"></i> <span class="menu-text">{{ _('Maintenance') }}</span></a></li>
-                                    <li class="nav-item"><a class="nav-link {% if request.endpoint == 'historial.historial_bloques' %}active{% endif %}" href="{{ url_for('historial.historial_bloques') }}"><i class="bi bi-clock-history"></i> <span class="menu-text">{{ _('History') }}</span></a></li>
-                                    <li class="nav-item"><a class="nav-link {% if request.endpoint == 'configuracion.configuracion' %}active{% endif %}" href="{{ url_for('configuracion.configuracion') }}"><i class="bi bi-sliders"></i> <span class="menu-text">{{ _('Settings') }}</span></a></li>
-                                </ul>
+            <ul class="nav nav-pills">
+                <li class="nav-item"><a class="nav-link {% if request.endpoint == 'home' %}active{% endif %}"
+                        href="{{ url_for('home') }}"><i class="bi bi-house"></i> <span class="menu-text">{{ _('Home')
+                            }}</span></a></li>
+                <li class="nav-item"><a class="nav-link {% if request.endpoint == 'ordenes.ordenes' %}active{% endif %}"
+                        href="{{ url_for('ordenes.ordenes') }}"><i class="bi bi-clipboard-check"></i> <span
+                            class="menu-text">{{ _('Orders') }}</span></a></li>
+                <li class="nav-item"><a class="nav-link {% if request.endpoint == 'bloques.bloques' %}active{% endif %}"
+                        href="{{ url_for('bloques.bloques') }}"><i class="bi bi-box"></i> <span class="menu-text">{{
+                            _('Blocks') }}</span></a></li>
+                <li class="nav-item"><a class="nav-link {% if request.endpoint == 'fresas.fresas' %}active{% endif %}"
+                        href="{{ url_for('fresas.fresas') }}"><i class="bi bi-gear"></i> <span class="menu-text">{{
+                            _('Milling') }}</span></a></li>
+                <li class="nav-item"><a
+                        class="nav-link {% if request.endpoint == 'mantenimiento.mantenimiento' %}active{% endif %}"
+                        href="{{ url_for('mantenimiento.mantenimiento') }}"><i class="bi bi-tools"></i> <span
+                            class="menu-text">{{ _('Maintenance') }}</span></a></li>
+                <li class="nav-item"><a
+                        class="nav-link {% if request.endpoint == 'historial.historial_bloques' %}active{% endif %}"
+                        href="{{ url_for('historial.historial_bloques') }}"><i class="bi bi-clock-history"></i> <span
+                            class="menu-text">{{ _('History') }}</span></a></li>
+                <li class="nav-item"><a
+                        class="nav-link {% if request.endpoint == 'configuracion.configuracion' %}active{% endif %}"
+                        href="{{ url_for('configuracion.configuracion') }}"><i class="bi bi-sliders"></i> <span
+                            class="menu-text">{{ _('Settings') }}</span></a></li>
+            </ul>
         </nav>
-        
+
     </div>
     <div class="container-fluid">
         <div class="row">
@@ -176,37 +289,44 @@
             <nav class="sidebar" tabindex="0">
                 <ul class="nav flex-column">
                     <li class="nav-item">
-                        <a class="nav-link {% if request.endpoint == 'home' %}active{% endif %}" href="{{ url_for('home') }}">
+                        <a class="nav-link {% if request.endpoint == 'home' %}active{% endif %}"
+                            href="{{ url_for('home') }}">
                             <i class="bi bi-house-door"></i> <span class="menu-text">{{ _('Home') }}</span>
                         </a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link {% if request.endpoint == 'ordenes.ordenes' %}active{% endif %}" href="{{ url_for('ordenes.ordenes') }}">
+                        <a class="nav-link {% if request.endpoint == 'ordenes.ordenes' %}active{% endif %}"
+                            href="{{ url_for('ordenes.ordenes') }}">
                             <i class="bi bi-list-check"></i> <span class="menu-text">{{ _('Orders') }}</span>
                         </a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link {% if request.endpoint == 'bloques.bloques' %}active{% endif %}" href="{{ url_for('bloques.bloques') }}">
+                        <a class="nav-link {% if request.endpoint == 'bloques.bloques' %}active{% endif %}"
+                            href="{{ url_for('bloques.bloques') }}">
                             <i class="bi bi-box"></i> <span class="menu-text">{{ _('Blocks') }}</span>
                         </a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link {% if request.endpoint == 'fresas.fresas' %}active{% endif %}" href="{{ url_for('fresas.fresas') }}">
+                        <a class="nav-link {% if request.endpoint == 'fresas.fresas' %}active{% endif %}"
+                            href="{{ url_for('fresas.fresas') }}">
                             <i class="bi bi-tools"></i> <span class="menu-text">{{ _('Milling') }}</span>
                         </a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link {% if request.endpoint == 'mantenimiento.mantenimiento' %}active{% endif %}" href="{{ url_for('mantenimiento.mantenimiento') }}">
+                        <a class="nav-link {% if request.endpoint == 'mantenimiento.mantenimiento' %}active{% endif %}"
+                            href="{{ url_for('mantenimiento.mantenimiento') }}">
                             <i class="bi bi-gear"></i> <span class="menu-text">{{ _('Maintenance') }}</span>
                         </a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link {% if request.endpoint == 'historial.historial_bloques' %}active{% endif %}" href="{{ url_for('historial.historial_bloques') }}">
+                        <a class="nav-link {% if request.endpoint == 'historial.historial_bloques' %}active{% endif %}"
+                            href="{{ url_for('historial.historial_bloques') }}">
                             <i class="bi bi-clock-history"></i> <span class="menu-text">{{ _('History') }}</span>
                         </a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link {% if request.endpoint == 'configuracion.configuracion' %}active{% endif %}" href="{{ url_for('configuracion.configuracion') }}">
+                        <a class="nav-link {% if request.endpoint == 'configuracion.configuracion' %}active{% endif %}"
+                            href="{{ url_for('configuracion.configuracion') }}">
                             <i class="bi bi-sliders"></i> <span class="menu-text">{{ _('Settings') }}</span>
                         </a>
                     </li>
@@ -220,11 +340,15 @@
     </div>
     <footer class="footer">
         <div>
-            <span>Fresado Pro &copy; {{ 2025 }} | {{ _('Developed for dental labs') }} | <i class="bi bi-github"></i> <a href="https://github.com/" target="_blank" style="color:#b0b3b8;text-decoration:underline;">GitHub</a></span>
+            <span>Fresado Pro &copy; {{ 2025 }} | {{ _('Developed for dental labs') }} | <i class="bi bi-github"></i> <a
+                    href="https://github.com/" target="_blank"
+                    style="color:#b0b3b8;text-decoration:underline;">GitHub</a></span>
         </div>
-        <div style="font-size:0.93em; margin-top:0.3em;">{{ _('Optimized for data analysis, productivity, and user experience.') }}</div>
+        <div style="font-size:0.93em; margin-top:0.3em;">{{ _('Optimized for data analysis, productivity, and user
+            experience.') }}</div>
         <div style="margin-top:0.8rem;">
-          <img src="{{ url_for('static', filename='shanto-wordmark.svg', v=ASSET_VERSION) }}" alt="Shanto Dental Laboratory" style="max-width:320px; width:60%; height:auto; opacity:0.9;">
+            <img src="{{ url_for('static', filename='shanto-wordmark.svg', v=ASSET_VERSION) }}"
+                alt="Shanto Dental Laboratory" style="max-width:320px; width:60%; height:auto; opacity:0.9;">
         </div>
     </footer>
     <!-- Bootstrap JS -->
@@ -237,27 +361,44 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
     <script src="/static/chart.min.js"></script>
     <script>
-      // Animación de entrada para tablas y cards
-      $(document).ready(function(){
-        $(".table, .card, .ordenes-card, .pendientes-table").css({opacity:0, transform:'translateY(30px)'}).animate({opacity:1, transform:'none'}, 700);
-      });
+        // Animación de entrada para tablas y cards
+        $(document).ready(function () {
+            $(".table, .card, .ordenes-card, .pendientes-table").css({ opacity: 0, transform: 'translateY(30px)' }).animate({ opacity: 1, transform: 'none' }, 700);
+        });
     </script>
     <script>
-      // DataTables language URLs (local para evitar CORS)
-      var datatablesLangUrl = {
-        es: '/static/es-ES.json',
-        en: '/static/en-GB.json'
-      };
-      var currentLang = "{{ session.get('lang', 'es') }}";
-      window.getDataTablesLangUrl = function() {
-        return datatablesLangUrl[currentLang] || datatablesLangUrl['es'];
-      };
+        // DataTables language URLs (local para evitar CORS)
+        var datatablesLangUrl = {
+            es: '/static/es-ES.json',
+            en: '/static/en-GB.json'
+        };
+        var currentLang = "{{ session.get('lang', 'es') }}";
+        window.getDataTablesLangUrl = function () {
+            return datatablesLangUrl[currentLang] || datatablesLangUrl['es'];
+        };
     </script>
     <script>
-    // --- Sidebar SIEMPRE colapsada: desactiva cualquier despliegue ---
-    // Elimina cualquier lógica de hover/despliegue
-    // No hacer nada aquí
+        // --- Sidebar SIEMPRE colapsada: desactiva cualquier despliegue ---
+        // Elimina cualquier lógica de hover/despliegue
+        // No hacer nada aquí
+    </script>
+    <script>
+        // Actualizar stats del Navbar
+        $(document).ready(function () {
+            if ($('#navbar-stats-container').length > 0) {
+                $.getJSON('/ordenes/api/resumen-dia', function (data) {
+                    if (data) {
+                        $('#nav-stat-ordenes').text(data.ordenes || 0);
+                        $('#nav-stat-casos').text(data.casos || 0);
+                        $('#nav-stat-modelos').text(data.modelos || 0);
+                    }
+                }).fail(function () {
+                    console.error('Error fetching navbar stats');
+                });
+            }
+        });
     </script>
     {% block scripts %}{% endblock %}
 </body>
+
 </html>

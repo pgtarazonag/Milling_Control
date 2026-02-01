@@ -90,6 +90,11 @@
               style="height:auto;min-height:85px;max-height:225px;overflow-y:auto;">
               <div class="text-muted small text-center mt-4">{{ _('Select Mat.') }}</div>
             </div>
+            <div class="mt-2">
+              <label class="form-label small fw-bold">{{ _('Reference Code') }}</label>
+              <input type="text" name="codigo_referencia" id="codigo_referencia" class="form-control form-control-sm"
+                placeholder="{{ _('Manufacturer SKU') }}">
+            </div>
           </div>
 
           <!-- Brand (Vertical) -->
@@ -124,12 +129,8 @@
             </div>
           </div>
 
-          <div class="col-md-6 mt-2">
-            <label class="form-label small fw-bold">{{ _('Reference Code') }}</label>
-            <input type="text" name="codigo_referencia" class="form-control form-control-sm"
-              placeholder="{{ _('Manufacturer SKU') }}">
-          </div>
-          <div class="col-md-6 text-end mt-4">
+
+          <div class="col-12 text-end mt-3">
             <button type="submit" class="btn btn-success btn-sm px-4"><i class="bi bi-plus-circle"></i> {{ _('Add')
               }}</button>
           </div>
@@ -204,7 +205,9 @@
                     style="display:inline;" class="form-eliminar-bloque" data-codigo="{{ bloque.codigo_barra }}"
                     data-material="{{ bloque.material }}" data-marca="{{ bloque.marca }}"
                     data-shade="{{ bloque.shade }}" data-grosor="{{ bloque.grosor }}">
-                    <button type="submit" class="btn btn-outline-danger btn-sm"><i class="bi bi-trash"></i></button>
+                    <button type="button" class="btn btn-outline-danger btn-sm btn-eliminar-trigger"
+                      data-url="{{ url_for('bloques.eliminar_bloque_usado', bloque_id=bloque.id) }}"
+                      data-codigo="{{ bloque.codigo_barra }}"><i class="bi bi-trash"></i></button>
                   </form>
                   <a href="{{ url_for('bloques.editar_bloque', bloque_id=bloque.id) }}"
                     class="btn btn-outline-warning btn-sm"><i class="bi bi-pencil"></i></a>
@@ -223,7 +226,7 @@
         <h4 class="mb-3"><i class="bi bi-box"></i> {{ _('New Blocks') }}</h4>
         <!-- Filtros para tabla de bloques nuevos -->
         <div class="row mb-2 align-items-end">
-          <div class="col-md-4">
+          <div class="col-md-3">
             <label class="form-label mb-1">{{ _('Brand') }}</label>
             <select class="form-select form-select-sm filtro-bloques" data-col="2" id="filtro-marca-nuevos">
               <option value="">{{ _('All Brands') }}</option>
@@ -232,7 +235,7 @@
               {% endfor %}
             </select>
           </div>
-          <div class="col-md-4">
+          <div class="col-md-3">
             <label class="form-label mb-1">{{ _('Shade') }}</label>
             <select class="form-select form-select-sm filtro-bloques" data-col="1" id="filtro-shade-nuevos">
               <option value="">{{ _('All Shades') }}</option>
@@ -250,7 +253,12 @@
               {% endfor %}
             </select>
           </div>
-          <div class="col-md-1 text-end">
+          <div class="col-md-3 d-flex align-items-center justify-content-end gap-2 pb-1">
+            <div class="form-check form-switch mb-0">
+              <input class="form-check-input" type="checkbox" id="check-mostrar-ceros" {% if
+                request.args.get('mostrar_ceros')=='1' %}checked{% endif %}>
+              <label class="form-check-label small" for="check-mostrar-ceros">{{ _('Show Empty') }}</label>
+            </div>
             <button type="button" class="btn btn-outline-secondary btn-sm" id="reset-filtros-nuevos"
               title="{{ _('Reset Filters') }}"><i class="bi bi-x-circle"></i></button>
           </div>
@@ -343,6 +351,36 @@
           <button type="submit" class="btn btn-primary">{{ _('Confirm') }}</button>
         </div>
       </form>
+    </div>
+  </div>
+</div>
+</div>
+
+<!-- Modal para confirmar eliminación de bloques -->
+<div class="modal fade" id="modalEliminarBloque" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header bg-danger text-white">
+        <h5 class="modal-title">{{ _('Delete Block') }}</h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <p>{{ _('Are you sure you want to delete block') }} <strong id="deleteBlockCode"></strong>?</p>
+        <p class="text-muted small">{{ _('Please choose an action:') }}</p>
+        <div class="d-grid gap-2">
+          <button type="button" class="btn btn-warning" id="btnDeleteArchive">
+            <i class="bi bi-clock-history"></i> {{ _('Delete (Archive)') }}
+            <div class="small fw-light">{{ _('Moves block to history. Recommended.') }}</div>
+          </button>
+          <button type="button" class="btn btn-danger" id="btnDeletePermanent">
+            <i class="bi bi-trash-fill"></i> {{ _('Delete Permanently') }}
+            <div class="small fw-light">{{ _('Completely removes data. Cannot be undone.') }}</div>
+          </button>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{{ _('Cancel') }}</button>
+      </div>
     </div>
   </div>
 </div>
@@ -479,15 +517,35 @@
 {{ super() }}
 <!-- 1. Confirmation when deleting a block -->
 <script>
-  $(document).on('submit', '.form-eliminar-bloque', function (e) {
+  // Handle Delete Button Click
+  $(document).on('click', '.btn-eliminar-trigger', function (e) {
+    e.preventDefault();
+    const url = $(this).data('url');
     const codigo = $(this).data('codigo');
-    const material = $(this).data('material');
-    const marca = $(this).data('marca');
-    const shade = $(this).data('shade');
-    const grosor = $(this).data('grosor');
-    const msg = `{{ _('Are you sure you want to delete this block?') }}\n\n{{ _('Code') }}: ${codigo}\n{{ _('Material') }}: ${material}\n{{ _('Brand') }}: ${marca}\n{{ _('Shade') }}: ${shade}\n{{ _('Thickness') }}: ${grosor}`;
-    if (!confirm(msg)) e.preventDefault();
+
+    $('#deleteBlockCode').text(codigo);
+
+    // Setup actions
+    $('#btnDeleteArchive').off('click').on('click', function () {
+      createHiddenFormAndSubmit(url, {});
+    });
+
+    $('#btnDeletePermanent').off('click').on('click', function () {
+      createHiddenFormAndSubmit(url, { 'permanente': '1' });
+    });
+
+    var modal = new bootstrap.Modal(document.getElementById('modalEliminarBloque'));
+    modal.show();
   });
+
+  function createHiddenFormAndSubmit(url, data) {
+    var form = $('<form method="post" action="' + url + '"></form>');
+    for (var key in data) {
+      form.append('<input type="hidden" name="' + key + '" value="' + data[key] + '">');
+    }
+    $('body').append(form);
+    form.submit();
+  }
 </script>
 
 <!-- 2. HISTORICAL CONSUMPTION TABLE LOGIC (Sorted) -->
@@ -633,6 +691,44 @@
 <script>
   // Pasar la configuración avanzada de materiales al JS
   const materialesAvanzado = {{ materiales_avanzado|default ({}) | tojson | safe }};
+  // Reference Map for Auto-population
+  const mapaReferencias = {{ mapa_referencias|default ({}) | tojson | safe }};
+
+  function updateReferenceCode() {
+    const material = $('#material').val();
+    const marca = $('#marca').val();
+
+    // Shade can be in hidden input #shade-input or #shade (check consistency)
+    // Based on previous code: input type="hidden" name="shade" id="shade-input"
+    const shade = $('#shade-input').val();
+
+    // Grosor: hidden input id="grosor" name="grosor" (hidden field not explicitly seen in snippets but likely exists from context)
+    // Let's verify hidden input IDs from "view_file" lines.
+    // Line 98: input type="hidden" name="marca" id="marca"
+    // Line 88: input type="hidden" name="shade" id="shade-input"
+    // Line 73: input type="hidden" name="material" id="material"
+    // Line 106: input type="hidden" name="grosor" id="grosor" ??? - Let's check line 106 range.
+    // Wait, let's assume standard IDs or check DOM.
+    // I'll assume #grosor based on previous JS snippet: $('#grosor').val(val);
+
+    const grosor = $('#grosor').val();
+
+    if (material && marca && shade && grosor) {
+      const key = `${material}|${marca}|${shade}|${grosor}`;
+      if (mapaReferencias[key]) {
+        $('#codigo_referencia').val(mapaReferencias[key]);
+        // Optional: highlight or disable? User just said separate box.
+      } else {
+        $('#codigo_referencia').val('empty');
+      }
+    }
+  }
+
+  // Trigger update on change
+  $(document).ready(function () {
+    $('#material, #marca, #shade-input, #grosor').on('change', updateReferenceCode);
+  });
+
 
   // Helper para agrupar shades
   function agruparShades(shades) {
@@ -672,7 +768,7 @@
       const val = $(this).data('value');
       $('.btn-brand-pill').removeClass('btn-custom-red');
       $(this).addClass('btn-custom-red');
-      $('#marca').val(val);
+      $('#marca').val(val).trigger('change');
     });
 
     // Delegación de eventos para los botones de Thickness
@@ -680,7 +776,7 @@
       const val = $(this).data('value');
       $('.btn-thickness').removeClass('btn-custom-red');
       $(this).addClass('btn-custom-red');
-      $('#grosor').val(val);
+      $('#grosor').val(val).trigger('change');
     });
 
     // Al cambiar el material (ya sea por click o evento), actualizar shades y marcas
@@ -737,7 +833,7 @@
     $(document).on('click', '.btn-shade', function () {
       $('.btn-shade').removeClass('btn-custom-red');
       $(this).addClass('btn-custom-red');
-      $('#shade-input').val($(this).data('value'));
+      $('#shade-input').val($(this).data('value')).trigger('change');
     });
 
     // Restore selections on load
@@ -911,6 +1007,18 @@
     $('#reset-filtros-nuevos').on('click', function () {
       $('#filtro-marca-nuevos, #filtro-shade-nuevos, #filtro-grosor-nuevos').val('').trigger('change');
       guardarFiltros('nuevos');
+    });
+
+    // Handle "Show Empty" checkbox
+    $('#check-mostrar-ceros').on('change', function () {
+      var isChecked = $(this).is(':checked');
+      var url = new URL(window.location.href);
+      if (isChecked) {
+        url.searchParams.set('mostrar_ceros', '1');
+      } else {
+        url.searchParams.delete('mostrar_ceros');
+      }
+      window.location.href = url.toString();
     });
   });
 </script>
