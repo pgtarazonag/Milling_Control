@@ -26,7 +26,7 @@
             <div class="d-flex flex-nowrap gap-2 align-items-start">
               <div class="col-auto">
                 <label class="form-label small fw-bold">{{ _('Material') }}</label>
-                <input type="hidden" name="material" id="material" required
+                <input type="hidden" name="material" id="material"
                   value="{{ request.form.get('material', material) or request.args.get('material', 'Zirconia') }}">
                 <div id="material-container" class="d-flex flex-column gap-1 border rounded p-2 bg-light"
                   style="height:auto;min-height:120px;max-height:300px;overflow-y:auto;width:fit-content;">
@@ -42,7 +42,7 @@
               </div>
               <div class="col-auto">
                 <label class="form-label small fw-bold">{{ _('Shade') }}</label>
-                <input type="hidden" name="shade" id="shade" required
+                <input type="hidden" name="shade" id="shade"
                   value="{{ request.form.get('shade', shade) or request.args.get('shade', '') }}">
                 <div id="shade-container" class="border rounded p-2 bg-light"
                   style="height:auto;min-height:120px;max-height:300px;overflow-y:auto;min-width:200px;">
@@ -51,7 +51,7 @@
               </div>
               <div class="col-auto">
                 <label class="form-label small fw-bold">{{ _('Machine') }}</label>
-                <input type="hidden" name="maquina" id="maquina" required
+                <input type="hidden" name="maquina" id="maquina"
                   value="{{ request.form.get('maquina', maquina) or '' }}">
                 <div id="maquina-container" class="d-flex flex-column gap-1 border rounded p-2 bg-light"
                   style="height:auto;min-height:120px;max-height:300px;overflow-y:auto;width:fit-content;">
