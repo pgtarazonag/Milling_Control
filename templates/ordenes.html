@@ -492,10 +492,8 @@
         // Update Hidden Input and Trigger Change (which loads shades via AJAX)
         $('#material').val(mat).trigger('change');
 
-        // After shades load, submit form to filter blocks
-        setTimeout(function () {
-          $('#shade').trigger('change'); // This will submit the form
-        }, 500);
+        // Do NOT auto-submit form - let user select shade first
+        // The form will submit when user clicks a shade button
       }
     });
 
@@ -640,6 +638,13 @@
   $(document).ready(function () {
     // --- Filtro dinámico de bloques por Shade (Material now handled via AJAX) ---
     $('#shade').on('change', function () {
+      // Only submit if shade actually has a value
+      var shadeValue = $(this).val();
+      if (!shadeValue || shadeValue.trim() === '') {
+        console.log('Shade is empty, not submitting form');
+        return;
+      }
+
       var codigoOrdenInput = $("input[name='codigo_orden']");
       var modelosPorCasoInput = $("input[name='modelos_por_caso']");
       var cantidadModelosInput = $("input[name='cantidad_modelos']");
