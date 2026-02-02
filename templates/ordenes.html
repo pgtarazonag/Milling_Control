@@ -118,8 +118,8 @@
                       style="width:120px;">
                   </div>
                   <div>
-                    <button type="submit" id="btn-add-order-submit" class="btn btn-success"
-                      style="padding-top:12px;padding-bottom:12px;">
+                    <button type="submit" id="btn-add-order-submit" name="btn_add_order" value="1"
+                      class="btn btn-success" style="padding-top:12px;padding-bottom:12px;">
                       <i class="bi bi-plus-circle"></i> {{ _('Add') }}
                     </button>
                   </div>
@@ -130,12 +130,11 @@
         </form>
         <script>
           $(function () {
-            // Set is_creation to 1 ONLY when clicking the manual Add button
-            $('#btn-add-order-submit').on('click', function () {
-              $('#is_creation').val('1');
-            });
-
             $('#orden-form').off('submit').on('submit', function (e) {
+              // Manual submit (Button or Enter) -> set creation intent
+              $('#is_creation').val('1');
+              console.log('Form submission detected as CREATION. is_creation=1');
+
               var material = $('#material').val();
               var shade = $('#shade').val();
               var maquina = $('#maquina').val();
@@ -144,36 +143,45 @@
               var codigo = $('#codigo-orden-input').val();
               var cantidad = $('[name="cantidad_modelos"]').val();
 
-              // If is_creation is 0, it means it's a filter submission, allow it
-              if ($('#is_creation').val() !== '1') return true;
-
               if (!material) {
                 alert("{{ _('Please select a Material.') }}");
+                $('#is_creation').val('0');
+                console.log('Validation failed: Material not selected. is_creation=0');
                 e.preventDefault();
                 return false;
               }
               if (!shade) {
                 alert("{{ _('Please select a Shade.') }}");
+                $('#is_creation').val('0');
+                console.log('Validation failed: Shade not selected. is_creation=0');
                 e.preventDefault();
                 return false;
               }
               if (!maquina) {
                 alert("{{ _('Please select a Machine.') }}");
+                $('#is_creation').val('0');
+                console.log('Validation failed: Machine not selected. is_creation=0');
                 e.preventDefault();
                 return false;
               }
               if (!usado && !nuevo) {
                 alert("{{ _('You must select a block (used or new) to continue.') }}");
+                $('#is_creation').val('0');
+                console.log('Validation failed: No block selected. is_creation=0');
                 e.preventDefault();
                 return false;
               }
               if (!codigo || !codigo.trim()) {
                 alert("{{ _('Please enter at least one Order Code.') }}");
+                $('#is_creation').val('0');
+                console.log('Validation failed: Order Code not entered. is_creation=0');
                 e.preventDefault();
                 return false;
               }
               if (!cantidad || parseInt(cantidad) <= 0) {
                 alert("{{ _('Number of Units must be greater than zero.') }}");
+                $('#is_creation').val('0');
+                console.log('Validation failed: Number of Units invalid. is_creation=0');
                 e.preventDefault();
                 return false;
               }
@@ -674,6 +682,7 @@
       $(".modelos-input").each(function () { modelos.push($(this).val()); });
       localStorage.setItem('ordenes_modelos_inputs', modelos.join(","));
       var form = $('#orden-form');
+      $('#is_creation').val('0'); // Ensure it's 0 for filtering
       form.attr('method', 'post');
       // Use native submit to bypass jQuery validation handlers for filtering
       if (form.length > 0) form[0].submit();

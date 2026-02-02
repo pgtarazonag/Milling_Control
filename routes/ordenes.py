@@ -149,7 +149,7 @@ def ordenes():
         )
 
     # 1. Capture Form Intent and data
-    is_creation = request.method == 'POST' and request.form.get('is_creation') == '1'
+    is_creation = request.method == 'POST' and (request.form.get('is_creation') == '1' or 'btn_add_order' in request.form)
     codigos_seleccionados = request.form.getlist('codigos_seleccionados')
 
     # 2. Handle Group Order Creation (from checkboxes)
