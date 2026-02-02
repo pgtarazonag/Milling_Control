@@ -21,6 +21,7 @@
             value="{{ request.form.get('modelos_por_caso', '') }}">
           <input type="hidden" name="pendientes_seleccionados" id="pendientes-seleccionados-hidden"
             value="{{ request.form.get('pendientes_seleccionados', pendientes_seleccionados|default('')) }}">
+          <input type="hidden" name="is_creation" id="is_creation" value="0">
           <!-- Material, Shade, Machine, New Blocks y Used Blocks juntos sin espacio -->
           <div class="col-12">
             <div class="d-flex flex-nowrap gap-2 align-items-start">
@@ -103,8 +104,8 @@
                   </div>
                   <div>
                     <label class="form-label small fw-bold">{{ _('Order Codes') }}</label>
-                    <input type="text" name="codigo_orden" class="form-control" required
-                      placeholder="ABC123, DEF456, GHI789" id="codigo-orden-input" style="width:456px;">
+                    <input type="text" name="codigo_orden" class="form-control" placeholder="ABC123, DEF456, GHI789"
+                      id="codigo-orden-input" style="width:456px;">
                     <small class="text-muted">{{ _('Enter one or more case codes separated by commas.') }}</small>
                   </div>
                 </div>
@@ -117,7 +118,7 @@
                       style="width:120px;">
                   </div>
                   <div>
-                    <button type="submit" name="btn_add_order" value="1" class="btn btn-success"
+                    <button type="submit" id="btn-add-order-submit" class="btn btn-success"
                       style="padding-top:12px;padding-bottom:12px;">
                       <i class="bi bi-plus-circle"></i> {{ _('Add') }}
                     </button>
@@ -128,8 +129,12 @@
           </div>
         </form>
         <script>
-          // Validar solo al submit, no al cambiar selects
           $(function () {
+            // Set is_creation to 1 ONLY when clicking the manual Add button
+            $('#btn-add-order-submit').on('click', function () {
+              $('#is_creation').val('1');
+            });
+
             $('#orden-form').off('submit').on('submit', function (e) {
               var material = $('#material').val();
               var shade = $('#shade').val();
@@ -138,6 +143,9 @@
               var nuevo = $('[name="bloque_nuevo_id"]').val();
               var codigo = $('#codigo-orden-input').val();
               var cantidad = $('[name="cantidad_modelos"]').val();
+
+              // If is_creation is 0, it means it's a filter submission, allow it
+              if ($('#is_creation').val() !== '1') return true;
 
               if (!material) {
                 alert("{{ _('Please select a Material.') }}");
@@ -172,6 +180,7 @@
 
               if (nuevo && !usado) {
                 e.preventDefault();
+                $('#is_creation').val('1');
                 var formData = $(this).serialize();
                 $.post(window.location.pathname, formData, function (resp) {
                   if (resp && resp.status === 'ok' && resp.bloque_usado) {

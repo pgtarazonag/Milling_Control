@@ -148,10 +148,12 @@ def ordenes():
             request=request
         )
 
-    # Si el formulario viene de la selección de casos pendientes (fresado grupal)
-    # Solo procesar fresado grupal si se presionó el botón de agregar
+    # 1. Capture Form Intent and data
+    is_creation = request.method == 'POST' and request.form.get('is_creation') == '1'
     codigos_seleccionados = request.form.getlist('codigos_seleccionados')
-    if codigos_seleccionados and request.method == 'POST' and 'material' in request.form and 'btn_add_order' in request.form:
+
+    # 2. Handle Group Order Creation (from checkboxes)
+    if is_creation and codigos_seleccionados:
         material_form = request.form.get('material')
         shade_form = request.form.get('shade')
         cantidad_modelos = int(request.form.get('cantidad_modelos', 1))
@@ -253,48 +255,16 @@ def ordenes():
                     'shade_form': shade_form
                 })
                 return redirect(url_for('ordenes.confirmar_codigo_bloque', bloque_id=bloque.id, orden_data=orden_data))
-        elif bloque_usado_id:
-            bloque = Bloque.query.get(int(bloque_usado_id))
-            if bloque:
-                bloque.modelos_fresados += cantidad_modelos * len(codigos_seleccionados)
-                codigos = bloque.get_codigos_orden_fresados()
-                codigos.extend(codigos_seleccionados)
-                bloque.codigos_orden_fresados = ','.join(codigos)
-                # Creamos una orden para cada código seleccionado
-                for codigo_orden in codigos_seleccionados:
-                    nueva_orden = Orden(
-                        codigos_caso=codigo_orden,
-                        material=bloque.material,
-                        marca=bloque.marca if hasattr(bloque, 'marca') else None,
-                        shade=bloque.shade,
-                        codigo_barra=bloque.codigo_barra,
-                        maquina=maquina,
-                        cantidad_modelos=cantidad_modelos,
-                        fecha_creacion=datetime.now(VANCOUVER_TZ)
-                    )
-                    db.session.add(nueva_orden)
-                    pendiente = OrdenPendiente.query.filter_by(codigo_orden=codigo_orden).first()
-                    if pendiente:
-                        db.session.delete(pendiente)
-                # Actualizamos la fresa instalada solo si maquina está definida
-                if maquina:
-                    fresa_instalada = FresaInstalada.query.filter(
-                        FresaInstalada.maquina == maquina,
-                        FresaInstalada.materiales.like(f"%{bloque.material}%")
-                    ).order_by(FresaInstalada.fecha_instalacion.desc()).first()
-                    if fresa_instalada:
-                        fresa_instalada.modelos_fresados += cantidad_modelos * len(codigos_seleccionados)
-                db.session.commit()
-                flash('Órdenes grupales creadas correctamente.')
-                return redirect(url_for('ordenes.ordenes', material=material_form, shade=shade_form))
+        elif is_creation:
+            # If is_creation but no block selected
+            error = "You must select a block (Used or New)."
+            # Continue to next block instead of early return
         else:
-            if codigos_seleccionados:  # Solo mostrar error si hay pendientes seleccionados
-                error = "Debes seleccionar un bloque usado o nuevo."
-            # Renderiza la plantilla con el error en vez de redirigir
-            return render_template('ordenes.html', error=error, material_form=material_form, shade_form=shade_form)
-
-    # Si el formulario es para crear una orden individual o múltiple (códigos separados por coma)
-    if request.method == 'POST' and 'codigo_orden' in request.form:
+            # Not a creation attempt, just ignore this block
+            pass
+            
+    # 3. Handle Single/Multiple Order Creation (from text input)
+    if is_creation and not codigos_seleccionados and 'codigo_orden' in request.form:
         codigos_orden = request.form.get('codigo_orden', '').strip()
         try:
             cantidad_modelos = int(request.form.get('cantidad_modelos', 1))
@@ -307,20 +277,15 @@ def ordenes():
         bloque_usado_id = request.form.get('bloque_usado_id')
         bloque_nuevo_id = request.form.get('bloque_nuevo_id')
         
-        # Backend Validation - Only if Add button was clicked
-        if 'btn_add_order' in request.form:
-            if not material_form or not shade_form or not maquina:
-                error = "You must select Material, Shade, and Machine."
-            elif not codigos_orden:
-                error = "You must enter at least one Order Code."
-            elif cantidad_modelos <= 0:
-                error = "Number of units must be greater than zero."
-        else:
-            # If it's just a POST from filtering, don't validate and don't create order
-            # Just let it fall through to render_template with the new filter values
-            pass
+        # Backend Validation - Only for creation
+        if not material_form or not shade_form or not maquina:
+            error = "You must select Material, Shade, and Machine."
+        elif not codigos_orden:
+            error = "You must enter at least one Order Code."
+        elif cantidad_modelos <= 0:
+            error = "Number of units must be greater than zero."
             
-        if not error and codigos_orden and 'btn_add_order' in request.form:
+        if not error and codigos_orden:
             codigos_lista = [c.strip() for c in codigos_orden.split(',') if c.strip()]
             bloque = None
             if bloque_usado_id:
