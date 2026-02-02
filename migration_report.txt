@@ -1,0 +1,11 @@
+Connecting to database with scheme: postgresql
+-- Processing mantenimiento.proxima_fecha --
+SUCCESS: Column 'proxima_fecha' already exists in 'mantenimiento'.
+--------------------
+-- Processing bloque.codigo_referencia --
+SUCCESS: Column 'codigo_referencia' already exists in 'bloque'.
+--------------------
+-- Processing bloque_historial.codigo_referencia --
+SUCCESS: Column 'codigo_referencia' already exists in 'bloque_historial'.
+--------------------
+MIGRATION PROCESS FINISHED

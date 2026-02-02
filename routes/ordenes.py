@@ -79,10 +79,13 @@ def ordenes():
     if request.method == 'POST':
         material_post = request.form.get('material')
         shade_post = request.form.get('shade')
+        maquina_post = request.form.get('maquina')
         if material_post:
             material = material_post
         if shade_post:
             shade = shade_post
+        if maquina_post:
+            maquina = maquina_post
 
     # Obtener máquinas y materiales desde configuración (asegura que estén definidas antes de cualquier render_template)
     maquinas = Configuracion.get_lista('maquinas')
@@ -255,13 +258,30 @@ def ordenes():
                     'shade_form': shade_form
                 })
                 return redirect(url_for('ordenes.confirmar_codigo_bloque', bloque_id=bloque.id, orden_data=orden_data))
-        elif is_creation:
+        else: # This 'else' corresponds to the 'if bloque_usado_id' or 'elif bloque_nuevo_id'
             # If is_creation but no block selected
             error = "You must select a block (Used or New)."
             # Continue to next block instead of early return
-        else:
-            # Not a creation attempt, just ignore this block
-            pass
+            
+    # If there was an error in the group order creation, render the template with the error
+    if error:
+        return render_template(
+            'ordenes.html',
+            error=error,
+            pendientes_orden=OrdenPendiente.query.order_by(OrdenPendiente.fecha_escaneo.asc()).all(),
+            tipos_material=tipos_material,
+            material=material_form,
+            shade=shade_form,
+            maquinas=maquinas,
+            shades_disponibles=shades_disponibles,
+            bloques_usados=bloques_usados,
+            bloques_nuevos=bloques_nuevos,
+            bloque_usado_id=request.form.get('bloque_usado_id'),
+            bloque_nuevo_id=request.form.get('bloque_nuevo_id'),
+            maquina=maquina,
+            ordenes=Orden.query.order_by(Orden.fecha_creacion.desc()).all(),
+            request=request
+        )
             
     # 3. Handle Single/Multiple Order Creation (from text input)
     if is_creation and not codigos_seleccionados and 'codigo_orden' in request.form:
@@ -386,6 +406,7 @@ def ordenes():
                     bloques_nuevos=bloques_nuevos,
                     bloque_usado_id=bloque_usado_id,
                     bloque_nuevo_id=bloque_nuevo_id,
+                    maquina=maquina,
                     ordenes=Orden.query.order_by(Orden.fecha_creacion.desc()).all(),
                     request=request
                 )
@@ -410,6 +431,7 @@ def ordenes():
         bloques_nuevos=bloques_nuevos,
         material=material,
         shade=shade,
+        maquina=maquina,
         error=error,
         pendientes_orden=pendientes_orden,
         shades_por_material=shades_por_material

@@ -128,89 +128,10 @@
             </div>
           </div>
         </form>
-        <script>
-          $(function () {
-            $('#orden-form').off('submit').on('submit', function (e) {
-              // Manual submit (Button or Enter) -> set creation intent
-              $('#is_creation').val('1');
-              console.log('Form submission detected as CREATION. is_creation=1');
-
-              var material = $('#material').val();
-              var shade = $('#shade').val();
-              var maquina = $('#maquina').val();
-              var usado = $('[name="bloque_usado_id"]').val();
-              var nuevo = $('[name="bloque_nuevo_id"]').val();
-              var codigo = $('#codigo-orden-input').val();
-              var cantidad = $('[name="cantidad_modelos"]').val();
-
-              if (!material) {
-                alert("{{ _('Please select a Material.') }}");
-                $('#is_creation').val('0');
-                console.log('Validation failed: Material not selected. is_creation=0');
-                e.preventDefault();
-                return false;
-              }
-              if (!shade) {
-                alert("{{ _('Please select a Shade.') }}");
-                $('#is_creation').val('0');
-                console.log('Validation failed: Shade not selected. is_creation=0');
-                e.preventDefault();
-                return false;
-              }
-              if (!maquina) {
-                alert("{{ _('Please select a Machine.') }}");
-                $('#is_creation').val('0');
-                console.log('Validation failed: Machine not selected. is_creation=0');
-                e.preventDefault();
-                return false;
-              }
-              if (!usado && !nuevo) {
-                alert("{{ _('You must select a block (used or new) to continue.') }}");
-                $('#is_creation').val('0');
-                console.log('Validation failed: No block selected. is_creation=0');
-                e.preventDefault();
-                return false;
-              }
-              if (!codigo || !codigo.trim()) {
-                alert("{{ _('Please enter at least one Order Code.') }}");
-                $('#is_creation').val('0');
-                console.log('Validation failed: Order Code not entered. is_creation=0');
-                e.preventDefault();
-                return false;
-              }
-              if (!cantidad || parseInt(cantidad) <= 0) {
-                alert("{{ _('Number of Units must be greater than zero.') }}");
-                $('#is_creation').val('0');
-                console.log('Validation failed: Number of Units invalid. is_creation=0');
-                e.preventDefault();
-                return false;
-              }
-
-              if (nuevo && !usado) {
-                e.preventDefault();
-                $('#is_creation').val('1');
-                var formData = $(this).serialize();
-                $.post(window.location.pathname, formData, function (resp) {
-                  if (resp && resp.status === 'ok' && resp.bloque_usado) {
-                    // Mostrar modal para confirmar código usando AJAX (carga el contenido del modal desde el backend)
-                    var bloque = resp.bloque_usado;
-                    // Si el backend necesita datos extra, puedes serializarlos aquí
-                    $.get('/ordenes/confirmar-codigo-bloque/' + bloque.id + '?orden_data=', function (html) {
-                      $('#modalConfirmarCodigoContent').html(html);
-                      $('#modalConfirmarCodigo').modal('show');
-                    });
-                  } else {
-                    alert('Error al crear el bloque usado.');
-                  }
-                });
-                return false;
-              }
-              // Si es bloque usado, submit normal
-              return true;
-            });
-
-          });
-        </script>
+      </div>
+    </div>
+    <div class="card border-0 shadow-sm animate__animated animate__fadeInUp">
+      <div class="card-body">
         <style>
           .btn-material-pill {
             font-size: 0.9em;
@@ -285,10 +206,6 @@
             min-width: 0;
           }
         </style>
-      </div>
-    </div>
-    <div class="card border-0 shadow-sm animate__animated animate__fadeInUp">
-      <div class="card-body">
         <div class="table-responsive animate__animated animate__fadeIn">
           <table class="table table-striped table-hover ordenes-table" id="tabla-ordenes">
             <thead class="table-primary">
@@ -439,8 +356,88 @@
 {% block scripts %}
 {{ super() }}
 <script>
-  // Material and Shade handlers - consolidated
   $(document).ready(function () {
+    // FORM SUBMISSION HANDLER
+    $('#orden-form').off('submit').on('submit', function (e) {
+      // Manual submit (Button or Enter) -> set creation intent
+      $('#is_creation').val('1');
+      console.log('Form submission detected as CREATION. is_creation=1');
+
+      var material = $('#material').val();
+      var shade = $('#shade').val();
+      var maquina = $('#maquina').val();
+      var usado = $('[name="bloque_usado_id"]').val();
+      var nuevo = $('[name="bloque_nuevo_id"]').val();
+      var codigo = $('#codigo-orden-input').val();
+      var cantidad = $('[name="cantidad_modelos"]').val();
+
+      if (!material) {
+        alert("{{ _('Please select a Material.') }}");
+        $('#is_creation').val('0');
+        console.log('Validation failed: Material not selected. is_creation=0');
+        e.preventDefault();
+        return false;
+      }
+      if (!shade) {
+        alert("{{ _('Please select a Shade.') }}");
+        $('#is_creation').val('0');
+        console.log('Validation failed: Shade not selected. is_creation=0');
+        e.preventDefault();
+        return false;
+      }
+      if (!maquina) {
+        alert("{{ _('Please select a Machine.') }}");
+        $('#is_creation').val('0');
+        console.log('Validation failed: Machine not selected. is_creation=0');
+        e.preventDefault();
+        return false;
+      }
+      if (!usado && !nuevo) {
+        alert("{{ _('You must select a block (used or new) to continue.') }}");
+        $('#is_creation').val('0');
+        console.log('Validation failed: No block selected. is_creation=0');
+        e.preventDefault();
+        return false;
+      }
+      if (!codigo || !codigo.trim()) {
+        alert("{{ _('Please enter at least one Order Code.') }}");
+        $('#is_creation').val('0');
+        console.log('Validation failed: Order Code not entered. is_creation=0');
+        e.preventDefault();
+        return false;
+      }
+      if (!cantidad || parseInt(cantidad) <= 0) {
+        alert("{{ _('Number of Units must be greater than zero.') }}");
+        $('#is_creation').val('0');
+        console.log('Validation failed: Number of Units invalid. is_creation=0');
+        e.preventDefault();
+        return false;
+      }
+
+      if (nuevo && !usado) {
+        e.preventDefault();
+        $('#is_creation').val('1');
+        var formData = $(this).serialize();
+        $.post(window.location.pathname, formData, function (resp) {
+          if (resp && resp.status === 'ok' && resp.bloque_usado) {
+            // Mostrar modal para confirmar código usando AJAX (carga el contenido del modal desde el backend)
+            var bloque = resp.bloque_usado;
+            // Si el backend necesita datos extra, puedes serializarlos aquí
+            $.get('/ordenes/confirmar-codigo-bloque/' + bloque.id + '?orden_data=', function (html) {
+              $('#modalConfirmarCodigoContent').html(html);
+              $('#modalConfirmarCodigo').modal('show');
+            });
+          } else {
+            alert('Error al crear el bloque usado.');
+          }
+        });
+        return false;
+      }
+      // Si es bloque usado, submit normal
+      return true;
+    });
+
+    // Material and Shade handlers - consolidated
     // Handler for Material change - MUST be defined first
     $('#material').on('change', function () {
       var material = $(this).val();
@@ -451,7 +448,13 @@
         var $shadeInput = $('#shade');
 
         $shadeContainer.empty();
-        $shadeInput.val('');
+        // Only clear shade input if it's NOT the initial load
+        if (!window.isInitialLoad) {
+          console.log('Clearing shade input because isInitialLoad is false');
+          $shadeInput.val('');
+        } else {
+          console.log('Keeping shade input because isInitialLoad is true. Value:', $shadeInput.val());
+        }
 
         console.log('Shades received:', data.shades);
 
@@ -490,10 +493,17 @@
           const currentShade = $('#shade').val();
           if (currentShade) {
             $(`.btn-shade[data-value="${currentShade}"]`).addClass('btn-custom-red');
+            console.log('Highlighted restored shade:', currentShade);
           }
         }
       }).fail(function (jqXHR, textStatus, errorThrown) {
         console.error('Error loading shades:', textStatus, errorThrown);
+      }).always(function () {
+        // Clear initial load flag after the first AJAX call completes
+        if (window.isInitialLoad) {
+          console.log('Initial load AJAX finished. Clearing flag.');
+          window.isInitialLoad = false;
+        }
       });
     });
 
@@ -537,24 +547,20 @@
 
     if (initialMat) {
       $(`.btn-material-pill[data-value="${initialMat}"]`).addClass('btn-custom-red');
-      // Trigger change to load shades
-      setTimeout(function () {
-        $('#material').trigger('change');
+      // Set a flag to skip clearing the shade input during initial load
+      window.isInitialLoad = true;
+      console.log('Initial state detected. Setting isInitialLoad=true');
+      $('#material').trigger('change');
 
-        // After shades load, restore shade selection
-        if (initialShade) {
-          setTimeout(function () {
-            $(`.btn-shade[data-value="${initialShade}"]`).addClass('btn-custom-red');
-            console.log('Restored shade:', initialShade);
-          }, 800);
-        }
-      }, 100);
+      // Safety timeout in case AJAX never completes
+      setTimeout(() => { if (window.isInitialLoad) window.isInitialLoad = false; }, 3000);
     }
 
     // Initialize: Restore machine selection
     const initialMaq = $('#maquina').val();
     if (initialMaq) {
       $(`.btn-maquina-pill[data-value="${initialMaq}"]`).addClass('btn-custom-red');
+      console.log('Restored machine selection:', initialMaq);
     }
   });
 </script>
