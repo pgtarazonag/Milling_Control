@@ -117,7 +117,8 @@
                       style="width:120px;">
                   </div>
                   <div>
-                    <button type="submit" class="btn btn-success" style="padding-top:12px;padding-bottom:12px;">
+                    <button type="submit" name="btn_add_order" value="1" class="btn btn-success"
+                      style="padding-top:12px;padding-bottom:12px;">
                       <i class="bi bi-plus-circle"></i> {{ _('Add') }}
                     </button>
                   </div>
@@ -492,8 +493,7 @@
         // Update Hidden Input and Trigger Change (which loads shades via AJAX)
         $('#material').val(mat).trigger('change');
 
-        // Do NOT auto-submit form - let user select shade first
-        // The form will submit when user clicks a shade button
+        // Note: form trigger removed to let user select shade first
       }
     });
 
@@ -666,7 +666,8 @@
       localStorage.setItem('ordenes_modelos_inputs', modelos.join(","));
       var form = $('#orden-form');
       form.attr('method', 'post');
-      form.submit();
+      // Use native submit to bypass jQuery validation handlers for filtering
+      if (form.length > 0) form[0].submit();
     });
 
     // Al cargar, si hay valores en localStorage, restáuralos (espera a que los inputs existan)

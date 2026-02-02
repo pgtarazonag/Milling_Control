@@ -149,9 +149,9 @@ def ordenes():
         )
 
     # Si el formulario viene de la selección de casos pendientes (fresado grupal)
+    # Solo procesar fresado grupal si se presionó el botón de agregar
     codigos_seleccionados = request.form.getlist('codigos_seleccionados')
-    # Solo procesar fresado grupal si también vienen los datos compartidos (material, shade, etc.)
-    if codigos_seleccionados and request.method == 'POST' and 'material' in request.form:
+    if codigos_seleccionados and request.method == 'POST' and 'material' in request.form and 'btn_add_order' in request.form:
         material_form = request.form.get('material')
         shade_form = request.form.get('shade')
         cantidad_modelos = int(request.form.get('cantidad_modelos', 1))
@@ -307,15 +307,20 @@ def ordenes():
         bloque_usado_id = request.form.get('bloque_usado_id')
         bloque_nuevo_id = request.form.get('bloque_nuevo_id')
         
-        # Backend Validation
-        if not material_form or not shade_form or not maquina:
-            error = "You must select Material, Shade, and Machine."
-        elif not codigos_orden:
-            error = "You must enter at least one Order Code."
-        elif cantidad_modelos <= 0:
-            error = "Number of units must be greater than zero."
+        # Backend Validation - Only if Add button was clicked
+        if 'btn_add_order' in request.form:
+            if not material_form or not shade_form or not maquina:
+                error = "You must select Material, Shade, and Machine."
+            elif not codigos_orden:
+                error = "You must enter at least one Order Code."
+            elif cantidad_modelos <= 0:
+                error = "Number of units must be greater than zero."
+        else:
+            # If it's just a POST from filtering, don't validate and don't create order
+            # Just let it fall through to render_template with the new filter values
+            pass
             
-        if not error and codigos_orden:
+        if not error and codigos_orden and 'btn_add_order' in request.form:
             codigos_lista = [c.strip() for c in codigos_orden.split(',') if c.strip()]
             bloque = None
             if bloque_usado_id:
