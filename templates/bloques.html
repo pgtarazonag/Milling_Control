@@ -227,6 +227,15 @@
         <!-- Filtros para tabla de bloques nuevos -->
         <div class="row mb-2 align-items-end">
           <div class="col-md-3">
+            <label class="form-label mb-1">{{ _('Material') }}</label>
+            <select class="form-select form-select-sm filtro-bloques" data-col="0" id="filtro-material-nuevos">
+              <option value="">{{ _('All Materials') }}</option>
+              {% for mat in materiales %}
+              <option value="{{ mat }}">{{ mat }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="col-md-3">
             <label class="form-label mb-1">{{ _('Brand') }}</label>
             <select class="form-select form-select-sm filtro-bloques" data-col="2" id="filtro-marca-nuevos">
               <option value="">{{ _('All Brands') }}</option>
@@ -235,7 +244,7 @@
               {% endfor %}
             </select>
           </div>
-          <div class="col-md-3">
+          <div class="col-md-2">
             <label class="form-label mb-1">{{ _('Shade') }}</label>
             <select class="form-select form-select-sm filtro-bloques" data-col="1" id="filtro-shade-nuevos">
               <option value="">{{ _('All Shades') }}</option>
@@ -244,7 +253,7 @@
               {% endfor %}
             </select>
           </div>
-          <div class="col-md-3">
+          <div class="col-md-2">
             <label class="form-label mb-1">{{ _('Thickness') }}</label>
             <select class="form-select form-select-sm filtro-bloques" data-col="3" id="filtro-grosor-nuevos">
               <option value="">{{ _('All Thicknesses') }}</option>
@@ -253,7 +262,7 @@
               {% endfor %}
             </select>
           </div>
-          <div class="col-md-3 d-flex align-items-center justify-content-end gap-2 pb-1">
+          <div class="col-md-2 d-flex align-items-center justify-content-end gap-2 pb-1">
             <div class="form-check form-switch mb-0">
               <input class="form-check-input" type="checkbox" id="check-mostrar-ceros" {% if
                 request.args.get('mostrar_ceros')=='1' %}checked{% endif %}>
@@ -928,8 +937,21 @@
 
 <!-- 6. Dynamic Filters Logic -->
 <script>
-  function llenarFiltrosDinamicos(tablaId, filtroMarca, filtroShade, filtroGrosor, colMarca, colShade, colGrosor) {
+  function llenarFiltrosDinamicos(tablaId, filtroMaterial, filtroMarca, filtroShade, filtroGrosor, colMaterial, colMarca, colShade, colGrosor) {
     var tabla = $(tablaId).DataTable();
+
+    // 1. Material Filter (if exists)
+    if (filtroMaterial && colMaterial !== undefined) {
+      var materiales = new Set();
+      tabla.column(colMaterial, { search: 'applied' }).data().each(function (val) { if (val) materiales.add(val); });
+      var $material = $(filtroMaterial);
+      var materialSel = $material.val();
+      $material.empty().append('<option value="">' + "{{ _('All Materials') }}" + '</option>');
+      Array.from(materiales).sort().forEach(function (m) { $material.append('<option value="' + m + '">' + m + '</option>'); });
+      if (materialSel) $material.val(materialSel);
+    }
+
+    // 2. Brand Filter
     var marcas = new Set();
     tabla.column(colMarca, { search: 'applied' }).data().each(function (val) { if (val) marcas.add(val); });
     var $marca = $(filtroMarca);
@@ -938,6 +960,7 @@
     Array.from(marcas).sort().forEach(function (m) { $marca.append('<option value="' + m + '">' + m + '</option>'); });
     if (marcaSel) $marca.val(marcaSel);
 
+    // 3. Shade Filter
     var shades = new Set();
     tabla.column(colShade, { search: 'applied' }).data().each(function (val) { if (val) shades.add(val); });
     var $shade = $(filtroShade);
@@ -946,6 +969,7 @@
     Array.from(shades).sort().forEach(function (s) { $shade.append('<option value="' + s + '">' + s + '</option>'); });
     if (shadeSel) $shade.val(shadeSel);
 
+    // 4. Thickness Filter
     var grosores = new Set();
     tabla.column(colGrosor, { search: 'applied' }).data().each(function (val) { if (val) grosores.add(val); });
     var $grosor = $(filtroGrosor);
@@ -954,23 +978,28 @@
     Array.from(grosores).sort().forEach(function (g) { $grosor.append('<option value="' + g + '">' + g + '</option>'); });
     if (grosorSel) $grosor.val(grosorSel);
   }
+
   $(document).ready(function () {
-    llenarFiltrosDinamicos('#tabla-bloques-usados', '#filtro-marca-usados', '#filtro-shade-usados', '#filtro-grosor-usados', 3, 2, 4);
-    llenarFiltrosDinamicos('#tabla-bloques-nuevos', '#filtro-marca-nuevos', '#filtro-shade-nuevos', '#filtro-grosor-nuevos', 2, 1, 3);
+    // Usados (No material filter passed)
+    llenarFiltrosDinamicos('#tabla-bloques-usados', null, '#filtro-marca-usados', '#filtro-shade-usados', '#filtro-grosor-usados', null, 3, 2, 4);
+
+    // Nuevos (With material filter at col 0)
+    llenarFiltrosDinamicos('#tabla-bloques-nuevos', '#filtro-material-nuevos', '#filtro-marca-nuevos', '#filtro-shade-nuevos', '#filtro-grosor-nuevos', 0, 2, 1, 3);
 
     $('#filtro-marca-usados, #filtro-shade-usados, #filtro-grosor-usados').on('change', function () {
       var tabla = $('#tabla-bloques-usados').DataTable();
       var col = $(this).data('col');
       var val = $(this).val();
       tabla.column(col).search(val, false, false).draw();
-      llenarFiltrosDinamicos('#tabla-bloques-usados', '#filtro-marca-usados', '#filtro-shade-usados', '#filtro-grosor-usados', 3, 2, 4);
+      llenarFiltrosDinamicos('#tabla-bloques-usados', null, '#filtro-marca-usados', '#filtro-shade-usados', '#filtro-grosor-usados', null, 3, 2, 4);
     });
-    $('#filtro-marca-nuevos, #filtro-shade-nuevos, #filtro-grosor-nuevos').on('change', function () {
+
+    $('#filtro-material-nuevos, #filtro-marca-nuevos, #filtro-shade-nuevos, #filtro-grosor-nuevos').on('change', function () {
       var tabla = $('#tabla-bloques-nuevos').DataTable();
       var col = $(this).data('col');
       var val = $(this).val();
       tabla.column(col).search(val, false, false).draw();
-      llenarFiltrosDinamicos('#tabla-bloques-nuevos', '#filtro-marca-nuevos', '#filtro-shade-nuevos', '#filtro-grosor-nuevos', 2, 1, 3);
+      llenarFiltrosDinamicos('#tabla-bloques-nuevos', '#filtro-material-nuevos', '#filtro-marca-nuevos', '#filtro-shade-nuevos', '#filtro-grosor-nuevos', 0, 2, 1, 3);
     });
   });
 </script>
@@ -978,34 +1007,70 @@
 <!-- 7. Filter Persistence -->
 <script>
   function guardarFiltros(tabla) {
-    localStorage.setItem('filtros_' + tabla, JSON.stringify({
+    var filtros = {
       marca: $('#filtro-marca-' + tabla).val() || '',
       shade: $('#filtro-shade-' + tabla).val() || '',
       grosor: $('#filtro-grosor-' + tabla).val() || ''
-    }));
+    };
+    if (tabla === 'nuevos') {
+      filtros.material = $('#filtro-material-nuevos').val() || '';
+    }
+    localStorage.setItem('filtros_' + tabla, JSON.stringify(filtros));
   }
+
   function restaurarFiltros(tabla) {
-    var filtros = localStorage.getItem('filtros_' + tabla);
-    if (filtros) {
+    var saved = localStorage.getItem('filtros_' + tabla);
+    var applied = false;
+
+    if (saved) {
       try {
-        filtros = JSON.parse(filtros);
-        $('#filtro-marca-' + tabla).val(filtros.marca).trigger('change');
-        $('#filtro-shade-' + tabla).val(filtros.shade).trigger('change');
-        $('#filtro-grosor-' + tabla).val(filtros.grosor).trigger('change');
+        var filtros = JSON.parse(saved);
+        if (tabla === 'nuevos' && filtros.material) {
+          $('#filtro-material-nuevos').val(filtros.material).trigger('change');
+        }
+        if (filtros.marca) $('#filtro-marca-' + tabla).val(filtros.marca).trigger('change');
+        if (filtros.shade) $('#filtro-shade-' + tabla).val(filtros.shade).trigger('change');
+        if (filtros.grosor) $('#filtro-grosor-' + tabla).val(filtros.grosor).trigger('change');
+        applied = true;
       } catch (e) { }
     }
+
+    // Default logic for New Blocks: Zirconia if no filter applied or empty
+    if (tabla === 'nuevos' && !applied) {
+      // Only default if not already set by restore
+      var currentMat = $('#filtro-material-nuevos').val();
+      if (!currentMat) {
+        $('#filtro-material-nuevos').val('Zirconia').trigger('change');
+      }
+    } else if (tabla === 'nuevos' && applied) {
+      // Double check if material was loaded, if not default to Zirconia
+      var currentMat = $('#filtro-material-nuevos').val();
+      if (!currentMat) {
+        $('#filtro-material-nuevos').val('Zirconia').trigger('change');
+      }
+    }
   }
+
   $(document).ready(function () {
     restaurarFiltros('usados');
-    restaurarFiltros('nuevos');
+    // Delay slightly to ensure table is ready
+    setTimeout(function () { restaurarFiltros('nuevos'); }, 100);
+
     $('#filtro-marca-usados, #filtro-shade-usados, #filtro-grosor-usados').on('change', function () { guardarFiltros('usados'); });
-    $('#filtro-marca-nuevos, #filtro-shade-nuevos, #filtro-grosor-nuevos').on('change', function () { guardarFiltros('nuevos'); });
+
+    $('#filtro-material-nuevos, #filtro-marca-nuevos, #filtro-shade-nuevos, #filtro-grosor-nuevos').on('change', function () {
+      guardarFiltros('nuevos');
+    });
+
     $('#reset-filtros-usados').on('click', function () {
       $('#filtro-marca-usados, #filtro-shade-usados, #filtro-grosor-usados').val('').trigger('change');
       guardarFiltros('usados');
     });
+
     $('#reset-filtros-nuevos').on('click', function () {
-      $('#filtro-marca-nuevos, #filtro-shade-nuevos, #filtro-grosor-nuevos').val('').trigger('change');
+      // Reset to Zirconia by default or empty? User asked for default Zirconia.
+      // Usually reset clears everything. Let's clear everything.
+      $('#filtro-material-nuevos, #filtro-marca-nuevos, #filtro-shade-nuevos, #filtro-grosor-nuevos').val('').trigger('change');
       guardarFiltros('nuevos');
     });
 

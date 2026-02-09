@@ -151,20 +151,29 @@ class Configuracion(db.Model):
                     return [x.strip() for x in valor.split(',') if x.strip()]
             return [x.strip() for x in valor.split(',') if x.strip()]
         return default or []
-
-# Modelo para Auditoría de Bloques (Log changes)
-class LogInventario(db.Model):
-    __tablename__ = 'log_inventario'
-    id = db.Column(db.Integer, primary_key=True)
-    fecha = db.Column(db.DateTime, default=datetime.utcnow)
-    accion = db.Column(db.String(50))  # CREACION, ELIMINACION, EDICION, CONVERSION, STOCK_UPDATE
-    bloque_id = db.Column(db.Integer, nullable=True) # Referencia al bloque relacionado
-    descripcion = db.Column(db.String(500)) # Detalle legible
-    detalles = db.Column(db.Text) # JSON string opcional para valores old/new
-    usuario = db.Column(db.String(50), default='System')
-
+    
+    @staticmethod
+    def get_valor(clave, default=None):
+        """Get a simple string value from configuration"""
+        c = Configuracion.query.filter_by(clave=clave).first()
+        if c:
+            return c.valor
+        return default or ''
+    
+    @staticmethod
+    def set_valor(clave, valor):
+        """Set a simple string value in configuration"""
+        c = Configuracion.query.filter_by(clave=clave).first()
+        if not c:
+            c = Configuracion(clave=clave, valor=str(valor))
+            db.session.add(c)
+        else:
+            c.valor = str(valor)
+        db.session.commit()
+    
     @staticmethod
     def set_lista(clave, lista):
+        """Set a list value in configuration"""
         c = Configuracion.query.filter_by(clave=clave).first()
         # Si es una lista con un solo elemento que parece JSON, guardar tal cual
         if isinstance(lista, list) and len(lista) == 1 and (str(lista[0]).strip().startswith('{') or str(lista[0]).strip().startswith('[')):
@@ -177,3 +186,14 @@ class LogInventario(db.Model):
         else:
             c.valor = valor
         db.session.commit()
+
+# Modelo para Auditoría de Bloques (Log changes)
+class LogInventario(db.Model):
+    __tablename__ = 'log_inventario'
+    id = db.Column(db.Integer, primary_key=True)
+    fecha = db.Column(db.DateTime, default=datetime.utcnow)
+    accion = db.Column(db.String(50))  # CREACION, ELIMINACION, EDICION, CONVERSION, STOCK_UPDATE
+    bloque_id = db.Column(db.Integer, nullable=True) # Referencia al bloque relacionado
+    descripcion = db.Column(db.String(500)) # Detalle legible
+    detalles = db.Column(db.Text) # JSON string opcional para valores old/new
+    usuario = db.Column(db.String(50), default='System')

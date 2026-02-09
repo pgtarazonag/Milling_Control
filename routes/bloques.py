@@ -352,6 +352,7 @@ def usar_bloque_nuevo(bloque_id):
     La fecha del bloque usado será la fecha actual.
     """
     from flask import request, redirect, url_for
+    import json
     bloque = Bloque.query.get_or_404(bloque_id)
     if bloque.estado != 'nuevo' or bloque.cantidad < 1:
         return redirect(url_for('bloques.bloques'))
@@ -366,7 +367,6 @@ def usar_bloque_nuevo(bloque_id):
     if not codigo or codigo in usados:
         grosor_str = str(bloque.grosor).zfill(2)
         materiales_avanzado = Configuracion.get_lista('materiales_avanzado')
-        import json
         if materiales_avanzado and isinstance(materiales_avanzado, list) and isinstance(materiales_avanzado[0], str):
             materiales_avanzado = json.loads(materiales_avanzado[0])
         letra = 'XX'
@@ -386,6 +386,7 @@ def usar_bloque_nuevo(bloque_id):
         marca=bloque.marca,
         shade=bloque.shade,
         grosor=bloque.grosor,
+        codigo_referencia=bloque.codigo_referencia,
         cantidad=1,
         codigo_barra=codigo,
         estado='usado',

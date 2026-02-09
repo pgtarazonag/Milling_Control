@@ -172,15 +172,31 @@ def descargar_historial():
                         'orden_id': 'Order ID'
                     }
                     df.rename(columns=column_map, inplace=True)
+                    
+                    # Apply reference code prefix if configured
+                    ref_code_prefix = Configuracion.get_valor('ref_code_prefix', default='')
+                    if ref_code_prefix and 'Reference Code' in df.columns:
+                        df['Reference Code'] = df['Reference Code'].apply(
+                            lambda x: f"{ref_code_prefix}{x}" if x and str(x).strip() and str(x) != 'None' else x
+                        )
                 except Exception:
                     cols = [c.name for c in modelo.__table__.columns]
                     df = pd.DataFrame(columns=cols)
-                # Escribir hoja
-                safe_sheet = nombre[:31]
-                df.to_excel(writer, sheet_name=safe_sheet, index=False)
+                # Translate sheet names to English
+                sheet_name_map = {
+                    'bloques_historial': 'Block History',
+                    'ordenes': 'Orders',
+                    'bloques': 'Blocks',
+                    'fresa_inventario': 'Mill Inventory',
+                    'fresa_instalada': 'Installed Mills',
+                    'mantenimiento': 'Maintenance',
+                    'orden_pendiente': 'Pending Orders'
+                }
+                sheet_name = sheet_name_map.get(nombre, nombre)[:31]  # Max 31 chars for Excel
+                df.to_excel(writer, sheet_name=sheet_name, index=False)
                 # Ajustes de ancho
                 try:
-                    worksheet = writer.sheets[safe_sheet]
+                    worksheet = writer.sheets[sheet_name]
                     for idx, col in enumerate(df.columns):
                         max_len = 10
                         if not df.empty:
@@ -196,7 +212,7 @@ def descargar_historial():
     return send_file(
         output,
         as_attachment=True,
-        download_name=f"historial_fresado_{datetime.now(VANCOUVER_TZ).strftime('%Y%m%d_%H%M')}.xlsx",
+        download_name=f"milling_history_{datetime.now(VANCOUVER_TZ).strftime('%Y%m%d_%H%M')}.xlsx",
         mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
     )
 
@@ -354,6 +370,13 @@ def reporte_semanal():
         df = df.reindex(columns=final_cols, fill_value=0)
         
         df = df.sort_values(by=['Material', 'Brand', 'Thickness', 'Shade'])
+        
+        # Apply reference code prefix if configured
+        ref_code_prefix = Configuracion.get_valor('ref_code_prefix', default='')
+        if ref_code_prefix and 'Ref Code' in df.columns:
+            df['Ref Code'] = df['Ref Code'].apply(
+                lambda x: f"{ref_code_prefix}{x}" if x and str(x).strip() and str(x) != 'None' else x
+            )
     
     output = io.BytesIO()
     with pd.ExcelWriter(output, engine='xlsxwriter') as writer:

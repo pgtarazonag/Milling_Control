@@ -68,7 +68,7 @@
       {% if bloque.estado == 'nuevo' %}
       <div class="col-md-6">
         <label class="form-label">{{ _('Count') }}</label>
-        <input type="number" name="cantidad" class="form-control" value="{{ bloque.cantidad }}" min="1">
+        <input type="number" name="cantidad" class="form-control" value="{{ bloque.cantidad }}" min="0">
       </div>
       {% endif %}
       <div class="col-12 text-end">

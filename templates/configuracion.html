@@ -32,7 +32,8 @@
         <div class="form-text">{{ _('Example') }}: Vita, Ivoclar, Aidite</div>
       </div>
       <div class="col-md-6">
-        <label class="form-label"><i class="bi bi-rulers"></i> {{ _('Available thicknesses (comma separated)') }}</label>
+        <label class="form-label"><i class="bi bi-rulers"></i> {{ _('Available thicknesses (comma separated)')
+          }}</label>
         <input type="text" name="grosores" class="form-control" value="{{ grosores|join(', ') }}" required>
         <div class="form-text">{{ _('Example') }}: 14, 16, 18, 20, 22, 25</div>
       </div>
@@ -46,6 +47,12 @@
         <input type="text" name="aspiradoras" class="form-control" value="{{ aspiradoras|join(', ') }}" required>
         <div class="form-text">{{ _('Example') }}: Vacuum 1, Vacuum 2, Vacuum 3</div>
       </div>
+      <div class="col-md-6">
+        <label class="form-label"><i class="bi bi-tag"></i> {{ _('Reference Code Prefix (Excel Export)') }}</label>
+        <input type="text" name="ref_code_prefix" class="form-control" value="{{ ref_code_prefix }}" placeholder=".40-">
+        <div class="form-text">{{ _('Prefix to add to reference codes when downloading Excel files (e.g., .40-). Leave
+          empty for no prefix.') }}</div>
+      </div>
       <div class="col-12">
         <h5 class="mt-4 mb-2"><i class="bi bi-sliders"></i> {{ _('Shades and Brands per Material') }}</h5>
         <div class="row g-2">
@@ -56,22 +63,30 @@
               <b>{{ mat }}</b>
               <div class="mb-1">
                 <label class="form-label mb-0">{{ _('Shades') }} ({{ mat }})</label>
-                <input type="text" name="shades_{{ norm }}" class="form-control form-control-sm" value="{{ (request.form.get('shades_' ~ norm) if request.form.get('shades_' ~ norm) is not none else (materiales_avanzado[mat]['shades']|join(', ') if materiales_avanzado.get(mat) else '')) }}" placeholder="e.g., A1, A2, B1">
+                <input type="text" name="shades_{{ norm }}" class="form-control form-control-sm"
+                  value="{{ (request.form.get('shades_' ~ norm) if request.form.get('shades_' ~ norm) is not none else (materiales_avanzado[mat]['shades']|join(', ') if materiales_avanzado.get(mat) else '')) }}"
+                  placeholder="e.g., A1, A2, B1">
               </div>
               <div>
                 <label class="form-label mb-0">{{ _('Brands') }} ({{ mat }})</label>
-                <input type="text" name="marcas_{{ norm }}" class="form-control form-control-sm mb-2" value="{{ (request.form.get('marcas_' ~ norm) if request.form.get('marcas_' ~ norm) is not none else (materiales_avanzado[mat]['marcas']|map(attribute='nombre')|join(', ') if materiales_avanzado.get(mat) else '')) }}" placeholder="e.g., Vita, Aidite">
+                <input type="text" name="marcas_{{ norm }}" class="form-control form-control-sm mb-2"
+                  value="{{ (request.form.get('marcas_' ~ norm) if request.form.get('marcas_' ~ norm) is not none else (materiales_avanzado[mat]['marcas']|map(attribute='nombre')|join(', ') if materiales_avanzado.get(mat) else '')) }}"
+                  placeholder="e.g., Vita, Aidite">
                 {% set marcas = materiales_avanzado[mat]['marcas'] if materiales_avanzado.get(mat) else [] %}
                 {% for marca in marcas %}
-                  {% set idx = loop.index0 %}
-                  <div class="d-flex align-items-center mb-1 ms-2">
-                    <span class="me-2 small">{{ marca.nombre }}</span>
-                    <input type="text" name="letra_{{ norm }}_{{ idx }}" value="{{ marca.letra }}" maxlength="2" class="form-control form-control-sm me-2" style="width:50px;" title="{{ _('Letters') }}">
-                    <input type="color" name="color_{{ norm }}_{{ idx }}" value="{{ marca.color }}" class="form-control form-control-color form-control-sm me-2" style="width:40px;" title="{{ _('Color') }}">
-                    <span class="badge" style="background:{{ marca.color }};color:#fff;">{{ marca.letra }}</span>
-                  </div>
+                {% set idx = loop.index0 %}
+                <div class="d-flex align-items-center mb-1 ms-2">
+                  <span class="me-2 small">{{ marca.nombre }}</span>
+                  <input type="text" name="letra_{{ norm }}_{{ idx }}" value="{{ marca.letra }}" maxlength="2"
+                    class="form-control form-control-sm me-2" style="width:50px;" title="{{ _('Letters') }}">
+                  <input type="color" name="color_{{ norm }}_{{ idx }}" value="{{ marca.color }}"
+                    class="form-control form-control-color form-control-sm me-2" style="width:40px;"
+                    title="{{ _('Color') }}">
+                  <span class="badge" style="background:{{ marca.color }};color:#fff;">{{ marca.letra }}</span>
+                </div>
                 {% endfor %}
-                <div class="form-text">{{ _('Define letter and color for each brand. If not assigned, the letter will be X and the color black.') }}</div>
+                <div class="form-text">{{ _('Define letter and color for each brand. If not assigned, the letter will be
+                  X and the color black.') }}</div>
               </div>
             </div>
           </div>
@@ -82,7 +97,9 @@
         <h5 class="mb-2"><i class="bi bi-tools"></i> {{ _('Association of milling tool types to machines') }}</h5>
         <div class="mb-2">
           <label class="form-label">{{ _('Milling tool types (comma separated)') }}</label>
-          <input type="text" name="tipos_fresa" class="form-control" value="{{ fresas_maquinas.keys()|join(', ') if fresas_maquinas else '' }}" placeholder="e.g., Tool A, Tool B, Tool C">
+          <input type="text" name="tipos_fresa" class="form-control"
+            value="{{ fresas_maquinas.keys()|join(', ') if fresas_maquinas else '' }}"
+            placeholder="e.g., Tool A, Tool B, Tool C">
           <div class="form-text">{{ _('Add or edit available milling tool types.') }}</div>
         </div>
         <div class="row g-2">
@@ -96,7 +113,8 @@
                 <div class="d-flex flex-wrap">
                   {% for m in maquinas %}
                   <div class="form-check me-2">
-                    <input class="form-check-input" type="checkbox" name="maquinas_fresa_{{ norm }}" value="{{ m }}" id="maq-{{ norm }}-{{ m }}" {% if m in fresas_maquinas[fresa] %}checked{% endif %}>
+                    <input class="form-check-input" type="checkbox" name="maquinas_fresa_{{ norm }}" value="{{ m }}"
+                      id="maq-{{ norm }}-{{ m }}" {% if m in fresas_maquinas[fresa] %}checked{% endif %}>
                     <label class="form-check-label" for="maq-{{ norm }}-{{ m }}">{{ m }}</label>
                   </div>
                   {% endfor %}
@@ -112,17 +130,20 @@
         <div class="row g-2">
           <div class="col-md-4">
             <label class="form-label">{{ _('Fresadoras activities (one per line)') }}</label>
-            <textarea name="actividades_fresadoras" class="form-control" rows="5" placeholder="limpieza_general\najuste_ejes">{{ actividades_mant['fresadoras']|join('\n') if actividades_mant['fresadoras'] else '' }}</textarea>
+            <textarea name="actividades_fresadoras" class="form-control" rows="5"
+              placeholder="limpieza_general\najuste_ejes">{{ actividades_mant['fresadoras']|join('\n') if actividades_mant['fresadoras'] else '' }}</textarea>
             <div class="form-text">{{ _('Use translation keys, one per line.') }}</div>
           </div>
           <div class="col-md-4">
             <label class="form-label">{{ _('Ovens activities (one per line)') }}</label>
-            <textarea name="actividades_hornos" class="form-control" rows="5" placeholder="calibracion_temperatura\nlimpieza_interna">{{ actividades_mant['hornos']|join('\n') if actividades_mant['hornos'] else '' }}</textarea>
+            <textarea name="actividades_hornos" class="form-control" rows="5"
+              placeholder="calibracion_temperatura\nlimpieza_interna">{{ actividades_mant['hornos']|join('\n') if actividades_mant['hornos'] else '' }}</textarea>
             <div class="form-text">{{ _('Use translation keys, one per line.') }}</div>
           </div>
           <div class="col-md-4">
             <label class="form-label">{{ _('Vacuum activities (one per line)') }}</label>
-            <textarea name="actividades_aspiradoras" class="form-control" rows="5" placeholder="cambio_filtro\nrevisar_motor">{{ actividades_mant['aspiradoras']|join('\n') if actividades_mant['aspiradoras'] else '' }}</textarea>
+            <textarea name="actividades_aspiradoras" class="form-control" rows="5"
+              placeholder="cambio_filtro\nrevisar_motor">{{ actividades_mant['aspiradoras']|join('\n') if actividades_mant['aspiradoras'] else '' }}</textarea>
             <div class="form-text">{{ _('Use translation keys, one per line.') }}</div>
           </div>
         </div>
@@ -136,8 +157,8 @@
         <div class="col-md-4">
           <label class="form-label"><i class="bi bi-translate"></i> {{ _('Language') }}</label>
           <select name="lang" class="form-select" onchange="this.form.submit()">
-            <option value="es" {% if session.get('lang', 'es') == 'es' %}selected{% endif %}>{{ _('Spanish') }}</option>
-            <option value="en" {% if session.get('lang') == 'en' %}selected{% endif %}>{{ _('English') }}</option>
+            <option value="es" {% if session.get('lang', 'es' )=='es' %}selected{% endif %}>{{ _('Spanish') }}</option>
+            <option value="en" {% if session.get('lang')=='en' %}selected{% endif %}>{{ _('English') }}</option>
           </select>
         </div>
       </div>
@@ -145,14 +166,11 @@
 
     <hr class="my-4" />
     <h3 class="mb-3"><i class="bi bi-hdd-network"></i> {{ _('Backup and Restore') }}</h3>
-    <div id="backup-restore-messages"
-         data-msg-enter-token="{{ _('Please enter the backup token.') }}"
-         data-msg-choose-file="{{ _('Please choose a file.') }}"
-         data-msg-restoring="{{ _('Restoring...') }}"
-         data-msg-invalid-response="{{ _('Invalid server response') }}"
-         data-msg-restore-ok="{{ _('Restore completed successfully.') }}"
-         data-msg-restore-failed="{{ _('Restore failed') }}"
-         data-msg-network="{{ _('Network error') }}">
+    <div id="backup-restore-messages" data-msg-enter-token="{{ _('Please enter the backup token.') }}"
+      data-msg-choose-file="{{ _('Please choose a file.') }}" data-msg-restoring="{{ _('Restoring...') }}"
+      data-msg-invalid-response="{{ _('Invalid server response') }}"
+      data-msg-restore-ok="{{ _('Restore completed successfully.') }}"
+      data-msg-restore-failed="{{ _('Restore failed') }}" data-msg-network="{{ _('Network error') }}">
     </div>
     <div class="row g-3">
       <div class="col-md-6">
@@ -165,7 +183,8 @@
               <input type="password" id="backup-token" class="form-control" placeholder="{{ _('Enter backup token') }}">
               <div class="form-text">{{ _('The token must match the BACKUP_TOKEN environment variable.') }}</div>
             </div>
-            <button type="button" class="btn btn-primary" id="btn-download-backup"><i class="bi bi-cloud-download"></i> {{ _('Download backup') }}</button>
+            <button type="button" class="btn btn-primary" id="btn-download-backup"><i class="bi bi-cloud-download"></i>
+              {{ _('Download backup') }}</button>
           </div>
         </div>
       </div>
@@ -177,11 +196,13 @@
             <form id="restore-form" enctype="multipart/form-data">
               <div class="mb-2">
                 <label class="form-label">{{ _('Backup token') }}</label>
-                <input type="password" name="token" id="restore-token" class="form-control" placeholder="{{ _('Enter backup token') }}">
+                <input type="password" name="token" id="restore-token" class="form-control"
+                  placeholder="{{ _('Enter backup token') }}">
               </div>
               <div class="mb-2">
                 <label class="form-label">{{ _('Backup file (JSON)') }}</label>
-                <input type="file" name="file" id="restore-file" accept="application/json" class="form-control" required>
+                <input type="file" name="file" id="restore-file" accept="application/json" class="form-control"
+                  required>
               </div>
               <div class="form-check mb-2">
                 <input class="form-check-input" type="checkbox" value="1" id="restore-wipe">
@@ -190,7 +211,8 @@
                 </label>
               </div>
               <div class="d-flex gap-2">
-                <button type="submit" class="btn btn-danger"><i class="bi bi-arrow-counterclockwise"></i> {{ _('Restore') }}</button>
+                <button type="submit" class="btn btn-danger"><i class="bi bi-arrow-counterclockwise"></i> {{
+                  _('Restore') }}</button>
                 <span id="restore-status" class="align-self-center small text-muted"></span>
               </div>
             </form>
@@ -200,13 +222,13 @@
     </div>
 
     <script>
-      (function(){
+      (function () {
         const msgsEl = document.getElementById('backup-restore-messages');
         const MSGS = msgsEl ? msgsEl.dataset : {};
         const $btn = document.getElementById('btn-download-backup');
         const $token = document.getElementById('backup-token');
         if ($btn) {
-          $btn.addEventListener('click', function(){
+          $btn.addEventListener('click', function () {
             const t = ($token && $token.value) || '';
             if (!t) { alert(MSGS.msgEnterToken || 'Enter backup token.'); return; }
             const url = `${window.location.origin}/backup?token=${encodeURIComponent(t)}`;
@@ -215,7 +237,7 @@
         }
         const $form = document.getElementById('restore-form');
         if ($form) {
-          $form.addEventListener('submit', async function(e){
+          $form.addEventListener('submit', async function (e) {
             e.preventDefault();
             const token = document.getElementById('restore-token').value.trim();
             const fileInput = document.getElementById('restore-file');
@@ -232,15 +254,15 @@
                 headers: { 'X-Backup-Token': token },
                 body: formData
               });
-              const json = await resp.json().catch(()=>({status:'error', msg:(MSGS.msgInvalidResponse || 'Invalid server response')}
+              const json = await resp.json().catch(() => ({ status: 'error', msg: (MSGS.msgInvalidResponse || 'Invalid server response') }
               ));
               if (resp.ok && json.status === 'ok') {
                 status.textContent = MSGS.msgRestoreOk || 'Restore completed successfully.';
-                setTimeout(()=>{ window.location.reload(); }, 1200);
+                setTimeout(() => { window.location.reload(); }, 1200);
               } else {
                 status.textContent = (json && json.msg) ? json.msg : (MSGS.msgRestoreFailed || 'Restore failed');
               }
-            } catch(err) {
+            } catch (err) {
               status.textContent = MSGS.msgNetwork || 'Network error';
             }
           });

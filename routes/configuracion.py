@@ -50,6 +50,10 @@ def configuracion():
             fresas_maquinas = {}
     except Exception:
         fresas_maquinas = {}
+    
+    # Load reference code prefix for Excel exports
+    ref_code_prefix = Configuracion.get_valor('ref_code_prefix', default='')
+    
     if request.method == 'POST':
         nuevas_maquinas = [m.strip() for m in request.form.get('maquinas','').split(',') if m.strip()]
         Configuracion.set_lista('maquinas', nuevas_maquinas)
@@ -101,6 +105,9 @@ def configuracion():
             maquinas_val = request.form.getlist(maquinas_key)
             fresas_maquinas_post[f] = maquinas_val
         Configuracion.set_lista('fresas_maquinas', [json.dumps(fresas_maquinas_post)])
+        # Save reference code prefix
+        ref_code_prefix = request.form.get('ref_code_prefix', '').strip()
+        Configuracion.set_valor('ref_code_prefix', ref_code_prefix)
         flash('Configuración actualizada correctamente.')
         return redirect(url_for('configuracion.configuracion'))
     # Al mostrar el formulario, asegurar que todos los materiales tengan shades y marcas aunque sean vacíos
@@ -135,5 +142,6 @@ def configuracion():
         materiales_avanzado=materiales_avanzado,
         fresas_maquinas=fresas_maquinas,
         normalize_key=normalize_key,
-        actividades_mant=actividades_mant
+        actividades_mant=actividades_mant,
+        ref_code_prefix=ref_code_prefix
     )
