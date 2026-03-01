@@ -8,6 +8,19 @@
 {% endblock %}
 {% block content %}
 <div class="row g-4">
+  <!-- Flash Messages -->
+  <div class="col-12">
+    {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+    {% for category, message in messages %}
+    <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+      {{ message }}
+      <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+    {% endfor %}
+    {% endif %}
+    {% endwith %}
+  </div>
   <!-- Top Section: Analytics Table & Add Block Form -->
   <div class="col-lg-5 mb-4">
     <div class="card border-0 shadow-sm animate__animated animate__fadeInLeft">
@@ -82,16 +95,34 @@
             </div>
           </div>
 
-          <!-- Shade (Grid/Cols) -->
+          <!-- Shade/Holder (Grid/Cols) -->
           <div class="col-md-3">
-            <label class="form-label small fw-bold">{{ _('Shade') }}</label>
-            <input type="hidden" name="shade" id="shade-input" required>
+            <label class="form-label small fw-bold" id="label-shade">{{ _('Shade') }}</label>
+            <label class="form-label small fw-bold d-none" id="label-holder">{{ _('Abutment System') }}</label>
+
+            <input type="hidden" name="shade" id="shade-input">
+            <input type="hidden" name="aditamento_holder" id="holder-input">
+
+            <!-- Shade Container -->
             <div id="shade-container" class="border rounded p-2 bg-light"
               style="height:auto;min-height:85px;max-height:225px;overflow-y:auto;">
               <div class="text-muted small text-center mt-4">{{ _('Select Mat.') }}</div>
             </div>
+
+            <!-- Holder Container (Titanium) -->
+            <div id="holder-container" class="d-none flex-column gap-1 border rounded p-2 bg-light"
+              style="height:auto;min-height:85px;max-height:225px;overflow-y:auto;">
+              {% for h in aditamento_holders %}
+              <button type="button" class="btn btn-sm btn-outline-secondary btn-holder-pill text-start ps-2"
+                data-value="{{ h }}">
+                {{ h }}
+              </button>
+              {% endfor %}
+            </div>
+
             <div class="mt-2">
-              <label class="form-label small fw-bold">{{ _('Reference Code') }}</label>
+              <label class="form-label small fw-bold">{{ _('Reference Code') }} <span class="text-danger d-none"
+                  id="ref-required-asterisk">*</span></label>
               <input type="text" name="codigo_referencia" id="codigo_referencia" class="form-control form-control-sm"
                 placeholder="{{ _('Manufacturer SKU') }}">
             </div>
@@ -105,13 +136,32 @@
               style="height:auto;min-height:85px;max-height:225px;overflow-y:auto;">
               <div class="text-muted small text-center mt-4">-</div>
             </div>
+
+            <!-- Titanium Brands Container -->
+            <div id="ti-marca-container" class="d-none border rounded p-2 bg-light mb-1"
+              style="max-height: 140px; overflow-y: auto;">
+              <div id="ti-marca-grid" class="d-flex flex-column gap-1">
+                <div class="text-muted small w-100 text-center mt-1">{{ _('Select an Abutment System first') }}</div>
+              </div>
+            </div>
+            <div id="ti-marca-other-btn-container" class="text-end mb-1 d-none">
+              <button type="button" class="btn btn-sm btn-outline-primary btn-ti-marca-other py-0 px-2"
+                data-value="OTHER" style="font-size: 0.75rem;">{{ _('Other / New') }}</button>
+            </div>
+            <div id="ti-marca-manual-container" class="mt-1 d-none">
+              <div class="input-group input-group-sm">
+                <input type="text" id="btn-ti-marca-manual" class="form-control" placeholder="{{ _('Add new brand') }}">
+                <button class="btn btn-outline-secondary fw-bold" type="button" id="btn-add-ti-marca"><i
+                    class="bi bi-plus-lg"></i></button>
+              </div>
+            </div>
           </div>
 
           <!-- Thickness + Count (Grid + Input) -->
           <div class="col-md-3 d-flex flex-column">
-            <div class="mb-2 flex-grow-1">
+            <div class="mb-2 flex-grow-1" id="col-grosor">
               <label class="form-label small fw-bold">{{ _('Thickness') }}</label>
-              <input type="hidden" name="grosor" id="grosor" required>
+              <input type="hidden" name="grosor" id="grosor">
               <div id="grosor-container" class="border rounded p-2 bg-light"
                 style="max-height: 140px; overflow-y: auto;">
                 <div class="thickness-grid">
@@ -119,6 +169,28 @@
                   <button type="button" class="btn btn-sm btn-outline-secondary btn-thickness" data-value="{{ g }}">{{ g
                     }}</button>
                   {% endfor %}
+                </div>
+              </div>
+            </div>
+
+            <!-- Titanium Types Grid mapped to Reference Code (Hidden by default) -->
+            <div class="mb-2 flex-grow-1 d-none" id="col-ti-types">
+              <label class="form-label small fw-bold">{{ _('Type') }}</label>
+              <div id="ti-types-container" class="border rounded p-2 bg-light mb-1"
+                style="max-height: 140px; overflow-y: auto;">
+                <div id="ti-types-grid" class="thickness-grid">
+                  <div class="text-muted small w-100 text-center mt-1">{{ _('Select an Abutment System first') }}</div>
+                </div>
+              </div>
+              <div class="text-end mb-1">
+                <button type="button" class="btn btn-sm btn-outline-primary btn-ti-type-other py-0 px-2"
+                  data-value="OTHER" style="font-size: 0.75rem;">{{ _('Other / New') }}</button>
+              </div>
+              <div id="ti-type-manual-container" class="mt-1 d-none">
+                <div class="input-group input-group-sm">
+                  <input type="text" id="btn-ti-type-manual" class="form-control" placeholder="{{ _('Add new type') }}">
+                  <button class="btn btn-outline-secondary fw-bold" type="button" id="btn-add-ti-type"><i
+                      class="bi bi-plus-lg"></i></button>
                 </div>
               </div>
             </div>
@@ -182,9 +254,10 @@
               <tr>
                 <th><i class="bi bi-upc-scan"></i> {{ _('Block Code') }}</th>
                 <th><i class="bi bi-box"></i> {{ _('Material') }}</th>
-                <th><i class="bi bi-palette"></i> {{ _('Shade') }}</th>
+                <th><i class="bi bi-palette"></i> {{ _('Shade / Type') }}</th>
                 <th><i class="bi bi-award"></i> {{ _('Brand') }}</th>
-                <th><i class="bi bi-rulers"></i> {{ _('Thickness') }}</th>
+                <th><i class="bi bi-rulers"></i> {{ _('Thickness / System') }}</th>
+                <th><i class="bi bi-tag"></i> {{ _('Ref Code') }}</th>
                 <th><i class="bi bi-123"></i> {{ _('# Units') }}</th>
                 <th><i class="bi bi-calendar"></i> {{ _('Creation Date') }}</th>
                 <th><i class="bi bi-gear"></i> {{ _('Actions') }}</th>
@@ -197,7 +270,14 @@
                 <td>{{ bloque.material }}</td>
                 <td>{{ bloque.shade }}</td>
                 <td>{{ bloque.marca }}</td>
-                <td>{{ bloque.grosor }}</td>
+                <td>
+                  {% if bloque.material|lower in ['titanium', 'titanio'] and bloque.aditamento_holder %}
+                  <span class="badge bg-secondary">{{ bloque.aditamento_holder }}</span>
+                  {% else %}
+                  {{ bloque.grosor }}
+                  {% endif %}
+                </td>
+                <td><small class="text-muted">{{ bloque.codigo_referencia or '' }}</small></td>
                 <td>{{ bloque.modelos_fresados }}</td>
                 <td><span class="fecha-tabla">{{ bloque.fecha_creacion|vancouver }}</span></td>
                 <td>
@@ -277,9 +357,10 @@
             <thead class="table-secondary">
               <tr>
                 <th><i class="bi bi-box"></i> {{ _('Material') }}</th>
-                <th><i class="bi bi-palette"></i> {{ _('Shade') }}</th>
+                <th><i class="bi bi-palette"></i> {{ _('Shade / Type') }}</th>
                 <th><i class="bi bi-award"></i> {{ _('Brand') }}</th>
-                <th><i class="bi bi-rulers"></i> {{ _('Thickness') }}</th>
+                <th><i class="bi bi-rulers"></i> {{ _('Thickness / System') }}</th>
+                <th><i class="bi bi-tag"></i> {{ _('Ref Code') }}</th>
                 <th><i class="bi bi-123"></i> {{ _('Count') }}</th>
                 <th><i class="bi bi-calendar"></i> {{ _('Creation Date') }}</th>
                 <th><i class="bi bi-gear"></i> {{ _('Actions') }}</th>
@@ -291,7 +372,14 @@
                 <td>{{ bloque.material }}</td>
                 <td>{{ bloque.shade }}</td>
                 <td>{{ bloque.marca }}</td>
-                <td>{{ bloque.grosor }}</td>
+                <td>
+                  {% if bloque.material|lower in ['titanium', 'titanio'] and bloque.aditamento_holder %}
+                  <span class="badge bg-secondary">{{ bloque.aditamento_holder }}</span>
+                  {% else %}
+                  {{ bloque.grosor }}
+                  {% endif %}
+                </td>
+                <td><small class="text-muted">{{ bloque.codigo_referencia or '' }}</small></td>
                 <td>
                   <div class="d-flex align-items-center gap-1">
                     <form method="post" action="{{ url_for('bloques.modificar_cantidad', bloque_id=bloque.id) }}"
@@ -321,12 +409,14 @@
                   </form>
                   <a href="{{ url_for('bloques.editar_bloque', bloque_id=bloque.id) }}"
                     class="btn btn-outline-warning btn-sm"><i class="bi bi-pencil"></i></a>
+                  {% if bloque.material|lower not in ['titanium', 'titanio'] %}
                   <button type="button" class="btn btn-outline-primary btn-sm btn-convertir-usado"
                     data-bloque-id="{{ bloque.id }}" data-material="{{ bloque.material }}"
                     data-marca="{{ bloque.marca }}" data-grosor="{{ bloque.grosor }}" data-shade="{{ bloque.shade }}"
                     data-cantidad="{{ bloque.cantidad }}" title="{{ _('Convert to used block') }}">
                     <i class="bi bi-arrow-repeat"></i>
                   </button>
+                  {% endif %}
                 </td>
               </tr>
               {% endfor %}
@@ -348,6 +438,7 @@
           <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
         </div>
         <div class="modal-body">
+          <div id="convert-error" class="alert alert-danger d-none small p-2 mb-2"></div>
           <div class="mb-3">
             <label for="codigoUsado" class="form-label">{{ _('Code for Used Block') }}</label>
             <input type="text" class="form-control" id="codigoUsado" name="codigo" required>
@@ -702,40 +793,41 @@
   const materialesAvanzado = {{ materiales_avanzado|default ({}) | tojson | safe }};
   // Reference Map for Auto-population
   const mapaReferencias = {{ mapa_referencias|default ({}) | tojson | safe }};
+  // Titanium Types mapping (Holder|Brand -> Types)
+  const titaniumTypesByBrand = {{ titanium_types_by_brand|default ({}) | tojson | safe }};
+  const titaniumBrandsByHolder = {{ titanium_brands_by_holder|default ({}) | tojson | safe }};
 
   function updateReferenceCode() {
     const material = $('#material').val();
     const marca = $('#marca').val();
-
-    // Shade can be in hidden input #shade-input or #shade (check consistency)
-    // Based on previous code: input type="hidden" name="shade" id="shade-input"
     const shade = $('#shade-input').val();
-
-    // Grosor: hidden input id="grosor" name="grosor" (hidden field not explicitly seen in snippets but likely exists from context)
-    // Let's verify hidden input IDs from "view_file" lines.
-    // Line 98: input type="hidden" name="marca" id="marca"
-    // Line 88: input type="hidden" name="shade" id="shade-input"
-    // Line 73: input type="hidden" name="material" id="material"
-    // Line 106: input type="hidden" name="grosor" id="grosor" ??? - Let's check line 106 range.
-    // Wait, let's assume standard IDs or check DOM.
-    // I'll assume #grosor based on previous JS snippet: $('#grosor').val(val);
-
     const grosor = $('#grosor').val();
+    const holder = $('#holder-input').val();
 
-    if (material && marca && shade && grosor) {
-      const key = `${material}|${marca}|${shade}|${grosor}`;
-      if (mapaReferencias[key]) {
-        $('#codigo_referencia').val(mapaReferencias[key]);
-        // Optional: highlight or disable? User just said separate box.
-      } else {
-        $('#codigo_referencia').val('empty');
+    if (!material) return;
+
+    const isTitanium = ['titanio', 'titanium'].includes(material.toLowerCase());
+    let key = null;
+
+    if (isTitanium) {
+      if (marca && shade && holder) {
+        key = `${material}|${marca}|${shade}|0|${holder}`;
       }
+    } else {
+      if (marca && shade && grosor) {
+        key = `${material}|${marca}|${shade}|${grosor}|NA`;
+      }
+    }
+
+    if (key && mapaReferencias[key]) {
+      $('#codigo_referencia').val(mapaReferencias[key]);
+    } else {
+      $('#codigo_referencia').val('empty');
     }
   }
 
-  // Trigger update on change
   $(document).ready(function () {
-    $('#material, #marca, #shade-input, #grosor').on('change', updateReferenceCode);
+    $('#material, #marca, #shade-input, #grosor, #holder-input').on('change', updateReferenceCode);
   });
 
 
@@ -760,6 +852,160 @@
   }
 
   $(document).ready(function () {
+    // Delegación de eventos para los botones de Holder
+    $(document).on('click', '.btn-holder-pill', function () {
+      const val = $(this).data('value');
+      $('.btn-holder-pill').removeClass('btn-custom-red');
+      $(this).addClass('btn-custom-red');
+      $('#holder-input').val(val).trigger('change');
+
+      // Clear/Hide Titanium Types Grid until Brand is selected
+      const $gridTypes = $('#ti-types-grid');
+      $gridTypes.html('<div class="text-muted small w-100 text-center mt-1">{{ _("Select a Brand first") }}</div>');
+      $('#shade-input').val('').trigger('change');
+
+      // Clear current brand selection when changing holder
+      $('#marca').val('').trigger('change');
+
+      // Update Titanium Brands Grid
+      if (!$('#ti-marca-container').hasClass('d-none')) {
+        renderTitaniumBrandsGrid(val);
+      }
+    });
+
+    function renderTitaniumBrandsGrid(holder) {
+      const brands = titaniumBrandsByHolder[holder] || [];
+      const $grid = $('#ti-marca-grid');
+      $grid.empty();
+
+      if (brands.length === 0) {
+        $grid.append('<div class="text-muted small w-100 text-center mt-1">{{ _("No brands found.") }}</div>');
+      } else {
+        brands.forEach(function (b) {
+          const currentBrand = $('#marca').val();
+          let cls = (b === currentBrand) ? 'btn-custom-red text-white' : 'btn-outline-secondary text-dark';
+          $grid.append(`<button type="button" class="btn btn-sm ${cls} btn-ti-marca-pill text-start ps-2" data-value="${b}">${b}</button>`);
+        });
+      }
+    }
+
+    $(document).on('click', '.btn-ti-marca-pill', function () {
+      $('.btn-ti-marca-pill').removeClass('btn-custom-red text-white').addClass('btn-outline-secondary text-dark');
+      $('.btn-ti-marca-other').removeClass('btn-primary text-white').addClass('btn-outline-primary');
+      $(this).removeClass('btn-outline-secondary text-dark').addClass('btn-custom-red text-white');
+
+      const brand = $(this).data('value');
+      $('#marca').val(brand).trigger('change');
+      $('#ti-marca-manual-container').addClass('d-none');
+
+      // Now update Types Grid
+      const holder = $('#holder-input').val();
+      if (!$('#ti-types-container').hasClass('d-none') && holder && brand) {
+        renderTitaniumTypesGrid(holder, brand);
+      }
+    });
+
+    $(document).on('click', '.btn-ti-marca-other', function () {
+      $('.btn-ti-marca-pill').removeClass('btn-custom-red text-white').addClass('btn-outline-secondary text-dark');
+      $(this).removeClass('btn-outline-primary').addClass('btn-primary text-white');
+
+      $('#marca').val('').trigger('change');
+      $('#ti-marca-manual-container').removeClass('d-none');
+      $('#btn-ti-marca-manual').focus();
+
+      // Reset Types grid
+      $('#ti-types-grid').html('<div class="text-muted small w-100 text-center mt-1">{{ _("Enter a Brand to view Types") }}</div>');
+      $('#shade-input').val('').trigger('change');
+    });
+
+    $('#btn-add-ti-marca').on('click', function () {
+      const newBrand = $('#btn-ti-marca-manual').val().trim();
+      if (newBrand) {
+        $('#marca').val(newBrand).trigger('change');
+        $('#btn-ti-marca-manual').val('');
+        $('#ti-marca-manual-container').addClass('d-none');
+
+        const activeHolder = $('#holder-input').val();
+        if (activeHolder) {
+          if (!titaniumBrandsByHolder[activeHolder]) {
+            titaniumBrandsByHolder[activeHolder] = [];
+          }
+          if (!titaniumBrandsByHolder[activeHolder].includes(newBrand)) {
+            titaniumBrandsByHolder[activeHolder].push(newBrand);
+            titaniumBrandsByHolder[activeHolder].sort((a, b) => a.localeCompare(b));
+          }
+          renderTitaniumBrandsGrid(activeHolder);
+          $(`.btn-ti-marca-pill[data-value="${newBrand}"]`).click();
+
+          // Show empty types grid since it's a new brand
+          renderTitaniumTypesGrid(activeHolder, newBrand);
+        }
+      }
+    });
+
+    function renderTitaniumTypesGrid(holder, brand) {
+      if (!holder || !brand) return;
+
+      const key = `${holder}|${brand}`;
+      const types = titaniumTypesByBrand[key] || [];
+      const $grid = $('#ti-types-grid');
+      $grid.empty();
+
+      if (types.length === 0) {
+        $grid.append('<div class="text-muted small w-100 text-center mt-1">{{ _("No types found.") }}</div>');
+      } else {
+        types.forEach(function (t) {
+          const currentType = $('#shade-input').val();
+          let cls = (t === currentType) ? 'btn-custom-red text-white' : 'btn-outline-secondary text-dark';
+          $grid.append(`<button type="button" class="btn btn-sm ${cls} btn-ti-type" data-value="${t}">${t}</button>`);
+        });
+      }
+    }
+
+    $(document).on('click', '.btn-ti-type', function () {
+      $('.btn-ti-type').removeClass('btn-custom-red text-white').addClass('btn-outline-secondary text-dark');
+      $('.btn-ti-type-other').removeClass('btn-primary text-white').addClass('btn-outline-primary');
+      $(this).removeClass('btn-outline-secondary text-dark').addClass('btn-custom-red text-white');
+
+      $('#shade-input').val($(this).data('value')).trigger('change');
+      $('#ti-type-manual-container').addClass('d-none');
+    });
+
+    $(document).on('click', '.btn-ti-type-other', function () {
+      // Handle "Other" selection
+      $('.btn-ti-type').removeClass('btn-custom-red text-white').addClass('btn-outline-secondary text-dark');
+      $(this).removeClass('btn-outline-primary').addClass('btn-primary text-white');
+
+      $('#shade-input').val('').trigger('change');
+      $('#ti-type-manual-container').removeClass('d-none');
+      $('#btn-ti-type-manual').focus();
+    });
+
+    $('#btn-add-ti-type').on('click', function () {
+      const newType = $('#btn-ti-type-manual').val().trim().toUpperCase();
+      if (newType) {
+        $('#shade-input').val(newType).trigger('change');
+        $('#btn-ti-type-manual').val('');
+        $('#ti-type-manual-container').addClass('d-none'); // Hide the input
+
+        const activeHolder = $('#holder-input').val();
+        const activeBrand = $('#marca').val();
+        if (activeHolder && activeBrand) {
+          const key = `${activeHolder}|${activeBrand}`;
+          if (!titaniumTypesByBrand[key]) {
+            titaniumTypesByBrand[key] = [];
+          }
+          if (!titaniumTypesByBrand[key].includes(newType)) {
+            titaniumTypesByBrand[key].push(newType);
+            titaniumTypesByBrand[key].sort((a, b) => a.localeCompare(b));
+          }
+          renderTitaniumTypesGrid(activeHolder, activeBrand);
+          // Auto-select newly added
+          $(`.btn-ti-type[data-value="${newType}"]`).click();
+        }
+      }
+    });
+
     // Delegación de eventos para los botones de material
     $(document).on('click', '.btn-material-pill', function () {
       const mat = $(this).data('value');
@@ -767,6 +1013,9 @@
       // UI Update - Custom Red Theme
       $('.btn-material-pill').removeClass('btn-custom-red');
       $(this).addClass('btn-custom-red');
+
+      // Save to localStorage
+      localStorage.setItem('last_selected_material', mat);
 
       // Update Hidden Input and Trigger Change
       $('#material').val(mat).trigger('change');
@@ -791,6 +1040,61 @@
     // Al cambiar el material (ya sea por click o evento), actualizar shades y marcas
     $('#material').on('change', function () {
       const mat = $(this).val();
+
+      const isTitanium = ['titanio', 'titanium'].includes((mat || '').toLowerCase());
+      if (isTitanium) {
+        $('#shade-container').addClass('d-none').addClass('d-none'); // double check
+        $('#shade-container').attr('class', 'd-none'); // force
+        // Actually classList is safer via jQuery
+        $('#shade-container').addClass('d-none');
+        $('#label-shade').addClass('d-none');
+
+        $('#holder-container').removeClass('d-none').addClass('d-flex');
+        $('#label-holder').removeClass('d-none');
+
+        $('#col-grosor').addClass('d-none');
+
+        $('#ref-required-asterisk').removeClass('d-none');
+
+        // Setup Titanium UI
+        $('#col-ti-types').removeClass('d-none').addClass('d-flex flex-column');
+
+        // Brand logic for Titanium
+        $('#marca-container').addClass('d-none');
+        $('#ti-marca-container').removeClass('d-none').addClass('d-flex flex-column');
+        $('#ti-marca-other-btn-container').removeClass('d-none');
+
+        const holder = $('#holder-input').val();
+        const brand = $('#marca').val();
+        renderTitaniumBrandsGrid(holder);
+        if (holder && brand) {
+          renderTitaniumTypesGrid(holder, brand);
+        } else {
+          $('#ti-types-grid').html('<div class="text-muted small w-100 text-center mt-1">{{ _("Select a Brand first") }}</div>');
+        }
+
+      } else {
+        $('#shade-container').removeClass('d-none');
+        $('#label-shade').removeClass('d-none');
+
+        $('#holder-container').addClass('d-none').removeClass('d-flex');
+        $('#label-holder').addClass('d-none');
+
+        $('#col-grosor').removeClass('d-none');
+        $('#ref-required-asterisk').addClass('d-none');
+
+        $('#holder-input').val('');
+        $('.btn-holder-pill').removeClass('btn-custom-red');
+
+        // Hide Titanium UI
+        $('#col-ti-types').addClass('d-none').removeClass('d-flex flex-column');
+
+        // Brand logic for non-Titanium
+        $('#marca-container').removeClass('d-none');
+        $('#ti-marca-container').addClass('d-none').removeClass('d-flex flex-column');
+        $('#ti-marca-other-btn-container').addClass('d-none');
+        $('#ti-marca-manual-container').addClass('d-none');
+      }
 
       // --- RENDER SHADES ---
       let shades = (materialesAvanzado && materialesAvanzado[mat]) ? materialesAvanzado[mat]['shades'] : [];
@@ -820,21 +1124,23 @@
         $shadeContainer.append(htmlContainer);
       }
 
-      // --- RENDER BRANDS ---
-      let marcas = (materialesAvanzado && materialesAvanzado[mat]) ? materialesAvanzado[mat]['marcas'] : [];
-      let $marcaContainer = $('#marca-container');
-      let $marcaInput = $('#marca');
+      // --- RENDER STANDARD BRANDS ---
+      if (!isTitanium) {
+        let marcas = (materialesAvanzado && materialesAvanzado[mat]) ? materialesAvanzado[mat]['marcas'] : [];
+        let $marcaContainer = $('#marca-container');
+        let $marcaInput = $('#marca');
 
-      $marcaContainer.empty();
-      $marcaInput.val('');
+        $marcaContainer.empty();
+        $marcaInput.val('');
 
-      if (!marcas || marcas.length === 0) {
-        $marcaContainer.html('<div class="text-muted small text-center mt-4">{{ _("No brands available") }}</div>');
-      } else {
-        marcas.forEach(function (m) {
-          let nombre = (typeof m === 'object' && m.nombre) ? m.nombre : m;
-          $marcaContainer.append(`<button type="button" class="btn btn-sm btn-outline-secondary btn-brand-pill" data-value="${nombre}">${nombre}</button>`);
-        });
+        if (!marcas || marcas.length === 0) {
+          $marcaContainer.html('<div class="text-muted small text-center mt-4">{{ _("No brands available") }}</div>');
+        } else {
+          marcas.forEach(function (m) {
+            let nombre = (typeof m === 'object' && m.nombre) ? m.nombre : m;
+            $marcaContainer.append(`<button type="button" class="btn btn-sm btn-outline-secondary btn-brand-pill text-start ps-2" data-value="${nombre}">${nombre}</button>`);
+          });
+        }
       }
     });
 
@@ -845,12 +1151,13 @@
       $('#shade-input').val($(this).data('value')).trigger('change');
     });
 
-    // Restore selections on load
-    let matVal = $('#material').val();
-    if (!matVal) {
-      const defaultMat = "{{ request.form.get('material', '') or 'Zirconia' }}";
-      matVal = defaultMat;
-    }
+    // --- MATERIAL MEMORY LOGIC & RESTORE ---
+    // Restore material first
+    let userMaterial = localStorage.getItem('last_selected_material');
+    let formMaterial = "{{ request.form.get('material', '') }}";
+
+    // Fallback: Form Submission > LocalStorage > Default (Zirconia)
+    let matVal = formMaterial || userMaterial || 'Zirconia';
 
     if (matVal) {
       let btn = $(`.btn-material-pill[data-value="${matVal}"]`);
@@ -860,6 +1167,7 @@
         $('#material').val(matVal).trigger('change');
       }
 
+      // Read form data (only restores after a POST, otherwise empty ignores)
       const shadeSel = "{{ request.form.get('shade', '') }}";
       if (shadeSel) {
         setTimeout(function () {
@@ -891,16 +1199,16 @@
 <!-- 4. DataTables Initialization -->
 <script>
   $(document).ready(function () {
-    // Para bloques nuevos: columna 5 (fecha)
+    // Para bloques nuevos: columna 6 (fecha)
     var tablaNuevos = $('#tabla-bloques-nuevos').DataTable({
       language: { url: window.getDataTablesLangUrl() },
-      "order": [[5, "desc"]],
+      "order": [[6, "desc"]],
       "dom": '<"datatable-top"f>t<"datatable-bottom d-flex justify-content-between align-items-center"lip>'
     });
-    // Para bloques usados: columna 6 (fecha)
+    // Para bloques usados: columna 7 (fecha)
     var tablaUsados = $('#tabla-bloques-usados').DataTable({
       language: { url: window.getDataTablesLangUrl() },
-      "order": [[6, "desc"]],
+      "order": [[7, "desc"]],
       "dom": '<"datatable-top"f>t<"datatable-bottom d-flex justify-content-between align-items-center"lip>'
     });
     // Filtros para usados
@@ -922,6 +1230,9 @@
 <script>
   $(document).on('click', '.btn-convertir-usado', function () {
     const bloqueId = $(this).data('bloque-id');
+    // Clear previous errors
+    $('#convert-error').addClass('d-none').text('');
+
     $.getJSON('/bloques/api/generar-codigo-usado', {
       bloque_id: bloqueId
     }, function (data) {
@@ -931,6 +1242,25 @@
       var modal = new bootstrap.Modal(document.getElementById('modalConvertirUsado'));
       modal.show();
       setTimeout(function () { $('#codigoUsado').focus(); }, 500);
+    });
+  });
+
+  // Handle Form Submission via AJAX to prevent modal close on error
+  $('#formConvertirUsado').on('submit', function (e) {
+    e.preventDefault();
+    var form = $(this);
+    var url = form.attr('action');
+    var data = form.serialize();
+
+    $.post(url, data, function (response) {
+      if (response.success) {
+        window.location.reload();
+      } else {
+        // Show error in modal
+        $('#convert-error').removeClass('d-none').text(response.message);
+      }
+    }).fail(function () {
+      $('#convert-error').removeClass('d-none').text('An unexpected error occurred. Please try again.');
     });
   });
 </script>
@@ -1025,29 +1355,22 @@
     if (saved) {
       try {
         var filtros = JSON.parse(saved);
-        if (tabla === 'nuevos' && filtros.material) {
+        if (tabla === 'nuevos' && typeof filtros.material !== 'undefined') {
           $('#filtro-material-nuevos').val(filtros.material).trigger('change');
+        } else if (tabla === 'nuevos') {
+          // Fallback only if material key doesn't exist
+          var globalMat = localStorage.getItem('last_selected_material') || 'Zirconia';
+          $('#filtro-material-nuevos').val(globalMat).trigger('change');
         }
         if (filtros.marca) $('#filtro-marca-' + tabla).val(filtros.marca).trigger('change');
         if (filtros.shade) $('#filtro-shade-' + tabla).val(filtros.shade).trigger('change');
         if (filtros.grosor) $('#filtro-grosor-' + tabla).val(filtros.grosor).trigger('change');
         applied = true;
       } catch (e) { }
-    }
-
-    // Default logic for New Blocks: Zirconia if no filter applied or empty
-    if (tabla === 'nuevos' && !applied) {
-      // Only default if not already set by restore
-      var currentMat = $('#filtro-material-nuevos').val();
-      if (!currentMat) {
-        $('#filtro-material-nuevos').val('Zirconia').trigger('change');
-      }
-    } else if (tabla === 'nuevos' && applied) {
-      // Double check if material was loaded, if not default to Zirconia
-      var currentMat = $('#filtro-material-nuevos').val();
-      if (!currentMat) {
-        $('#filtro-material-nuevos').val('Zirconia').trigger('change');
-      }
+    } else if (tabla === 'nuevos') {
+      // Default logic for New Blocks when completely empty localStorage
+      var globalMat = localStorage.getItem('last_selected_material') || 'Zirconia';
+      $('#filtro-material-nuevos').val(globalMat).trigger('change');
     }
   }
 

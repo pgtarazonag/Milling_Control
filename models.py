@@ -32,20 +32,34 @@ class Orden(db.Model):
     marca = db.Column(db.String(50))
     # Color o shade del material
     shade = db.Column(db.String(20))
-    # Código de barra del bloque usado
-    codigo_barra = db.Column(db.String(100))
+    # Código de barra del bloque usado (JSON list for Titanium, Single String for Zirconia)
+    codigo_barra = db.Column(db.Text) 
     # Máquina utilizada
     maquina = db.Column(db.String(50))
     # Cantidad de modelos fresados en la orden
     cantidad_modelos = db.Column(db.Integer)
     # Fecha de creación de la orden
     fecha_creacion = db.Column(db.DateTime, default=datetime.utcnow)
+    # Holder para aditamentos de titanio
+    aditamento_holder = db.Column(db.String(50))
 
     def get_codigos_caso(self):
         # Devuelve una lista de los códigos de caso asociados a la orden
         if self.codigos_caso:
             return [c.strip() for c in self.codigos_caso.split(',') if c.strip()]
         return []
+
+    def get_lista_codigos_barras(self):
+        # Parses codigo_barra as a list if strictly needed, assumes comma separated or JSON
+        if not self.codigo_barra:
+            return []
+        if self.codigo_barra.startswith('[') and self.codigo_barra.endswith(']'):
+            import json
+            try:
+                return json.loads(self.codigo_barra)
+            except:
+                return [self.codigo_barra]
+        return [self.codigo_barra]
 
 # Modelo para los bloques de material
 class Bloque(db.Model):
@@ -61,6 +75,8 @@ class Bloque(db.Model):
     modelos_fresados = db.Column(db.Integer, default=0)
     codigos_orden_fresados = db.Column(db.Text)
     fecha_creacion = db.Column(db.DateTime, default=datetime.utcnow)
+    # Holder/System for titanium blocks
+    aditamento_holder = db.Column(db.String(50))
 
     def get_codigos_orden_fresados(self):
         # Devuelve una lista de los códigos de orden fresados en este bloque

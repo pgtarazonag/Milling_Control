@@ -25,10 +25,13 @@ VANCOUVER_TZ = pytz.timezone('America/Vancouver')
 bloques_bp = Blueprint('bloques', __name__, url_prefix='/bloques')
 @bloques_bp.route('/', methods=['GET', 'POST'])
 def bloques():
+    from sqlalchemy import func
     materiales = Configuracion.get_lista('materiales', default=['Zirconia','Disilicato','PMMA','Cera','Wax','Composite'])
     shades = Configuracion.get_lista('shades', default=['A1','A2','A3','B1','B2','C1','C2'])
     marcas = Configuracion.get_lista('marcas', default=['Vita','Ivoclar','Aidite'])
     grosores = Configuracion.get_lista('grosores', default=['14','16','18','20','22','25'])
+    # Load Titanium Holders
+    aditamento_holders = Configuracion.get_lista('aditamento_holders', default=['Medentica', 'DESS', 'Zimmer', 'BioHorizons', 'Straumann', 'Nobel'])
     # Cargar configuración avanzada de materiales
     import json
     try:
@@ -54,8 +57,46 @@ def bloques():
     for b in bloques_ref:
         # Clave compuesta para identificar el tipo de bloque
         # Asegurar tipos string/int consistentes
-        key = f"{b.material}|{b.marca}|{b.shade}|{b.grosor}"
+        holder_key = b.aditamento_holder if b.aditamento_holder else 'NA'
+        key = f"{b.material}|{b.marca}|{b.shade}|{b.grosor}|{holder_key}"
         mapa_referencias[key] = b.codigo_referencia
+
+    # Titanio Types mapping: {Holder: [Type1, Type2, ...]}
+    titanium_blocks_all = Bloque.query.filter(
+        db.or_(func.lower(Bloque.material) == 'titanio', func.lower(Bloque.material) == 'titanium')
+    ).all()
+
+    titanium_types_by_brand = {}
+    titanium_brands_by_holder = {}
+    
+    for tb in titanium_blocks_all:
+        h = tb.aditamento_holder
+        b_marca = tb.marca
+        if h:
+            h = h.strip()
+            
+            # Brands Logic (Holder -> Brands)
+            if b_marca:
+                b_marca = b_marca.strip()
+                if h not in titanium_brands_by_holder:
+                    titanium_brands_by_holder[h] = set()
+                titanium_brands_by_holder[h].add(b_marca)
+                
+                # Types Logic (Holder|Brand -> Types)
+                brand_key = f"{h}|{b_marca}"
+                if brand_key not in titanium_types_by_brand:
+                    titanium_types_by_brand[brand_key] = set()
+                
+                b_type = tb.shade
+                if b_type and b_type.strip() and b_type.strip() != 'NA':
+                    titanium_types_by_brand[brand_key].add(b_type.strip())
+
+    for k in titanium_types_by_brand:
+        titanium_types_by_brand[k] = sorted(list(titanium_types_by_brand[k]))
+        
+    for h in titanium_brands_by_holder:
+        titanium_brands_by_holder[h] = sorted(list(titanium_brands_by_holder[h]))
+
     error = None
     # Si se envía el formulario para agregar un bloque nuevo
     if request.method == 'POST':
@@ -64,30 +105,60 @@ def bloques():
         grosor_str = request.form.get('grosor', '').strip()
         marca = request.form.get('marca', '').strip()
         cantidad_str = request.form.get('cantidad', '').strip()
-        # Validación estricta: todos los campos obligatorios
-        if not material or not shade or not grosor_str or not cantidad_str or not marca:
-            error = 'Todos los campos (material, shade, grosor, marca y cantidad) son obligatorios.'
-        else:
+        codigo_referencia = request.form.get('codigo_referencia', '').strip()
+        aditamento_holder = request.form.get('aditamento_holder', '').strip()
+
+        # Check if material is Titanium
+        is_titanium = material.lower() in ['titanio', 'titanium']
+
+        # Validación estricta
+        if not material or not cantidad_str or not marca:
+             error = 'Material, Brand, and Quantity are required.'
+        elif is_titanium:
+             if not aditamento_holder or not shade:
+                 error = 'For Titanium, System (Holder) and Type (Shade) are required.'
+             else:
+                 # Titanium logic: Thickness ignored (or set to defaults)
+                 grosor_str = '0'
+        elif not shade or not grosor_str:
+             error = 'Shade and Thickness are required for non-Titanium blocks.'
+
+        if not error:
             try:
                 grosor = int(grosor_str)
                 cantidad = int(cantidad_str)
-                codigo_referencia = request.form.get('codigo_referencia', '').strip()
                 from datetime import datetime
                 import pytz
                 VANCOUVER_TZ = pytz.timezone('America/Vancouver')
                 ahora_van = datetime.now(VANCOUVER_TZ)
-                # Upsert: si ya existe un bloque "nuevo" con mismas características, sumar cantidad
-                existente = (
-                    Bloque.query
-                    .filter_by(estado='nuevo', material=material, marca=marca, shade=shade, grosor=grosor, codigo_barra=None)
-                    .first()
-                )
+                
+                # Upsert query construction
+                query_kwargs = {
+                    'estado': 'nuevo',
+                    'material': material,
+                    'marca': marca,
+                    'codigo_barra': None
+                }
+                if is_titanium:
+                    query_kwargs['aditamento_holder'] = aditamento_holder
+                    query_kwargs['shade'] = shade
+                    query_kwargs['grosor'] = 0
+                    query_kwargs['codigo_referencia'] = codigo_referencia
+                else:
+                    query_kwargs['shade'] = shade
+                    query_kwargs['grosor'] = grosor
+
+                existente = Bloque.query.filter_by(**query_kwargs).first()
+                
                 if existente:
-                    # Update reference code if provided
-                    old_qty = existente.cantidad
-                    if codigo_referencia:
+                    old_qty = existente.cantidad or 0
+                    
+                    # Update reference code if provided (only for non-titanium)
+                    if codigo_referencia and not is_titanium:
                         existente.codigo_referencia = codigo_referencia
-                    existente.cantidad = (existente.cantidad or 0) + cantidad
+                        
+                    existente.cantidad = old_qty + cantidad
+                    
                     # Guardar la fecha en UTC para consistencia con la vista
                     try:
                         import pytz as _p
@@ -96,77 +167,62 @@ def bloques():
                         existente.fecha_creacion = ahora_van
                     
                     # LOG
+                    log_desc = f"Added {cantidad} units: {material} {aditamento_holder if is_titanium else shade}"
                     log = LogInventario(
                         accion='ALTA_INCREMENTO',
                         bloque_id=existente.id,
-                        descripcion=f"Quantity increased (+{cantidad}) for: {material} {shade} {grosor}mm",
+                        descripcion=log_desc,
                         detalles=json.dumps({
-                            'old_qty': old_qty, 
-                            'new_qty': existente.cantidad, 
-                            'added': cantidad,
-                            'material': material,
-                            'shade': shade,
-                            'marca': marca,
-                            'grosor': grosor
+                            'material': existente.material,
+                            'shade': existente.shade,
+                            'marca': existente.marca,
+                            'grosor': existente.grosor,
+                            'holder': aditamento_holder if is_titanium else None,
+                            'ref': codigo_referencia,
+                            'cantidad_agregada': cantidad,
+                            'cantidad_nueva': existente.cantidad
                         }),
                         usuario='System'
                     )
                     db.session.add(log)
                     db.session.commit()
                 else:
-                    # Guardar la fecha en UTC pero mostrarla en Vancouver
-                    nuevo = Bloque(
+                    nuevo_bloque = Bloque(
                         material=material,
-                        marca=marca,
                         shade=shade,
                         grosor=grosor,
                         cantidad=cantidad,
+                        marca=marca,
                         codigo_referencia=codigo_referencia,
+                        aditamento_holder=aditamento_holder if is_titanium else None,
                         estado='nuevo',
-                        fecha_creacion=ahora_van.astimezone(pytz.utc)
+                        fecha_creacion=ahora_van
                     )
-                    db.session.add(nuevo)
-                    db.session.commit() # Commit first to get ID
+                    db.session.add(nuevo_bloque)
+                    db.session.commit()
                     
                     # LOG
+                    log_desc = f"New block: {material} {aditamento_holder if is_titanium else shade}"
                     log = LogInventario(
                         accion='ALTA_NUEVO',
-                        bloque_id=nuevo.id,
-                        descripcion=f"New block added: {material} {shade} {grosor}mm (Qty: {cantidad})",
+                        bloque_id=nuevo_bloque.id,
+                        descripcion=log_desc,
                         detalles=json.dumps({
-                            'material': material, 
-                            'shade': shade, 
-                            'grosor': grosor, 
-                            'cantidad': cantidad,
-                            'marca': marca
+                            'material': material,
+                            'shade': shade,
+                            'marca': marca,
+                            'grosor': grosor,
+                            'holder': aditamento_holder if is_titanium else None,
+                            'cantidad': cantidad
                         }),
                         usuario='System'
                     )
                     db.session.add(log)
                     db.session.commit()
-                    if codigo_referencia:
-                        existente.codigo_referencia = codigo_referencia
-                    existente.cantidad = (existente.cantidad or 0) + cantidad
-                    # Guardar la fecha en UTC para consistencia con la vista
-                    try:
-                        import pytz as _p
-                        existente.fecha_creacion = ahora_van.astimezone(_p.utc)
-                    except Exception:
-                        existente.fecha_creacion = ahora_van
                     
-                    # LOG
-                    log = LogInventario(
-                        accion='ALTA_INCREMENTO',
-                        bloque_id=existente.id,
-                        descripcion=f"Increased quantity for existing new block type: {material} {shade} {grosor}mm. ({old_qty} -> {existente.cantidad})",
-                        detalles=json.dumps({'old_qty': old_qty, 'new_qty': existente.cantidad, 'added': cantidad}),
-                        usuario='System'
-                    )
-                    db.session.add(log)
-                    db.session.commit()
                 return redirect(url_for('bloques.bloques'))
             except ValueError:
-                error = 'El grosor y la cantidad deben ser números válidos.'
+                error = 'Thickness and quantity must be valid numbers.'
 
     # Filtros GET para buscar bloques por material, shade o estado
     material = request.args.get('material')
@@ -223,7 +279,10 @@ def bloques():
         bloques_nuevos=bloques_nuevos,
         error=error,
         materiales_avanzado=materiales_avanzado,
-        mapa_referencias=mapa_referencias # DATA FOR JS
+        mapa_referencias=mapa_referencias, # DATA FOR JS
+        aditamento_holders=aditamento_holders,
+        titanium_types_by_brand=titanium_types_by_brand,
+        titanium_brands_by_holder=titanium_brands_by_holder
     )
 
 # Ruta para editar un bloque existente
@@ -232,7 +291,24 @@ def editar_bloque(bloque_id):
     materiales = Configuracion.get_lista('materiales', default=['Zirconia','Disilicato','PMMA','Cera','Wax','Composite'])
     marcas = Configuracion.get_lista('marcas', default=['Vita','Ivoclar','Aidite'])
     grosores = Configuracion.get_lista('grosores', default=['14','16','18','20','22','25'])
+    aditamento_holders = Configuracion.get_lista('aditamento_holders', default=['Medentica', 'DESS', 'Zimmer', 'BioHorizons', 'Straumann', 'Nobel'])
     bloque = Bloque.query.get_or_404(bloque_id)
+    
+    # Titanium Types and Brands mappings needed for editing Titanium blocks
+    titanium_blocks_all = Bloque.query.filter(
+        db.or_(db.func.lower(Bloque.material) == 'titanio', db.func.lower(Bloque.material) == 'titanium')
+    ).all()
+
+    titanium_brands_by_holder = {}
+    for b in titanium_blocks_all:
+        if b.aditamento_holder and b.marca:
+            h = b.aditamento_holder
+            m = b.marca
+            if h not in titanium_brands_by_holder:
+                titanium_brands_by_holder[h] = []
+            if m not in titanium_brands_by_holder[h]:
+                titanium_brands_by_holder[h].append(m)
+                
     # Cargar configuración avanzada de materiales para shades y marcas dependientes
     import json
     try:
@@ -248,8 +324,17 @@ def editar_bloque(bloque_id):
     if request.method == 'POST':
         # Actualizamos los datos del bloque con los valores del formulario
         bloque.material = request.form['material']
-        bloque.shade = request.form['shade']
-        bloque.grosor = int(request.form['grosor'])
+        is_titanium = bloque.material.lower() in ['titanio', 'titanium']
+        
+        if is_titanium:
+            bloque.aditamento_holder = request.form.get('aditamento_holder', '')
+            bloque.shade = request.form.get('shade', '') # Type corresponds to Shade
+            bloque.grosor = 0
+        else:
+            bloque.shade = request.form.get('shade', '')
+            bloque.grosor = int(request.form.get('grosor', 0))
+            bloque.aditamento_holder = None
+            
         bloque.marca = request.form.get('marca')  # Siempre guardar marca
         # Solo actualizar cantidad si el bloque es nuevo y el campo existe en el form
         if bloque.estado == 'nuevo' and 'cantidad' in request.form:
@@ -270,15 +355,16 @@ def editar_bloque(bloque_id):
         
         # LOG
         detalles_json = json.dumps({
-            'material': request.form['material'],
-            'shade': request.form['shade'],
-            'grosor': int(request.form['grosor']),
-            'marca': request.form.get('marca')
+            'material': bloque.material,
+            'shade': bloque.shade,
+            'grosor': bloque.grosor,
+            'marca': bloque.marca,
+            'holder': bloque.aditamento_holder
         })
         log = LogInventario(
             accion='EDICION',
             bloque_id=bloque.id,
-            descripcion=f"Block edited {bloque.id}: {request.form['material']} {request.form['shade']}",
+            descripcion=f"Block edited {bloque.id}: {bloque.material} {bloque.aditamento_holder if is_titanium else bloque.shade}",
             detalles=detalles_json,
             usuario='System'
         )
@@ -298,7 +384,9 @@ def editar_bloque(bloque_id):
         marcas=marcas,
         grosores=grosores,
         shades=Configuracion.get_lista('shades', default=['A1','A2','A3','B1','B2','C1','C2']),
-        materiales_avanzado=materiales_avanzado
+        materiales_avanzado=materiales_avanzado,
+        aditamento_holders=aditamento_holders,
+        titanium_brands_by_holder=titanium_brands_by_holder
     )
 
 # Ruta para eliminar un bloque (lo guarda en el historial antes de eliminar)
@@ -342,6 +430,8 @@ def eliminar_bloque(bloque_id):
     
     db.session.delete(bloque)
     db.session.commit()
+    from flask import flash
+    flash('Block deleted successfully.', 'success')
     return redirect(url_for('bloques.bloques'))
 
 @bloques_bp.route('/usar_bloque_nuevo/<int:bloque_id>', methods=['POST'])
@@ -364,7 +454,19 @@ def usar_bloque_nuevo(bloque_id):
     # Permitir código personalizado desde el formulario
     codigo = request.form.get('codigo')
     usados = set(b.codigo_barra for b in Bloque.query.filter_by(estado='usado').all())
-    if not codigo or codigo in usados:
+    
+    # Validation: If code provided and exists, return error
+    if codigo and codigo in usados:
+        # Check if request accepts JSON (AJAX)
+        if request.headers.get('X-Requested-With') == 'XMLHttpRequest' or request.accepts('application/json'):
+             return json.dumps({'success': False, 'message': f"Error: Code '{codigo}' is already in use. Please choose another."}), 200, {'Content-Type': 'application/json'}
+        
+        # Fallback for non-AJAX (should not happen with new JS, but good safety)
+        from flask import flash
+        flash(f"Error: Code '{codigo}' is already in use. Please choose another.", "danger")
+        return redirect(url_for('bloques.bloques'))
+
+    if not codigo:
         grosor_str = str(bloque.grosor).zfill(2)
         materiales_avanzado = Configuracion.get_lista('materiales_avanzado')
         if materiales_avanzado and isinstance(materiales_avanzado, list) and isinstance(materiales_avanzado[0], str):
@@ -417,6 +519,11 @@ def usar_bloque_nuevo(bloque_id):
     )
     db.session.add(log)
     db.session.commit()
+    
+    # Check if request accepts JSON (AJAX)
+    if request.headers.get('X-Requested-With') == 'XMLHttpRequest' or request.accepts('application/json'):
+         return json.dumps({'success': True}), 200, {'Content-Type': 'application/json'}
+
     # Antes: Redirigir a la pantalla de confirmación de código de bloque (sin orden_data)
     # return redirect(url_for('ordenes.confirmar_codigo_bloque', bloque_id=bloque_usado.id))
     # Ahora: Redirigir directamente a la lista de bloques
@@ -549,9 +656,9 @@ def eliminar_bloque_usado(bloque_id):
             fecha_eliminacion=datetime.now(VANCOUVER_TZ)
         )
         db.session.add(historial)
-        msg = 'Bloque usado eliminado correctamente (archivado en historial).'
+        msg = 'Used block successfully deleted (archived in history).'
     else:
-        msg = 'Bloque usado eliminado permanentemente.'
+        msg = 'Used block permanently deleted.'
 
     # LOG
     tipo_elim = 'Permanente' if permanente else 'Archivado'
@@ -768,7 +875,7 @@ def eliminar_log(log_id):
     log = LogInventario.query.get_or_404(log_id)
     db.session.delete(log)
     db.session.commit()
-    return jsonify({'success': True, 'message': 'Registro eliminado'})
+    return jsonify({'success': True, 'message': 'Record deleted'})
 
 @bloques_bp.route('/api/audit-log/editar/<int:log_id>', methods=['POST'])
 def editar_log(log_id):
@@ -778,5 +885,5 @@ def editar_log(log_id):
     if nueva_desc:
         log.descripcion = nueva_desc
         db.session.commit()
-        return jsonify({'success': True, 'message': 'Registro actualizado'})
+        return jsonify({'success': True, 'message': 'Record updated'})
     return jsonify({'success': False, 'message': 'Descripción vacía'}), 400

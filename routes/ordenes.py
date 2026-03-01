@@ -307,8 +307,78 @@ def ordenes():
             
         if not error and codigos_orden:
             codigos_lista = [c.strip() for c in codigos_orden.split(',') if c.strip()]
+            
+            # --- TITANIUM LOGIC ---
+            is_titanium = material_form and material_form.lower() in ['titanio', 'titanium']
+            if is_titanium:
+                titanium_block_ids = request.form.getlist('titanium_block_ids')
+                aditamento_holder = request.form.get('aditamento_holder')
+                if not titanium_block_ids:
+                    error = "You must select Titanium Blanks for consumption."
+                else:
+                    from collections import Counter
+                    block_counts = Counter(titanium_block_ids)
+                    consumed_refs = []
+                    
+                    # Verify stock availability first
+                    for bid, qty_t in block_counts.items():
+                        b_chk = Bloque.query.get(int(bid))
+                        if not b_chk or b_chk.cantidad < qty_t:
+                            error = f"Not enough quantity for block {b_chk.codigo_referencia if b_chk else bid}"
+                            break
+                    
+                    if not error:
+                        for bid, qty_t in block_counts.items():
+                            bloque = Bloque.query.get(int(bid))
+                            bloque.cantidad -= qty_t
+                            if bloque.cantidad > 0:
+                                bloque.fecha_creacion = datetime.now(VANCOUVER_TZ)
+                            
+                            # Log Type (shade) and real ref if it exists for the display badge
+                            ref_display = f"{bloque.shade} ({bloque.codigo_referencia})" if bloque.codigo_referencia else bloque.shade
+                            consumed_refs.extend([ref_display] * qty_t)
+                            
+                            log = LogInventario(
+                                accion='CONSUMO_TITANIO',
+                                bloque_id=bloque.id,
+                                descripcion=f"Consumed {qty_t} units for Order {codigos_orden}",
+                                usuario='System'
+                            )
+                            db.session.add(log)
+                            
+                        import json
+                        nueva_orden = Orden(
+                            codigos_caso=','.join(codigos_lista),
+                            material=material_form,
+                            marca=request.form.get('marca'),
+                            shade='NA',
+                            aditamento_holder=aditamento_holder,
+                            codigo_barra=json.dumps(consumed_refs),
+                            maquina=maquina,
+                            cantidad_modelos=cantidad_modelos,
+                            fecha_creacion=datetime.now(VANCOUVER_TZ)
+                        )
+                        db.session.add(nueva_orden)
+                        
+                        for codigo_orden in codigos_lista:
+                            pendiente = OrdenPendiente.query.filter_by(codigo_orden=codigo_orden).first()
+                            if pendiente:
+                                db.session.delete(pendiente)
+                                
+                        if maquina:
+                            fresas_compatibles = FresaInstalada.query.filter(
+                                FresaInstalada.maquina == maquina,
+                                FresaInstalada.materiales.like(f"%{material_form}%")
+                            ).all()
+                            for fresa in fresas_compatibles:
+                                fresa.modelos_fresados += cantidad_modelos
+                                
+                        db.session.commit()
+                        flash('Titanium Order created successfully.')
+                        return redirect(url_for('ordenes.ordenes', material=material_form))
+
             bloque = None
-            if bloque_usado_id:
+            if not is_titanium and not error and bloque_usado_id:
                 bloque = Bloque.query.get(int(bloque_usado_id))
                 if bloque:
                     # Actualiza modelos_fresados del bloque (opcional: puedes sumar cantidad_modelos si quieres llevar control)
@@ -343,7 +413,7 @@ def ordenes():
                     db.session.commit()
                     flash('Orden creada correctamente.')
                     return redirect(url_for('ordenes.ordenes', material=material_form, shade=shade_form))
-            elif bloque_nuevo_id:
+            elif not is_titanium and not error and bloque_nuevo_id:
                 bloque_nuevo = Bloque.query.get(int(bloque_nuevo_id))
                 if bloque_nuevo and bloque_nuevo.cantidad > 0:
                     bloque_nuevo.cantidad -= 1
@@ -389,7 +459,7 @@ def ordenes():
                     return redirect(url_for('ordenes.confirmar_codigo_bloque', bloque_id=bloque.id, orden_data=orden_data))
                 else:
                     error = "No hay bloques nuevos disponibles."
-            if not bloque:
+            if not is_titanium and not error and not bloque:
                 error = "Debes seleccionar un bloque usado o nuevo."
             # Render template with error if needed
             if error:
@@ -420,6 +490,23 @@ def ordenes():
         shades = db.session.query(Bloque.shade).filter(Bloque.material == tipo).distinct().all()
         shades_por_material[tipo] = [s[0] for s in shades if s[0]]
 
+    # Titanium Inventory
+    titanium_blocks = Bloque.query.filter(
+        db.or_(func.lower(Bloque.material) == 'titanio', func.lower(Bloque.material) == 'titanium'),
+        Bloque.estado == 'nuevo'
+    ).all()
+    titanium_inventory = []
+    for b in titanium_blocks:
+        titanium_inventory.append({
+            'id': b.id,
+            'holder': b.aditamento_holder,
+            'ref': b.shade, # Type is now in shade
+            'real_ref': b.codigo_referencia,
+            'qty': b.cantidad,
+            'marca': b.marca
+        })
+    aditamento_holders = Configuracion.get_lista('aditamento_holders', default=['Medentica', 'DESS', 'Zimmer', 'BioHorizons'])
+
     # Renderizamos la plantilla HTML con los datos necesarios
     return render_template(
         'ordenes.html',
@@ -434,7 +521,9 @@ def ordenes():
         maquina=maquina,
         error=error,
         pendientes_orden=pendientes_orden,
-        shades_por_material=shades_por_material
+        shades_por_material=shades_por_material,
+        titanium_inventory=titanium_inventory,
+        aditamento_holders=aditamento_holders
     )
 
 @ordenes_bp.route('/eliminar/<int:orden_id>', methods=['POST'])

@@ -42,12 +42,27 @@
                 </div>
               </div>
               <div class="col-auto">
-                <label class="form-label small fw-bold">{{ _('Shade') }}</label>
+                <label class="form-label small fw-bold" id="label-shade">{{ _('Shade') }}</label>
+                <label class="form-label small fw-bold d-none" id="label-holder">{{ _('Abutment System') }}</label>
                 <input type="hidden" name="shade" id="shade"
                   value="{{ request.form.get('shade', shade) or request.args.get('shade', '') }}">
+                <input type="hidden" name="aditamento_holder" id="aditamento_holder">
+
+                <!-- Shade List -->
                 <div id="shade-container" class="border rounded p-2 bg-light"
                   style="height:auto;min-height:120px;max-height:300px;overflow-y:auto;min-width:200px;">
                   <div class="text-muted small text-center mt-4">{{ _('Select Material') }}</div>
+                </div>
+
+                <!-- Holder List -->
+                <div id="holder-container" class="d-none flex-column gap-1 border rounded p-2 bg-light"
+                  style="height:auto;min-height:120px;max-height:300px;overflow-y:auto;min-width:200px;">
+                  {% for h in aditamento_holders %}
+                  <button type="button" class="btn btn-sm btn-outline-secondary btn-holder-pill text-start ps-2"
+                    data-value="{{ h }}">
+                    {{ h }}
+                  </button>
+                  {% endfor %}
                 </div>
               </div>
               <div class="col-auto">
@@ -66,7 +81,7 @@
                 </div>
               </div>
               <div class="col-auto">
-                <div class="d-flex flex-column gap-2">
+                <div class="d-flex flex-column gap-2" id="zirconia-blocks-container">
                   <div>
                     <label class="form-label small fw-bold">{{ _('New Blocks') }}</label>
                     <select name="bloque_nuevo_id" class="form-select" style="width:380px;">
@@ -102,13 +117,32 @@
                       {% endfor %}
                     </select>
                   </div>
-                  <div>
-                    <label class="form-label small fw-bold">{{ _('Order Codes') }}</label>
-                    <input type="text" name="codigo_orden" class="form-control" placeholder="ABC123, DEF456, GHI789"
-                      id="codigo-orden-input" style="width:456px;">
-                    <small class="text-muted">{{ _('Enter one or more case codes separated by commas.') }}</small>
+                </div>
+
+                <!-- Titanium Blocks Container -->
+                <div class="d-none flex-column gap-2" id="titanium-blocks-container" style="width:456px;">
+                  <label class="form-label small fw-bold">
+                    {{ _('Select Blanks') }}
+                    <span class="badge bg-secondary ms-1">
+                      <span id="selected-ti-count">0</span> {{ _('Selected') }}
+                    </span>
+                  </label>
+                  <div id="titanium-grid" class="d-flex flex-wrap gap-2 border rounded p-2 bg-light"
+                    style="min-height:100px; max-height:300px; overflow-y:auto;">
+                    <div class="text-muted small w-100 text-center mt-4">{{ _('Select an Abutment System first') }}
+                    </div>
                   </div>
                 </div>
+
+                <!-- Common Order Codes (Moved out of specific containers) -->
+                <div class="mt-2" id="common-order-codes">
+                  <label class="form-label small fw-bold">{{ _('Order Codes') }}</label>
+                  <input type="text" name="codigo_orden" class="form-control" placeholder="ABC123, DEF456, GHI789"
+                    id="codigo-orden-input" style="width:456px;">
+                  <!-- Renamed ID to avoid conflict if I keep old one? No I replaced -->
+                  <small class="text-muted">{{ _('Enter one or more case codes separated by commas.') }}</small>
+                </div>
+
               </div>
               <div class="col-auto">
                 <div class="d-flex flex-column gap-2">
@@ -188,6 +222,38 @@
 
           .btn-shade:hover {
             background-color: #e9ecef;
+          }
+
+          /* Titanium Blank Grid Buttons */
+          .btn-ti-blank {
+            width: 100%;
+            font-weight: 600;
+            font-size: 0.8em;
+            padding: 8px 4px;
+            border-radius: 4px;
+            line-height: 1.2;
+            border: 1px solid #ced4da;
+            color: #212529;
+            background-color: #fff;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.1s ease-in-out;
+          }
+
+          .btn-ti-blank:hover {
+            background-color: #e9ecef;
+          }
+
+          .btn-ti-blank:active {
+            transform: scale(0.95);
+          }
+
+          .btn-ti-blank small {
+            font-size: 0.75em;
+            color: inherit;
+            opacity: 0.8;
           }
 
           .shade-columns-container {
@@ -441,7 +507,14 @@
     // Handler for Material change - MUST be defined first
     $('#material').on('change', function () {
       var material = $(this).val();
-      console.log('Material changed to:', material);
+      console.log('Material changed event triggered for:', material);
+
+      const isTitanium = ['titanio', 'titanium'].includes((material || '').toLowerCase());
+
+      if (isTitanium) {
+        // Skip AJAX shade loading for Titanium
+        return;
+      }
 
       $.getJSON('/ordenes/api/shades', { material: material }, function (data) {
         var $shadeContainer = $('#shade-container');
@@ -507,6 +580,45 @@
       });
     });
 
+    // Function to toggle Titanium UI
+    function toggleTitaniumUI(material) {
+      const isTitanium = ['titanio', 'titanium'].includes((material || '').toLowerCase());
+      console.log('toggleTitaniumUI called for:', material, 'isTitanium:', isTitanium);
+
+      if (isTitanium) {
+        $('#shade-container').addClass('d-none');
+        $('#label-shade').addClass('d-none');
+        $('#zirconia-blocks-container').removeClass('d-flex').addClass('d-none');
+
+        $('#holder-container').removeClass('d-none').addClass('d-flex');
+        $('#label-holder').removeClass('d-none');
+        $('#titanium-blocks-container').removeClass('d-none').addClass('d-flex');
+        $("input[name='cantidad_modelos']").prop('readonly', true).addClass('bg-light');
+
+        if (!window.isInitialLoad) {
+          // Reset selections only if it's a new click, not page load
+          $('#aditamento_holder').val('');
+          $('.btn-holder-pill').removeClass('btn-custom-red');
+          $('#titanium-grid').html('<div class="text-muted small w-100 text-center mt-4">{{ _("Select an Abutment System first") }}</div>').css('display', 'block');
+          selectedTitaniumBlocks = [];
+
+          if (typeof updateTitaniumSelectionUI === 'function') {
+            updateTitaniumSelectionUI();
+          }
+        }
+      } else {
+        $('#shade-container').removeClass('d-none');
+        $('#label-shade').removeClass('d-none');
+        $('#zirconia-blocks-container').removeClass('d-none').addClass('d-flex');
+
+        $('#holder-container').removeClass('d-flex').addClass('d-none');
+        $('#label-holder').addClass('d-none');
+        $('#titanium-blocks-container').removeClass('d-flex').addClass('d-none');
+        $("input[name='cantidad_modelos']").prop('readonly', false).removeClass('bg-light');
+      }
+      return isTitanium;
+    }
+
     // Handler for Material button clicks
     $(document).on('click', '.btn-material-pill', function () {
       const mat = $(this).data('value');
@@ -514,13 +626,19 @@
 
       // Only submit if material actually changed
       if (mat !== currentMat) {
+        // Save to localStorage
+        localStorage.setItem('last_selected_material', mat);
+
         // UI Update - Custom Red Theme
         $('.btn-material-pill').removeClass('btn-custom-red');
         $(this).addClass('btn-custom-red');
+
+        // Immediately toggle UI
+        window.isInitialLoad = false; // ensure resets happen
+        toggleTitaniumUI(mat);
+
         // Update Hidden Input and Trigger Change (which loads shades via AJAX)
         $('#material').val(mat).trigger('change');
-
-        // Note: form trigger removed to let user select shade first
       }
     });
 
@@ -540,16 +658,24 @@
     });
 
     // Initialize: Restore material selection and load shades
-    const initialMat = $('#material').val();
+    let userMaterial = localStorage.getItem('last_selected_material');
+    let formMaterial = "{{ request.form.get('material', '') }}";
+    let initialMat = formMaterial || userMaterial || $('#material').val();
+
     const initialShade = $('#shade').val();
     console.log('Initial material:', initialMat);
     console.log('Initial shade:', initialShade);
 
     if (initialMat) {
+      $('#material').val(initialMat);
       $(`.btn-material-pill[data-value="${initialMat}"]`).addClass('btn-custom-red');
       // Set a flag to skip clearing the shade input during initial load
       window.isInitialLoad = true;
       console.log('Initial state detected. Setting isInitialLoad=true');
+
+      // Apply UI state immediately for Titanium
+      toggleTitaniumUI(initialMat);
+
       $('#material').trigger('change');
 
       // Safety timeout in case AJAX never completes
@@ -807,6 +933,160 @@
     }
     $btn.prop('disabled', true);
     setTimeout(function () { $btn.prop('disabled', false); }, 800);
+  });
+</script>
+<script>
+  // TITANIUM LOGIC
+  const titaniumInventory = {{ titanium_inventory|default ([]) | tojson | safe }};
+
+  $(document).ready(function () {
+    // Keep global Titanium array
+    selectedTitaniumBlocks = [];
+
+    // Holder Selection
+    $(document).on('click', '.btn-holder-pill', function () {
+      const holder = $(this).data('value');
+      $('#aditamento_holder').val(holder);
+      $('.btn-holder-pill').removeClass('btn-custom-red');
+      $(this).addClass('btn-custom-red');
+
+      selectedTitaniumBlocks = []; // Reset selections when system changes
+      updateTitaniumSelectionUI();
+      renderTitaniumGrid(holder);
+    });
+
+    function renderTitaniumGrid(holder) {
+      const grid = $('#titanium-grid');
+      grid.empty();
+
+      // Upgrade layout to CSS Grid
+      grid.removeClass('d-flex flex-wrap').css({
+        'display': 'grid',
+        'grid-template-columns': 'repeat(auto-fill, minmax(85px, 1fr))',
+        'gap': '8px',
+        'align-items': 'start'
+      });
+
+      const blocks = titaniumInventory.filter(b => b.holder === holder);
+
+      if (blocks.length === 0) {
+        grid.css('display', 'block'); // revert for message
+        grid.html('<div class="text-muted small w-100 text-center mt-4">{{ _("No blanks available") }}</div>');
+        return;
+      }
+
+      const grouped = {};
+      blocks.forEach(b => {
+        if (!grouped[b.ref]) grouped[b.ref] = { qty: 0, ids: [], real_ref: b.real_ref || '' };
+        grouped[b.ref].qty += b.qty;
+      });
+
+      Object.keys(grouped).sort().forEach(ref => {
+        const data = grouped[ref];
+        const btn = $(`
+                  <button type="button" class="btn btn-ti-blank shadow-sm" data-ref="${ref}">
+                      <div>${ref}</div>
+                      <div class="text-muted" style="font-size: 0.75em;">${data.real_ref}</div>
+                      <small>Avail: ${data.qty}</small>
+                  </button>
+              `);
+        grid.append(btn);
+      });
+    }
+
+    // Reference Click -> Select
+    $(document).on('click', '.btn-ti-blank', function () {
+      const ref = $(this).data('ref');
+      const holder = $('#aditamento_holder').val();
+
+      // Allocate logic
+      const blocksForRef = titaniumInventory.filter(b => b.ref === ref && b.holder === holder);
+
+      let allocatedId = null;
+      for (let b of blocksForRef) {
+        const usedCount = selectedTitaniumBlocks.filter(item => item.id == b.id).length;
+        if (usedCount < b.qty) {
+          allocatedId = b.id;
+          break;
+        }
+      }
+
+      if (!allocatedId) {
+        alert('No more units available for ' + ref);
+        return;
+      }
+
+      const allocatedBlock = blocksForRef.find(b => b.id === allocatedId);
+      selectedTitaniumBlocks.push({ id: allocatedId, ref: ref, real_ref: allocatedBlock.real_ref || '' });
+      updateTitaniumSelectionUI();
+    });
+
+    // Remove Selection
+    $(document).on('click', '.btn-remove-ti-sel', function () {
+      const idx = $(this).data('index');
+      selectedTitaniumBlocks.splice(idx, 1);
+      updateTitaniumSelectionUI();
+    });
+
+    function updateTitaniumSelectionUI() {
+      const isTitanium = ['titanio', 'titanium'].includes(($('#material').val() || '').toLowerCase());
+
+      // Auto-update units count based on blanks selected for Titanium
+      if (isTitanium) {
+        const newCount = selectedTitaniumBlocks.length > 0 ? selectedTitaniumBlocks.length : 1;
+        $("input[name='cantidad_modelos']").val(newCount);
+      }
+
+      $('#selected-ti-count').text(selectedTitaniumBlocks.length);
+
+      // Render Selected List
+      let list = $('#titanium-selected-list');
+      if (list.length === 0) {
+        $('#titanium-grid').after('<div id="titanium-selected-list" class="d-flex flex-wrap gap-1 mt-2 p-1 border-top"></div>');
+        list = $('#titanium-selected-list');
+      }
+      list.empty();
+
+      selectedTitaniumBlocks.forEach((item, index) => {
+        const displayRef = item.real_ref ? `${item.ref} <span class="opacity-75 ms-1 small">(${item.real_ref})</span>` : item.ref;
+        list.append(`
+                 <span class="badge bg-primary d-flex align-items-center gap-1">
+                    ${displayRef}
+                    <i class="bi bi-x-circle btn-remove-ti-sel ms-1" style="cursor:pointer;" data-index="${index}"></i>
+                 </span>
+              `);
+      });
+
+      // Hidden Inputs
+      $('#titanium-inputs-container').remove();
+      const container = $('<div id="titanium-inputs-container"></div>');
+      selectedTitaniumBlocks.forEach(item => {
+        container.append(`<input type="hidden" name="titanium_block_ids" value="${item.id}">`);
+      });
+      $('form#orden-form').append(container);
+
+      // Update Grid Availabilities
+      $('#titanium-grid .btn-ti-blank').each(function () {
+        const ref = $(this).data('ref');
+        const holder = $('#aditamento_holder').val();
+        const blocks = titaniumInventory.filter(b => b.ref === ref && b.holder === holder);
+        const totalQty = blocks.reduce((a, b) => a + b.qty, 0);
+        const used = selectedTitaniumBlocks.filter(i => i.ref === ref).length;
+        const remaining = totalQty - used;
+
+        $(this).find('small').text('Avail: ' + remaining);
+        if (remaining <= 0) $(this).addClass('disabled opacity-50');
+        else $(this).removeClass('disabled opacity-50');
+      });
+    }
+
+    // Prevent manual updates to count if Titanium
+    $("input[name='cantidad_modelos']").on('input', function () {
+      const isTitanium = ['titanio', 'titanium'].includes(($('#material').val() || '').toLowerCase());
+      if (!isTitanium) {
+        // other logic if needed
+      }
+    });
   });
 </script>
 {% endblock %}

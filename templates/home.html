@@ -172,6 +172,15 @@
       <div class="card-body">
         <h6 class="card-title mb-3" style="font-weight:600;"><i class="bi bi-grid-3x3-gap me-1"
             style="color:var(--accent);"></i> {{ _('Stock by Shade and Thickness') }}</h6>
+        <div class="mb-2 d-flex flex-wrap gap-2 align-items-center">
+          <label class="form-label mb-0 me-2 text-secondary">{{ _('Material:') }}</label>
+          <select id="filtro-stock-material" class="form-select form-select-sm shadow-none"
+            style="min-width:120px;max-width:160px;">
+            {% for mat in tipos_material %}
+            <option value="{{ mat }}" {% if mat=='Zirconia' %}selected{% endif %}>{{ _(mat) }}</option>
+            {% endfor %}
+          </select>
+        </div>
         <div class="rounded-4 p-2 bg-white shadow-sm mb-2" style="min-height:240px;">
           <canvas id="graficaStockShadeGrosor" height="240"></canvas>
         </div>
@@ -644,7 +653,8 @@
     renderGraficaRecordCases();
   });
   function renderGraficaStockShadeGrosor() {
-    $.getJSON('/bloques/api/stock-shade-grosor', { material: 'Zirconia' }, function (resp) {
+    var material = $('#filtro-stock-material').val() || 'Zirconia';
+    $.getJSON('/bloques/api/stock-shade-grosor', { material: material }, function (resp) {
       const ctx = document.getElementById('graficaStockShadeGrosor');
       if (!ctx) return;
       const shades = resp.shades || [];
@@ -694,6 +704,8 @@
     // Render inicial de nuevas gráficas
     setTimeout(renderGraficaStockShadeGrosor, 150);
     setTimeout(renderGraficaShadeHistorico, 200);
+
+    $('#filtro-stock-material').on('change', renderGraficaStockShadeGrosor);
   });
 
   function renderGraficaShadeHistorico() {

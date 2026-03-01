@@ -48,6 +48,11 @@
         <div class="form-text">{{ _('Example') }}: Vacuum 1, Vacuum 2, Vacuum 3</div>
       </div>
       <div class="col-md-6">
+        <label class="form-label"><i class="bi bi-grid-3x3"></i> {{ _('Titanium Abutment Systems') }}</label>
+        <input type="text" name="aditamento_holders" class="form-control" value="{{ aditamento_holders|join(', ') }}">
+        <div class="form-text">{{ _('Example') }}: Medentica, DESS, Zimmer</div>
+      </div>
+      <div class="col-md-6">
         <label class="form-label"><i class="bi bi-tag"></i> {{ _('Reference Code Prefix (Excel Export)') }}</label>
         <input type="text" name="ref_code_prefix" class="form-control" value="{{ ref_code_prefix }}" placeholder=".40-">
         <div class="form-text">{{ _('Prefix to add to reference codes when downloading Excel files (e.g., .40-). Leave

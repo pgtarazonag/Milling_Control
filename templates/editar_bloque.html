@@ -33,16 +33,27 @@
           {% endfor %}
         </select>
       </div>
-      <div class="col-md-6">
-        <label class="form-label">{{ _('Shade') }}</label>
-        <select name="shade" class="form-select" required>
+      <div class="col-md-6" id="div-shade">
+        <label class="form-label" id="label-shade">{{ _('Shade') }}</label>
+        <select name="shade" id="shade-select" class="form-select" required>
           <option value="">-- {{ _('Select') }} --</option>
           {% for s in shades %}
           <option value="{{ s }}" {% if bloque.shade==s %}selected{% endif %}>{{ s }}</option>
           {% endfor %}
         </select>
+        <input type="text" id="shade-text" class="form-control d-none"
+          value="{% if bloque.material|lower in ['titanio', 'titanium'] %}{{ bloque.shade }}{% endif %}">
       </div>
-      <div class="col-md-6">
+      <div class="col-md-6" id="div-holder" style="display:none;">
+        <label class="form-label">{{ _('Abutment System') }}</label>
+        <select name="aditamento_holder" class="form-select">
+          <option value="">-- {{ _('Select') }} --</option>
+          {% for h in aditamento_holders %}
+          <option value="{{ h }}" {% if bloque.aditamento_holder==h %}selected{% endif %}>{{ h }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="col-md-6" id="div-grosor">
         <label class="form-label">{{ _('Thickness') }}</label>
         <select name="grosor" class="form-select" required>
           <option value="">-- {{ _('Select') }} --</option>
@@ -51,18 +62,21 @@
           {% endfor %}
         </select>
       </div>
+      {% if bloque.estado == 'usado' %}
       <div class="col-md-6">
         <label class="form-label">{{ _('Block Code') }}</label>
         <input type="text" name="codigo_barra" class="form-control" value="{{ bloque.codigo_barra or '' }}">
       </div>
       <div class="col-md-6">
-        <label class="form-label">{{ _('Reference Code') }}</label>
-        <input type="text" name="codigo_referencia" class="form-control" value="{{ bloque.codigo_referencia or '' }}">
-      </div>
-      <div class="col-md-6">
         <label class="form-label">{{ _('# Units') }}</label>
         <input type="number" name="modelos_fresados" class="form-control" value="{{ bloque.modelos_fresados or 0 }}"
           min="0">
+      </div>
+      {% endif %}
+
+      <div class="col-md-6">
+        <label class="form-label">{{ _('Reference Code') }}</label>
+        <input type="text" name="codigo_referencia" class="form-control" value="{{ bloque.codigo_referencia or '' }}">
       </div>
       <input type="hidden" name="estado" value="{{ bloque.estado }}">
       {% if bloque.estado == 'nuevo' %}
@@ -83,20 +97,22 @@
 {{ super() }}
 <script>
   const materialesAvanzado = {{ materiales_avanzado|default ({}) | tojson | safe }};
+  const titaniumBrandsByHolder = {{ titanium_brands_by_holder|default ({}) | tojson | safe }};
+
   $(document).ready(function () {
     function actualizarShadesYMarcas() {
       const mat = $('select[name=material]').val();
       // Shades
       let shades = materialesAvanzado[mat] ? materialesAvanzado[mat]['shades'] : [];
-      let $shade = $('select[name=shade]');
-      let shadeActual = $shade.val();
-      $shade.empty();
-      $shade.append('<option value="">-- ' + "{{ _('Select') }}" + ' --</option>');
+      let $shadeSelect = $('#shade-select');
+      let shadeActual = $shadeSelect.val() || '{{ bloque.shade }}';
+      $shadeSelect.empty();
+      $shadeSelect.append('<option value="">-- ' + "{{ _('Select') }}" + ' --</option>');
       shades.forEach(function (s) {
-        $shade.append('<option value="' + s + '">' + s + '</option>');
+        $shadeSelect.append('<option value="' + s + '">' + s + '</option>');
       });
-      if (shadeActual && shades.includes(shadeActual)) {
-        $shade.val(shadeActual);
+      if (shadeActual && shades.includes(shadeActual) && !['titanio', 'titanium'].includes((mat || '').toLowerCase())) {
+        $shadeSelect.val(shadeActual);
       }
       // Marcas
       let marcas = materialesAvanzado[mat] ? materialesAvanzado[mat]['marcas'] : [];
@@ -114,8 +130,57 @@
       if (marcaActual) {
         $marca.val(marcaActual);
       }
+
+      // Titanium Logic Customization
+      const isTitanium = ['titanio', 'titanium'].includes((mat || '').toLowerCase());
+      if (isTitanium) {
+        $('#label-shade').text("{{ _('Type') }}");
+        $('#shade-select').addClass('d-none').removeAttr('name').removeAttr('required');
+        $('#shade-text').removeClass('d-none').attr('name', 'shade').attr('required', 'required');
+
+        $('#div-grosor').hide();
+        $('select[name=grosor]').removeAttr('required');
+
+        $('#div-holder').show();
+        $('select[name=aditamento_holder]').attr('required', 'required');
+
+        // Dynamically load Brands based on selected Holder for Titanium
+        const holder = $('select[name=aditamento_holder]').val();
+        let $marca = $('select[name=marca]');
+        let marcaActual = $marca.val();
+
+        $marca.empty();
+        $marca.append('<option value="">-- ' + "{{ _('Select') }}" + ' --</option>');
+
+        if (holder && titaniumBrandsByHolder[holder]) {
+          titaniumBrandsByHolder[holder].forEach(function (m) {
+            $marca.append('<option value="' + m + '">' + m + '</option>');
+          });
+        }
+
+        // Restore previous value if it exists in the newly populated list
+        if (marcaActual && titaniumBrandsByHolder[holder] && titaniumBrandsByHolder[holder].includes(marcaActual)) {
+          $marca.val(marcaActual);
+        } else if ('{{ bloque.marca }}' && titaniumBrandsByHolder[holder] && titaniumBrandsByHolder[holder].includes('{{ bloque.marca }}')) {
+          $marca.val('{{ bloque.marca }}');
+        }
+
+      } else {
+        $('#label-shade').text("{{ _('Shade') }}");
+        $('#shade-select').removeClass('d-none').attr('name', 'shade').attr('required', 'required');
+        $('#shade-text').addClass('d-none').removeAttr('name').removeAttr('required');
+
+        $('#div-grosor').show();
+        $('select[name=grosor]').attr('required', 'required');
+
+        $('#div-holder').hide();
+        $('select[name=aditamento_holder]').removeAttr('required');
+      }
     }
+
     $('select[name=material]').on('change', actualizarShadesYMarcas);
+    $('select[name=aditamento_holder]').on('change', actualizarShadesYMarcas);
+
     // Inicializar al cargar
     actualizarShadesYMarcas();
   });

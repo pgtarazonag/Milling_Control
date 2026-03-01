@@ -53,6 +53,8 @@ def configuracion():
     
     # Load reference code prefix for Excel exports
     ref_code_prefix = Configuracion.get_valor('ref_code_prefix', default='')
+    # Load Titanium Holders
+    aditamento_holders = Configuracion.get_lista('aditamento_holders', default=['Medentica', 'DESS', 'Zimmer', 'BioHorizons', 'Straumann', 'Nobel'])
     
     if request.method == 'POST':
         nuevas_maquinas = [m.strip() for m in request.form.get('maquinas','').split(',') if m.strip()]
@@ -69,6 +71,10 @@ def configuracion():
         Configuracion.set_lista('marcas', nuevas_marcas)
         nuevos_grosores = [g.strip() for g in request.form.get('grosores','').split(',') if g.strip()]
         Configuracion.set_lista('grosores', nuevos_grosores)
+        # Save Titanium Holders
+        nuevos_holders = [h.strip() for h in request.form.get('aditamento_holders','').split(',') if h.strip()]
+        Configuracion.set_lista('aditamento_holders', nuevos_holders)
+
         # Guardar actividades de mantenimiento por grupo
         actividades_mant_post = {
             'fresadoras': [a.strip() for a in request.form.get('actividades_fresadoras','').replace('\r','').split('\n') if a.strip()],
@@ -139,9 +145,10 @@ def configuracion():
         grosores=grosores,
         hornos=hornos,
         aspiradoras=aspiradoras,
+        aditamento_holders=aditamento_holders,
         materiales_avanzado=materiales_avanzado,
         fresas_maquinas=fresas_maquinas,
+        ref_code_prefix=ref_code_prefix,
         normalize_key=normalize_key,
-        actividades_mant=actividades_mant,
-        ref_code_prefix=ref_code_prefix
+        actividades_mant=actividades_mant
     )
