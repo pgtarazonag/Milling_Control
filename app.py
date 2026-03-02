@@ -15,7 +15,7 @@ Paso a paso:
 9. Se crea la base de datos si no existe.
 10. Se retorna la aplicación lista para usarse.
 11. Finalmente, si ejecutas este archivo directamente, se inicia el servidor en modo debug.
-"""
+""" 
 
 # Importamos Flask y la función para renderizar plantillas HTML
 from flask import Flask, render_template, session, request, redirect, url_for, jsonify, make_response, abort

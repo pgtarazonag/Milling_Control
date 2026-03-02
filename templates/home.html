@@ -279,7 +279,10 @@
       // Blocks by shade simple
       try {
         var ctx3 = document.getElementById('graficaBloquesShade').getContext('2d');
-        new Chart(ctx3, {
+        if (window.graficaBloquesShade && typeof window.graficaBloquesShade.destroy === 'function') {
+          window.graficaBloquesShade.destroy();
+        }
+        window.graficaBloquesShade = new Chart(ctx3, {
           type: 'bar',
           data: {
             labels: data.bloques_shade.map(x => x.shade),
