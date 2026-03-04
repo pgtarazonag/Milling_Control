@@ -776,14 +776,19 @@
 </script>
 
 <!-- 3. ADD BLOCK FORM LOGIC -->
+<!-- Injecting Jinja data safely to avoid IDE JS Linter errors -->
+<script type="application/json" id="data-materiales-avanzado">{{ materiales_avanzado|default({})|tojson|safe }}</script>
+<script type="application/json" id="data-mapa-referencias">{{ mapa_referencias|default({})|tojson|safe }}</script>
+<script type="application/json" id="data-titanium-types">{{ titanium_types_by_brand|default({})|tojson|safe }}</script>
+<script type="application/json"
+  id="data-titanium-brands">{{ titanium_brands_by_holder|default({})|tojson|safe }}</script>
+
 <script>
-  // Pasar la configuración avanzada de materiales al JS
-  const materialesAvanzado = {{ materiales_avanzado|default ({}) | tojson | safe }};
-  // Reference Map for Auto-population
-  const mapaReferencias = {{ mapa_referencias|default ({}) | tojson | safe }};
-  // Titanium Types mapping (Holder|Brand -> Types)
-  const titaniumTypesByBrand = {{ titanium_types_by_brand|default ({}) | tojson | safe }};
-  const titaniumBrandsByHolder = {{ titanium_brands_by_holder|default ({}) | tojson | safe }};
+  // Parse injected JSON data
+  const materialesAvanzado = JSON.parse(document.getElementById('data-materiales-avanzado').textContent || '{}');
+  const mapaReferencias = JSON.parse(document.getElementById('data-mapa-referencias').textContent || '{}');
+  const titaniumTypesByBrand = JSON.parse(document.getElementById('data-titanium-types').textContent || '{}');
+  const titaniumBrandsByHolder = JSON.parse(document.getElementById('data-titanium-brands').textContent || '{}');
 
   function updateReferenceCode() {
     const material = $('#material').val();
