@@ -24,7 +24,7 @@
           <input type="hidden" name="is_creation" id="is_creation" value="0">
           <!-- Material, Shade, Machine, New Blocks y Used Blocks juntos sin espacio -->
           <div class="col-12">
-            <div class="d-flex flex-nowrap gap-2 align-items-start">
+            <div class="d-flex flex-nowrap gap-2 align-items-start" style="overflow-x: auto; padding-bottom: 5px;">
               <div class="col-auto">
                 <label class="form-label small fw-bold">{{ _('Material') }}</label>
                 <input type="hidden" name="material" id="material"
@@ -65,7 +65,7 @@
                   {% endfor %}
                 </div>
               </div>
-              <div class="col-auto">
+              <div class="col-auto" id="col-machine">
                 <label class="form-label small fw-bold">{{ _('Machine') }}</label>
                 <input type="hidden" name="maquina" id="maquina"
                   value="{{ request.form.get('maquina', maquina) or '' }}">
@@ -80,11 +80,11 @@
                   {% endfor %}
                 </div>
               </div>
-              <div class="col-auto">
-                <div class="d-flex flex-column gap-2" id="zirconia-blocks-container">
+              <div class="col-auto" id="col-blocks-codes" style="width: 320px;">
+                <div class="d-flex flex-column gap-2" id="zirconia-blocks-container" style="width:100%;">
                   <div>
                     <label class="form-label small fw-bold">{{ _('New Blocks') }}</label>
-                    <select name="bloque_nuevo_id" class="form-select" style="width:380px;">
+                    <select name="bloque_nuevo_id" class="form-select" style="width:100%;">
                       <option value="">-- {{ _('Select') }} --</option>
                       {% for bloque in bloques_nuevos %}
                       <option value="{{ bloque.id }}" {% if (request.form.get('bloque_nuevo_id') and
@@ -102,7 +102,7 @@
                   </div>
                   <div>
                     <label class="form-label small fw-bold">{{ _('Used Blocks') }}</label>
-                    <select name="bloque_usado_id" class="form-select" style="width:380px;">
+                    <select name="bloque_usado_id" class="form-select" style="width:100%;">
                       <option value="">-- {{ _('Select') }} --</option>
                       {% for bloque in bloques_usados %}
                       <option value="{{ bloque.id }}" {% if (request.form.get('bloque_usado_id') and
@@ -134,29 +134,73 @@
                   </div>
                 </div>
 
+                <!-- PMMA Container -->
+                <div class="d-none flex-column gap-1 border rounded p-2 bg-light" id="pmma-container"
+                  style="width:320px; border-left: 4px solid var(--accent) !important;">
+                  <div class="d-flex justify-content-between align-items-center mb-1">
+                    <h6 class="mb-0 fw-bold text-dark" style="font-size: 0.9rem;"><i class="bi bi-box-seam me-1"></i> {{
+                      _('PMMA Setup') }}</h6>
+                    <small class="text-muted" id="pmma-instruction" style="font-size: 0.75rem;">{{ _('Select a
+                      configuration.') }}</small>
+                  </div>
+
+                  <div id="pmma-clear-options" class="d-none gap-2">
+                    <button type="button" class="btn btn-outline-primary btn-sm flex-fill py-1" id="btn-pmma-nuevo">
+                      <i class="bi bi-plus-square"></i> {{ _('1 New Block') }}
+                    </button>
+                    <button type="button" class="btn btn-outline-secondary btn-sm flex-fill py-1" id="btn-pmma-usado">
+                      <i class="bi bi-arrow-repeat"></i> {{ _('Used Block') }}
+                    </button>
+                  </div>
+
+                  <div id="pmma-clear-thickness" class="d-none mt-1">
+                    <div class="d-flex align-items-center gap-2">
+                      <label class="form-label small fw-bold mb-0 text-nowrap" style="font-size: 0.8rem;">{{
+                        _('Thickness') }}:</label>
+                      <select name="pmma_thickness" id="pmma_thickness" class="form-select form-select-sm py-1">
+                        <option value="">-- {{ _('Select') }} --</option>
+                        <option value="16">16mm</option>
+                        <option value="20">20mm</option>
+                        <option value="25">25mm</option>
+                        <option value="30">30mm</option>
+                      </select>
+                    </div>
+                    <input type="hidden" name="pmma_source" id="pmma_source" value="">
+                  </div>
+
+                  <div id="pmma-clear-used-list" class="d-none mt-1">
+                    <div class="d-flex align-items-center gap-2">
+                      <label class="form-label small fw-bold mb-0 text-nowrap" style="font-size: 0.8rem;">{{ _('Used')
+                        }}:</label>
+                      <select name="pmma_usado_id" id="pmma_usado_id" class="form-select form-select-sm py-1">
+                        <option value="">-- {{ _('Select Block') }} --</option>
+                      </select>
+                    </div>
+                  </div>
+                </div>
+
                 <!-- Common Order Codes (Moved out of specific containers) -->
-                <div class="mt-2" id="common-order-codes">
+                <div class="mt-2" id="common-order-codes" style="width:320px;">
                   <label class="form-label small fw-bold">{{ _('Order Codes') }}</label>
                   <input type="text" name="codigo_orden" class="form-control" placeholder="ABC123, DEF456, GHI789"
-                    id="codigo-orden-input" style="width:456px;">
+                    id="codigo-orden-input" style="width:100%;">
                   <!-- Renamed ID to avoid conflict if I keep old one? No I replaced -->
                   <small class="text-muted">{{ _('Enter one or more case codes separated by commas.') }}</small>
                 </div>
 
               </div>
-              <div class="col-auto">
-                <div class="d-flex flex-column gap-2">
-                  <div>
-                    <label class="form-label small fw-bold">{{ _('# Units') }}</label>
-                    <input type="number" name="cantidad_modelos" class="form-control" min="1" value="1" required
-                      style="width:120px;">
-                  </div>
-                  <div>
-                    <button type="submit" id="btn-add-order-submit" name="btn_add_order" value="1"
-                      class="btn btn-success" style="padding-top:12px;padding-bottom:12px;">
-                      <i class="bi bi-plus-circle"></i> {{ _('Add') }}
-                    </button>
-                  </div>
+              <div class="col-auto d-flex flex-column justify-content-between pb-1" id="col-rightmost"
+                style="min-width: 120px; border-left: 1px dashed #dee2e6; padding-left: 10px; margin-left: 5px;">
+                <div id="units-container" class="d-flex flex-column gap-2 mt-0">
+                  <label class="form-label small fw-bold mb-0">{{ _('# Units') }}</label>
+                  <input type="number" name="cantidad_modelos" id="cantidad_modelos" class="form-control" min="1"
+                    value="1" required style="width:100px;">
+                </div>
+                <div id="col-add-btn" class="mt-auto mb-1">
+                  <button type="submit" id="btn-add-order-submit" name="btn_add_order" value="1"
+                    class="btn btn-success w-100" style="padding-top:10px;padding-bottom:10px;">
+                    <i class="bi bi-plus-circle"></i> {{ _('Add Order') }}
+                  </button>
                 </div>
               </div>
             </div>
@@ -212,12 +256,38 @@
           .btn-shade {
             width: 100%;
             font-weight: 600;
-            font-size: 0.75em;
-            padding: 8px 1px;
-            border-radius: 3px;
-            line-height: 1.1;
+            font-size: 0.8em;
+            padding: 8px 4px;
+            border-radius: 4px;
+            line-height: 1.2;
             border: 1px solid #ced4da;
             color: #212529;
+          }
+
+          .shade-col {
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+            margin-right: 2px;
+            padding-right: 2px;
+            border-right: 1px dashed #dee2e6;
+            min-width: 25px;
+          }
+
+          .shade-col:last-child {
+            border-right: none;
+            margin-right: 0;
+            padding-right: 0;
+          }
+
+          .shade-col.col-wide {
+            min-width: 50px;
+          }
+
+          .shade-col.col-wide .btn-shade {
+            white-space: nowrap;
+            padding-left: 5px;
+            padding-right: 5px;
           }
 
           .btn-shade:hover {
@@ -437,38 +507,59 @@
       var codigo = $('#codigo-orden-input').val();
       var cantidad = $('[name="cantidad_modelos"]').val();
 
+      const isTitanium = ['titanio', 'titanium'].includes((material || '').toLowerCase());
+
       if (!material) {
         alert("{{ _('Please select a Material.') }}");
         $('#is_creation').val('0');
-        console.log('Validation failed: Material not selected. is_creation=0');
+        console.log('Validation failed: Material not selected.');
         e.preventDefault();
         return false;
       }
-      if (!shade) {
+
+      // Titanium does not immediately load shades in the classic way, but it sets the holder as Abutment system.
+      // If it's Titanium, "shade" here corresponds to the Reference type logic on the backend, but we don't pick it upfront.
+      // Wait, Titanium uses #aditamento_holder. But we don't strictly require a single "shade" value globally upfront for Ti.
+      if (!isTitanium && !shade) {
         alert("{{ _('Please select a Shade.') }}");
         $('#is_creation').val('0');
-        console.log('Validation failed: Shade not selected. is_creation=0');
+        console.log('Validation failed: Shade not selected.');
         e.preventDefault();
         return false;
       }
       if (!maquina) {
         alert("{{ _('Please select a Machine.') }}");
         $('#is_creation').val('0');
-        console.log('Validation failed: Machine not selected. is_creation=0');
+        console.log('Validation failed: Machine not selected.');
         e.preventDefault();
         return false;
       }
-      if (!usado && !nuevo) {
-        alert("{{ _('You must select a block (used or new) to continue.') }}");
-        $('#is_creation').val('0');
-        console.log('Validation failed: No block selected. is_creation=0');
-        e.preventDefault();
-        return false;
+
+      // Check block selection based on material
+      if (isTitanium) {
+        // Titanium checks the internal array built by user clicks
+        if (selectedTitaniumBlocks.length === 0) {
+          alert("{{ _('Please select at least one Titanium Blank.') }}");
+          $('#is_creation').val('0');
+          console.log('Validation failed: No Titanium blanks selected.');
+          e.preventDefault();
+          return false;
+        }
+      } else {
+        // Zirconia, PMMA, Wax use standard used/new single IDs
+        if (!usado && !nuevo) {
+          alert("{{ _('You must select a block (used or new) to continue.') }}");
+          $('#is_creation').val('0');
+          console.log('Validation failed: No block selected.');
+          e.preventDefault();
+          return false;
+        }
       }
+
       if (!codigo || !codigo.trim()) {
         alert("{{ _('Please enter at least one Order Code.') }}");
         $('#is_creation').val('0');
-        console.log('Validation failed: Order Code not entered. is_creation=0');
+        console.log('Validation failed: Order Code not entered.');
         e.preventDefault();
         return false;
       }
@@ -552,7 +643,8 @@
           var orden = ['A', 'B', 'C', 'D', 'OM', 'BL', 'Others'];
           orden.forEach(function (key) {
             if (grupos[key].length > 0) {
-              htmlContainer += '<div class="shade-col">';
+              var extraClass = (key === 'Others') ? ' col-wide' : '';
+              htmlContainer += '<div class="shade-col' + extraClass + '">';
               grupos[key].forEach(function (s) {
                 htmlContainer += '<button type="button" class="btn btn-sm btn-shade" data-value="' + s + '">' + s + '</button>';
               });
@@ -580,20 +672,63 @@
       });
     });
 
-    // Function to toggle Titanium UI
-    function toggleTitaniumUI(material) {
+    // Function to toggle Material specific UI
+    function toggleMaterialUI(material, currentShade) {
       const isTitanium = ['titanio', 'titanium'].includes((material || '').toLowerCase());
-      console.log('toggleTitaniumUI called for:', material, 'isTitanium:', isTitanium);
+      const isPmma = (material || '').toLowerCase() === 'pmma';
+      const isClearPmma = isPmma && (currentShade || '').toLowerCase() === 'clear';
 
+      // Advanced PMMA Layout Rearrangement
+      if (isPmma) {
+        // PMMA Layout: Units under Machine, Add Button under Order Codes.
+        $('#col-machine').addClass('d-flex flex-column justify-content-start');
+        $('#col-blocks-codes').addClass('d-flex flex-column justify-content-start');
+
+        $('#col-rightmost').addClass('d-none').removeClass('d-flex'); // Hide 4th col
+
+        // Remove titanium specific parallel classes if any
+        $('#units-container').removeClass('flex-row w-50 pe-1').addClass('flex-column');
+        $('#col-add-btn').removeClass('w-50 ps-1 align-self-end mt-0').addClass('w-100 mt-2 align-self-start');
+        $('#common-order-codes').removeClass('d-flex flex-wrap');
+
+        $('#units-container').appendTo('#col-machine');
+        $('#col-add-btn').appendTo('#col-blocks-codes');
+      } else if (isTitanium) {
+        // Titanium Layout: 4 cols. Col 4 has Order Codes, then Units and Add parallel beneath it.
+        $('#col-rightmost').addClass('d-none').removeClass('d-flex'); // Hide 4th col
+
+        $('#col-blocks-codes').addClass('d-flex flex-column justify-content-start');
+
+        // Create a flex-row container feel for the two items under order codes
+        $('#common-order-codes').addClass('d-flex flex-wrap');
+
+        $('#units-container').appendTo('#common-order-codes').removeClass('flex-column mt-0').addClass('flex-row w-50 pe-1 mt-2');
+        $('#col-add-btn').appendTo('#common-order-codes').removeClass('mt-auto mb-1 w-100').addClass('w-50 ps-1 align-self-end mt-0');
+
+      } else {
+        // Standard Layout Reversion
+        $('#units-container').prependTo('#col-rightmost').removeClass('flex-row w-50 pe-1').addClass('flex-column mt-0');
+        $('#col-add-btn').appendTo('#col-rightmost').removeClass('w-50 ps-1 align-self-end mt-0 mt-2 align-self-start').addClass('mt-auto mb-1 w-100');
+        $('#common-order-codes').removeClass('d-flex flex-wrap');
+
+        $('#col-rightmost').removeClass('d-none').addClass('d-flex flex-column justify-content-between pb-1'); // Show 4th col
+
+        $('#col-machine').removeClass('d-flex flex-column justify-content-start');
+        $('#col-blocks-codes').removeClass('d-flex flex-column justify-content-start');
+      }
+
+      // 1. Manage Material Level Configurations (Holders vs Shades)
       if (isTitanium) {
         $('#shade-container').addClass('d-none');
         $('#label-shade').addClass('d-none');
         $('#zirconia-blocks-container').removeClass('d-flex').addClass('d-none');
+        $('#pmma-container').removeClass('d-flex').addClass('d-none');
 
         $('#holder-container').removeClass('d-none').addClass('d-flex');
         $('#label-holder').removeClass('d-none');
         $('#titanium-blocks-container').removeClass('d-none').addClass('d-flex');
         $("input[name='cantidad_modelos']").prop('readonly', true).addClass('bg-light');
+        $('#units-container').removeClass('d-none');
 
         if (!window.isInitialLoad) {
           // Reset selections only if it's a new click, not page load
@@ -606,17 +741,105 @@
             updateTitaniumSelectionUI();
           }
         }
-      } else {
-        $('#shade-container').removeClass('d-none');
-        $('#label-shade').removeClass('d-none');
-        $('#zirconia-blocks-container').removeClass('d-none').addClass('d-flex');
-
+      } else if (isPmma) {
         $('#holder-container').removeClass('d-flex').addClass('d-none');
         $('#label-holder').addClass('d-none');
         $('#titanium-blocks-container').removeClass('d-flex').addClass('d-none');
+        $('#zirconia-blocks-container').removeClass('d-flex').addClass('d-none');
+
+        $('#shade-container').removeClass('d-none');
+        $('#label-shade').removeClass('d-none');
+        $("input[name='cantidad_modelos']").prop('readonly', false).removeClass('bg-light');
+        $('#units-container').removeClass('d-none');
+
+        // Note: The specific Clear vs Normal logic is handled in shade change events or below
+        if (isClearPmma) {
+          $('#pmma-container').removeClass('d-none').addClass('d-flex');
+          evalPmmaClearState();
+        } else {
+          $('#pmma-container').removeClass('d-flex').addClass('d-none');
+        }
+
+      } else {
+        // Standard (Zirconia, Wax, etc)
+        $('#holder-container').removeClass('d-flex').addClass('d-none');
+        $('#label-holder').addClass('d-none');
+        $('#titanium-blocks-container').removeClass('d-flex').addClass('d-none');
+        $('#pmma-container').removeClass('d-flex').addClass('d-none');
+
+        $('#shade-container').removeClass('d-none');
+        $('#label-shade').removeClass('d-none');
+        $('#zirconia-blocks-container').removeClass('d-none').addClass('d-flex');
+        $('#units-container').removeClass('d-none');
         $("input[name='cantidad_modelos']").prop('readonly', false).removeClass('bg-light');
       }
-      return isTitanium;
+
+      return { isTitanium, isPmma, isClearPmma };
+    }
+
+    // Evaluate PMMA Clear State based on # Units
+    function evalPmmaClearState() {
+      const units = parseInt($('#cantidad_modelos').val()) || 1;
+      $('#pmma-clear-options, #pmma-clear-thickness, #pmma-clear-used-list').addClass('d-none');
+      $('#btn-pmma-nuevo').removeClass('active btn-primary').addClass('btn-outline-primary');
+      $('#btn-pmma-usado').removeClass('active btn-secondary').addClass('btn-outline-secondary');
+      $('#pmma_source').val('');
+
+      if (units === 1) {
+        $('#pmma-instruction').text("{{ _('Select a new or used block for 1 unit.') }}");
+        $('#pmma-clear-options').removeClass('d-none').addClass('d-flex');
+      } else if (units === 2) {
+        $('#pmma-instruction').text("{{ _('2 units requires consuming 1 full New Block.') }}");
+        $('#pmma-clear-thickness').removeClass('d-none');
+        $('#pmma_source').val('nuevo');
+      } else {
+        $('#pmma-instruction').text("{{ _('Invalid amount for a single block.') }}");
+      }
+    }
+
+    // Listen to Unit Changes for PMMA
+    $('#cantidad_modelos').on('input', function () {
+      const material = $('#material').val();
+      const shade = $('#shade').val();
+      if ((material || '').toLowerCase() === 'pmma' && (shade || '').toLowerCase() === 'clear') {
+        evalPmmaClearState();
+      }
+    });
+
+    // PMMA Source Buttons
+    $('#btn-pmma-nuevo').on('click', function () {
+      $(this).removeClass('btn-outline-primary').addClass('active btn-primary');
+      $('#btn-pmma-usado').removeClass('active btn-secondary').addClass('btn-outline-secondary');
+      $('#pmma_source').val('nuevo');
+      $('#pmma-clear-thickness').removeClass('d-none');
+      $('#pmma-clear-used-list').addClass('d-none');
+    });
+
+    $('#btn-pmma-usado').on('click', function () {
+      $(this).removeClass('btn-outline-secondary').addClass('active btn-secondary');
+      $('#btn-pmma-nuevo').removeClass('active btn-primary').addClass('btn-outline-primary');
+      $('#pmma_source').val('usado');
+      $('#pmma-clear-thickness').addClass('d-none');
+      $('#pmma-clear-used-list').removeClass('d-none');
+      // Trigger AJAX load for used PMMA clear blocks
+      loadUsedPmmaBlocks();
+    });
+
+    function loadUsedPmmaBlocks() {
+      $('#pmma_usado_id').html('<option value="">{{ _("Loading blocks...") }}</option>');
+      $.getJSON('/ordenes/api/pmma-used-clear', function (data) {
+        let options = '<option value="">-- {{ _("Select Used Block") }} --</option>';
+        if (data && data.length > 0) {
+          data.forEach(b => {
+            options += `<option value="${b.id}">${b.codigo_barra} (${b.grosor}mm) - ${b.fecha}</option>`;
+          });
+        } else {
+          options = '<option value="">{{ _("No used blocks found") }}</option>';
+        }
+        $('#pmma_usado_id').html(options);
+      }).fail(function () {
+        $('#pmma_usado_id').html('<option value="">{{ _("Error loading blocks") }}</option>');
+      });
     }
 
     // Handler for Material button clicks
@@ -635,7 +858,7 @@
 
         // Immediately toggle UI
         window.isInitialLoad = false; // ensure resets happen
-        toggleTitaniumUI(mat);
+        toggleMaterialUI(mat, ''); // Initially shade is empty on material change
 
         // Update Hidden Input and Trigger Change (which loads shades via AJAX)
         $('#material').val(mat).trigger('change');
@@ -646,7 +869,11 @@
     $(document).on('click', '.btn-shade', function () {
       $('.btn-shade').removeClass('btn-custom-red');
       $(this).addClass('btn-custom-red');
-      $('#shade').val($(this).data('value')).trigger('change');
+      const selectedShade = $(this).data('value');
+      $('#shade').val(selectedShade).trigger('change');
+
+      const mat = $('#material').val();
+      toggleMaterialUI(mat, selectedShade);
     });
 
     // Handler for Machine button clicks
@@ -673,8 +900,8 @@
       window.isInitialLoad = true;
       console.log('Initial state detected. Setting isInitialLoad=true');
 
-      // Apply UI state immediately for Titanium
-      toggleTitaniumUI(initialMat);
+      // Apply UI state immediately for Material/Titanium/PMMA
+      toggleMaterialUI(initialMat, initialShade);
 
       $('#material').trigger('change');
 
@@ -907,18 +1134,59 @@
 <script>
   // Evitar submit del form al presionar Enter en el input de Order Codes
   $(document).ready(function () {
-    $('#codigo-orden-input').on('keydown', function (e) {
+    const $codeInput = $('#codigo-orden-input');
+    const $unitsInput = $('#cantidad_modelos');
+
+    $codeInput.on('keydown', function (e) {
       if (e.key === 'Enter') {
         e.preventDefault();
         let val = $(this).val();
-        if (val && !val.trim().endsWith(',')) {
-          // Si ya termina en coma, solo agrega espacio si falta
-          if (val.trim().endsWith(',')) {
-            $(this).val(val + ' ');
-          } else {
-            $(this).val(val + ', ');
+        if (val) {
+          if (!val.trim().endsWith(',')) {
+            $(this).val(val.trim() + ', ');
+            $(this).trigger('input'); // Trigger input to update units
           }
         }
+      }
+    });
+
+    // Auto-increment units based on separated codes
+    $codeInput.on('input', function () {
+      if (!$unitsInput.prop('readonly')) {
+        let val = $(this).val();
+        let codes = val.split(',').map(c => c.trim()).filter(c => c.length > 0);
+        let currentCodeCount = codes.length;
+
+        // Retrieve previous code count, defaulting to 0
+        let prevCodeCount = parseInt($(this).data('prev-code-count')) || 0;
+
+        // Calculate the difference in number of valid codes
+        let diff = currentCodeCount - prevCodeCount;
+
+        let currentVal = parseInt($unitsInput.val()) || 1;
+
+        if (diff > 0) {
+          // If we added new codes, increment the units by the number of new codes added
+          // Note: If we just started typing the first code, currentVal is likely 1, 
+          // adding +1 would make it 2 incorrectly if they just typed the first code.
+          // Wait, if prevCodeCount was 0 and now is 1, diff is 1. If currentVal is 1, we don't want to make it 2.
+          // Let's only increment if we are moving from 1 to 2 or more, or if currentVal is already >= prevCodeCount.
+
+          if (prevCodeCount === 0 && currentCodeCount === 1) {
+            // First code entered, minimum is 1, usually already 1, do not increment.
+          } else {
+            $unitsInput.val(currentVal + diff);
+          }
+        }
+
+        // Always enforce that units cannot be less than the number of codes
+        currentVal = parseInt($unitsInput.val()) || 1;
+        if (currentCodeCount > currentVal) {
+          $unitsInput.val(currentCodeCount);
+        }
+
+        // Save the new count for the next input event
+        $(this).data('prev-code-count', currentCodeCount);
       }
     });
   });
@@ -996,11 +1264,12 @@
 
     // Reference Click -> Select
     $(document).on('click', '.btn-ti-blank', function () {
-      const ref = $(this).data('ref');
+      const rawRef = $(this).data('ref');
+      const ref = rawRef !== undefined && rawRef !== null ? rawRef.toString() : '';
       const holder = $('#aditamento_holder').val();
 
       // Allocate logic
-      const blocksForRef = titaniumInventory.filter(b => b.ref === ref && b.holder === holder);
+      const blocksForRef = titaniumInventory.filter(b => b.ref.toString() === ref && b.holder === holder);
 
       let allocatedId = null;
       for (let b of blocksForRef) {
@@ -1067,11 +1336,12 @@
 
       // Update Grid Availabilities
       $('#titanium-grid .btn-ti-blank').each(function () {
-        const ref = $(this).data('ref');
+        const rawRef = $(this).data('ref');
+        const ref = rawRef !== undefined && rawRef !== null ? rawRef.toString() : '';
         const holder = $('#aditamento_holder').val();
-        const blocks = titaniumInventory.filter(b => b.ref === ref && b.holder === holder);
+        const blocks = titaniumInventory.filter(b => b.ref.toString() === ref && b.holder === holder);
         const totalQty = blocks.reduce((a, b) => a + b.qty, 0);
-        const used = selectedTitaniumBlocks.filter(i => i.ref === ref).length;
+        const used = selectedTitaniumBlocks.filter(i => i.ref.toString() === ref).length;
         const remaining = totalQty - used;
 
         $(this).find('small').text('Avail: ' + remaining);

@@ -116,7 +116,7 @@
     </div>
   </div>
   <!-- CENTRO: Production Analysis Daily y demás gráficas -->
-  <div class="col-md-4">
+  <div class="col-md-5">
     <div class="card border-0 shadow-sm animate__animated animate__fadeInUp mb-4">
       <div class="card-body">
         <h6 class="card-title mb-3" style="font-weight:600;"><i class="bi bi-bar-chart-line me-1"
@@ -188,7 +188,7 @@
     </div>
   </div>
   <!-- DERECHA: Upcoming activities -->
-  <div class="col-md-4">
+  <div class="col-md-3">
     <!-- Resumen del día -->
     <div class="card shadow-sm mb-3 animate__animated animate__fadeInRight border-0"
       style="background:#2E3A46;color:#fff; border-radius:1.2rem;">
@@ -276,25 +276,6 @@
           });
         }
       } catch (e) { console.error('[DEBUG] Error rendering materials chart', e); }
-      // Blocks by shade simple
-      try {
-        var ctx3 = document.getElementById('graficaBloquesShade').getContext('2d');
-        if (window.graficaBloquesShade && typeof window.graficaBloquesShade.destroy === 'function') {
-          window.graficaBloquesShade.destroy();
-        }
-        window.graficaBloquesShade = new Chart(ctx3, {
-          type: 'bar',
-          data: {
-            labels: data.bloques_shade.map(x => x.shade),
-            datasets: [{
-              label: "{{ _('Blocks') }}",
-              data: data.bloques_shade.map(x => x.cantidad),
-              backgroundColor: '#E14A4C',
-            }]
-          },
-          options: { responsive: true, plugins: { legend: { display: false } } }
-        });
-      } catch (e) { console.error('[DEBUG] Error rendering blocks-by-shade chart', e); }
     }).fail(function (jqXHR, textStatus, errorThrown) {
       console.error('[DEBUG] Error in /ordenes/api/graficas-inventario:', textStatus, errorThrown, jqXHR.responseText);
     });

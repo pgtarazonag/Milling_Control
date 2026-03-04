@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser<html lang="{{ session.get('lang', 'es') }}">
+
 <head>
     <meta charset="UTF-8">
     <title>{{ _('Edit Order') }} | Fresado Pro</title>
@@ -7,7 +8,11 @@ Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser<html lang="
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css">
     <style>
-        body { background: #f4f6fa; font-family: 'Inter', 'Segoe UI', Arial, sans-serif; }
+        body {
+            background: #f4f6fa;
+            font-family: 'Inter', 'Segoe UI', Arial, sans-serif;
+        }
+
         .topbar {
             background: #23272f;
             color: #fff;
@@ -15,8 +20,9 @@ Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser<html lang="
             display: flex;
             align-items: center;
             justify-content: space-between;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
         }
+
         .topbar .logo {
             font-weight: 700;
             font-size: 1.3rem;
@@ -26,24 +32,29 @@ Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser<html lang="
             gap: 0.5em;
             color: #fff;
         }
+
         .card {
             border-radius: 1.2rem;
             box-shadow: 0 2px 12px #0001;
             border: none;
         }
+
         .btn-primary {
             background: linear-gradient(90deg, #3949ab 0%, #00bcd4 100%);
             color: #fff;
             font-weight: 600;
             border: none;
         }
+
         .btn-primary:hover {
             background: linear-gradient(90deg, #1a237e 0%, #0097a7 100%);
         }
+
         .form-label {
             color: #3949ab;
             font-weight: 500;
         }
+
         .footer {
             background: #23272f;
             color: #b0b3b8;
@@ -54,12 +65,19 @@ Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser<html lang="
             border-top: 1px solid #2d323c;
             letter-spacing: 0.02em;
         }
+
         @media (max-width: 600px) {
-            .container { padding: 0 0.2rem; }
-            .topbar { padding: 0.7rem 0.5rem; }
+            .container {
+                padding: 0 0.2rem;
+            }
+
+            .topbar {
+                padding: 0.7rem 0.5rem;
+            }
         }
     </style>
 </head>
+
 <body>
     <div class="topbar">
         <span class="logo"><i class="bi bi-cpu"></i> Fresado Pro</span>
@@ -72,7 +90,8 @@ Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser<html lang="
                 <form method="post" class="row g-3">
                     <div class="col-md-6">
                         <label class="form-label"><i class="bi bi-upc-scan"></i> {{ _('Order Codes') }}</label>
-                        <input type="text" name="codigos_caso" class="form-control" value="{{ orden.codigos_caso }}" required placeholder="ABC123, DEF456, GHI789">
+                        <input type="text" name="codigos_caso" class="form-control" value="{{ orden.codigos_caso }}"
+                            required placeholder="ABC123, DEF456, GHI789">
                         <small class="text-muted">{{ _('Enter one or more case codes separated by commas.') }}</small>
                     </div>
                     <div class="col-md-6">
@@ -80,7 +99,7 @@ Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser<html lang="
                         <select name="material" class="form-select" required>
                             <option value="">-- {{ _('Select') }} --</option>
                             {% for mat in materiales %}
-                                <option value="{{ mat }}" {% if orden.material == mat %}selected{% endif %}>{{ mat }}</option>
+                            <option value="{{ mat }}" {% if orden.material==mat %}selected{% endif %}>{{ mat }}</option>
                             {% endfor %}
                         </select>
                     </div>
@@ -91,35 +110,52 @@ Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser<html lang="
                             {# The options will be filled by JS #}
                         </select>
                     </div>
-                    <div class="col-md-6">
-                        <label class="form-label"><i class="bi bi-palette"></i> {{ _('Shade') }}</label>
-                        <select name="shade" class="form-select">
+                    <div class="col-md-6" id="container-holder" style="display: none;">
+                        <label class="form-label"><i class="bi bi-diagram-3"></i> {{ _('Abutment System') }}</label>
+                        <select name="aditamento_holder" class="form-select">
                             <option value="">-- {{ _('Select') }} --</option>
-                            {% for s in shades %}
-                                <option value="{{ s }}" {% if orden.shade == s %}selected{% endif %}>{{ s }}</option>
+                            {% for h in aditamento_holders %}
+                            <option value="{{ h }}" {% if orden.aditamento_holder==h %}selected{% endif %}>{{ h }}
+                            </option>
                             {% endfor %}
                         </select>
+                    </div>
+                    <div class="col-md-6" id="container-shade">
+                        <label class="form-label" id="label-shade"><i class="bi bi-palette"></i> {{ _('Shade')
+                            }}</label>
+                        <select name="shade" class="form-select" id="shade-select">
+                            <option value="">-- {{ _('Select') }} --</option>
+                            {% for s in shades %}
+                            <option value="{{ s }}" {% if orden.shade==s %}selected{% endif %}>{{ s }}</option>
+                            {% endfor %}
+                        </select>
+                        <input type="text" name="shade_text" class="form-control" id="shade-input"
+                            value="{{ orden.shade }}" style="display:none;" placeholder="{{ _('e.g. NC, WP') }}">
                     </div>
                     <div class="col-md-6">
                         <label class="form-label"><i class="bi bi-gear"></i> {{ _('Machine') }}</label>
                         <select name="maquina" class="form-select">
                             <option value="">-- {{ _('Select') }} --</option>
                             {% for m in maquinas %}
-                                <option value="{{ m }}" {% if orden.maquina == m %}selected{% endif %}>{{ m }}</option>
+                            <option value="{{ m }}" {% if orden.maquina==m %}selected{% endif %}>{{ m }}</option>
                             {% endfor %}
                         </select>
                     </div>
                     <div class="col-md-6">
                         <label class="form-label"><i class="bi bi-123"></i> {{ _('# Units') }}</label>
-                        <input type="number" name="cantidad_modelos" class="form-control" value="{{ orden.cantidad_modelos }}" min="1">
+                        <input type="number" name="cantidad_modelos" class="form-control"
+                            value="{{ orden.cantidad_modelos }}" min="1">
                     </div>
                     <div class="col-md-6">
                         <label class="form-label"><i class="bi bi-calendar-event"></i> {{ _('Creation Date') }}</label>
-                        <input type="datetime-local" name="fecha_creacion" class="form-control" value="{{ orden.fecha_creacion.strftime('%Y-%m-%dT%H:%M') }}" required>
+                        <input type="datetime-local" name="fecha_creacion" class="form-control"
+                            value="{{ orden.fecha_creacion.strftime('%Y-%m-%dT%H:%M') }}" required>
                     </div>
                     <div class="col-12 text-end">
-                        <button type="submit" class="btn btn-primary"><i class="bi bi-save"></i> {{ _('Save Changes') }}</button>
-                        <a href="{{ url_for('ordenes.ordenes') }}" class="btn btn-outline-secondary ms-2"><i class="bi bi-x"></i> {{ _('Cancel') }}</a>
+                        <button type="submit" class="btn btn-primary"><i class="bi bi-save"></i> {{ _('Save Changes')
+                            }}</button>
+                        <a href="{{ url_for('ordenes.ordenes') }}" class="btn btn-outline-secondary ms-2"><i
+                                class="bi bi-x"></i> {{ _('Cancel') }}</a>
                     </div>
                 </form>
             </div>
@@ -127,40 +163,68 @@ Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser<html lang="
     </div>
     <footer class="footer">
         <div>
-            <span>Fresado Pro &copy; 2025 | {{ _('Developed for dental labs') }} | <i class="bi bi-github"></i> <a href="https://github.com/" target="_blank" style="color:#b0b3b8;text-decoration:underline;">GitHub</a></span>
+            <span>Fresado Pro &copy; 2025 | {{ _('Developed for dental labs') }} | <i class="bi bi-github"></i> <a
+                    href="https://github.com/" target="_blank"
+                    style="color:#b0b3b8;text-decoration:underline;">GitHub</a></span>
         </div>
-        <div style="font-size:0.93em; margin-top:0.3em;">{{ _('Optimized for data analysis, productivity, and user experience.') }}</div>
+        <div style="font-size:0.93em; margin-top:0.3em;">{{ _('Optimized for data analysis, productivity, and user
+            experience.') }}</div>
     </footer>
     <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
     <script>
-    const materialesAvanzado = {{ materiales_avanzado|default({})|tojson|safe }};
-    const marcasGlobales = {{ marcas|tojson|safe }};
-    $(document).ready(function() {
-      function actualizarDropdownMarcas() {
-        const mat = $('select[name=material]').val();
-        let marcas = (materialesAvanzado[mat] && materialesAvanzado[mat]['marcas'] && materialesAvanzado[mat]['marcas'].length > 0)
-          ? materialesAvanzado[mat]['marcas'] : marcasGlobales;
-        let $marca = $('#marca-select');
-        let marcaActual = "{{ orden.marca|e }}";
-        $marca.empty();
-        $marca.append('<option value="">-- {{ _('Select') }} --</option>');
-        marcas.forEach(function(m) {
-          if (typeof m === 'string') {
-            $marca.append('<option value="'+m+'"'+(marcaActual===m?' selected':'')+'>'+m+'</option>');
-          } else if (typeof m === 'object' && m.nombre) {
-            $marca.append('<option value="'+m.nombre+'"'+(marcaActual===m.nombre?' selected':'')+'>'+m.nombre+'</option>');
-          }
+        const materialesAvanzado = {{ materiales_avanzado|default ({}) | tojson | safe }};
+        const marcasGlobales = {{ marcas| tojson | safe }};
+        $(document).ready(function () {
+            function actualizarDropdownMarcas() {
+                const mat = $('select[name=material]').val();
+                let marcas = (materialesAvanzado[mat] && materialesAvanzado[mat]['marcas'] && materialesAvanzado[mat]['marcas'].length > 0)
+                    ? materialesAvanzado[mat]['marcas'] : marcasGlobales;
+                let $marca = $('#marca-select');
+                let marcaActual = "{{ orden.marca|e }}";
+                $marca.empty();
+                $marca.append('<option value="">-- {{ _('Select') }} --</option>');
+                marcas.forEach(function (m) {
+                    if (typeof m === 'string') {
+                        $marca.append('<option value="' + m + '"' + (marcaActual === m ? ' selected' : '') + '>' + m + '</option>');
+                    } else if (typeof m === 'object' && m.nombre) {
+                        $marca.append('<option value="' + m.nombre + '"' + (marcaActual === m.nombre ? ' selected' : '') + '>' + m.nombre + '</option>');
+                    }
+                });
+                // Si la marca actual no está en la lista, agregarla para que no se pierda
+                if (marcaActual && $marca.find('option[value="' + marcaActual + '"]').length === 0) {
+                    $marca.append('<option value="' + marcaActual + '" selected>' + marcaActual + '</option>');
+                }
+            }
+
+            function actualizarUI() {
+                const mat = $('select[name=material]').val();
+                const isTitanium = ['titanio', 'titanium'].includes((mat || '').toLowerCase());
+                if (isTitanium) {
+                    $('#container-holder').show();
+                    $('#marca-select').closest('.col-md-6').hide();
+                    $('#label-shade').html('<i class="bi bi-tag"></i> {{ _("Type") }}');
+                    $('#shade-select').hide().removeAttr('name');
+                    $('#shade-input').show().attr('name', 'shade');
+                } else {
+                    $('#container-holder').hide();
+                    $('#marca-select').closest('.col-md-6').show();
+                    $('#label-shade').html('<i class="bi bi-palette"></i> {{ _("Shade") }}');
+                    $('#shade-input').hide().removeAttr('name');
+                    $('#shade-select').show().attr('name', 'shade');
+                }
+            }
+
+            $('select[name=material]').on('change', function () {
+                actualizarDropdownMarcas();
+                actualizarUI();
+            });
+
+            // Inicializar al cargar
+            actualizarDropdownMarcas();
+            actualizarUI();
         });
-        // Si la marca actual no está en la lista, agregarla para que no se pierda
-        if (marcaActual && $marca.find('option[value="'+marcaActual+'"]').length === 0) {
-          $marca.append('<option value="'+marcaActual+'" selected>'+marcaActual+'</option>');
-        }
-      }
-      $('select[name=material]').on('change', actualizarDropdownMarcas);
-      // Inicializar al cargar
-      actualizarDropdownMarcas();
-    });
     </script>
 </body>
+
 </html>

@@ -8,19 +8,7 @@
 {% endblock %}
 {% block content %}
 <div class="row g-4">
-  <!-- Flash Messages -->
-  <div class="col-12">
-    {% with messages = get_flashed_messages(with_categories=true) %}
-    {% if messages %}
-    {% for category, message in messages %}
-    <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
-      {{ message }}
-      <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-    </div>
-    {% endfor %}
-    {% endif %}
-    {% endwith %}
-  </div>
+  <!-- Flash Messages Handled Globally in base.html -->
   <!-- Top Section: Analytics Table & Add Block Form -->
   <div class="col-lg-5 mb-4">
     <div class="card border-0 shadow-sm animate__animated animate__fadeInLeft">
@@ -1395,6 +1383,54 @@
       // Usually reset clears everything. Let's clear everything.
       $('#filtro-material-nuevos, #filtro-marca-nuevos, #filtro-shade-nuevos, #filtro-grosor-nuevos').val('').trigger('change');
       guardarFiltros('nuevos');
+    });
+
+    // Form Submission Validation to prevent silent failures
+    $('#form-bloque-agregar').on('submit', function (e) {
+      const mat = $('#material').val();
+      const isTitanium = ['titanio', 'titanium'].includes((mat || '').toLowerCase());
+      const marca = $('#marca').val();
+      const shade = $('#shade-input').val();
+      const grosor = $('#grosor').val();
+      const holder = $('#holder-input').val();
+
+      if (!mat) {
+        alert("{{ _('Please select a material.') }}");
+        e.preventDefault();
+        return false;
+      }
+
+      if (!marca) {
+        alert("{{ _('Please select a brand.') }}");
+        e.preventDefault();
+        return false;
+      }
+
+      if (isTitanium) {
+        if (!holder) {
+          alert("{{ _('Please select an Abutment System.') }}");
+          e.preventDefault();
+          return false;
+        }
+        if (!shade) { // for Titanium, shade-input holds the 'Type'
+          alert("{{ _('Please select an Abutment Type.') }}");
+          e.preventDefault();
+          return false;
+        }
+      } else {
+        if (!shade) {
+          alert("{{ _('Please select a shade.') }}");
+          e.preventDefault();
+          return false;
+        }
+        if (!grosor) {
+          alert("{{ _('Please select a thickness.') }}");
+          e.preventDefault();
+          return false;
+        }
+      }
+      // If we got here, everything required is present. Native submission proceeds.
+      return true;
     });
 
     // Handle "Show Empty" checkbox

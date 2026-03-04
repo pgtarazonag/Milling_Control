@@ -334,7 +334,27 @@
             </nav>
             <!-- Contenido principal -->
             <main class="content">
-                {% block content %}{% endblock %}
+                <div class="container-fluid pt-3 px-4">
+                    <!-- Global Flash Messages -->
+                    {% with messages = get_flashed_messages(with_categories=true) %}
+                    {% if messages %}
+                    <div class="row">
+                        <div class="col-12">
+                            {% for category, message in messages %}
+                            <div class="alert alert-{{ category }} alert-dismissible fade show shadow-sm" role="alert"
+                                style="border-radius: 10px; font-weight: 500;">
+                                {{ message }}
+                                <button type="button" class="btn-close" data-bs-dismiss="alert"
+                                    aria-label="Close"></button>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    {% endif %}
+                    {% endwith %}
+
+                    {% block content %}{% endblock %}
+                </div>
             </main>
         </div>
     </div>

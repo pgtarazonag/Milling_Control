@@ -61,6 +61,27 @@ def generar_codigo_bloque(grosor, marca=None, material=None):
             return codigo
 
 # Ruta principal para ver y crear órdenes
+@ordenes_bp.route('/api/pmma-used-clear', methods=['GET'])
+def get_pmma_used_clear():
+    """
+    Returns a JSON list of all 'usado' PMMA blocks with shade 'Clear'.
+    """
+    used_blocks = Bloque.query.filter_by(material='PMMA', shade='Clear', estado='usado').all()
+    data = []
+    
+    # We define a common date format
+    from datetime import datetime
+    for b in used_blocks:
+        date_str = b.fecha_creacion.strftime("%Y-%m-%d") if b.fecha_creacion else "N/A"
+        data.append({
+            'id': b.id,
+            'grosor': b.grosor,
+            'codigo_barra': b.codigo_barra,
+            'fecha': date_str
+        })
+        
+    return jsonify(data)
+
 @ordenes_bp.route('/', methods=['GET', 'POST'])
 def ordenes():
     material_form = None
@@ -259,8 +280,18 @@ def ordenes():
                 })
                 return redirect(url_for('ordenes.confirmar_codigo_bloque', bloque_id=bloque.id, orden_data=orden_data))
         else: # This 'else' corresponds to the 'if bloque_usado_id' or 'elif bloque_nuevo_id'
-            # If is_creation but no block selected
-            error = "You must select a block (Used or New)."
+            # Check if PMMA
+            material_form = request.form.get('material')
+            shade_form = request.form.get('shade')
+            
+            is_pmma = material_form and material_form.lower() == 'pmma'
+            is_titanium = material_form and material_form.lower() in ['titanio', 'titanium']
+            if is_pmma or is_titanium:
+                # Group creation for PMMA/Titanium natively skips standard block single-selection
+                pass
+            else:
+                # If is_creation but no block selected
+                error = "You must select a block (Used or New)."
             # Continue to next block instead of early return
             
     # If there was an error in the group order creation, render the template with the error
@@ -298,19 +329,195 @@ def ordenes():
         bloque_nuevo_id = request.form.get('bloque_nuevo_id')
         
         # Backend Validation - Only for creation
-        if not material_form or not shade_form or not maquina:
-            error = "You must select Material, Shade, and Machine."
+        is_titanium = material_form and material_form.lower() in ['titanio', 'titanium']
+        is_pmma = material_form and material_form.lower() == 'pmma'
+        is_pmma_clear = is_pmma and shade_form and shade_form.lower() == 'clear'
+        
+        if not material_form or not maquina:
+            error = "You must select Material and Machine."
+        elif not is_titanium and not shade_form:
+            error = "You must select a Shade."
         elif not codigos_orden:
             error = "You must enter at least one Order Code."
         elif cantidad_modelos <= 0:
             error = "Number of units must be greater than zero."
             
+        # Additional validation for PMMA Clear
+        pmma_source = request.form.get('pmma_source')
+        pmma_thickness = request.form.get('pmma_thickness')
+        pmma_usado_id = request.form.get('pmma_usado_id')
+        
+        if is_pmma_clear and not error:
+            if cantidad_modelos > 2:
+                error = "A single PMMA block cannot yield more than 2 units."
+            elif cantidad_modelos == 1 and not pmma_source:
+                error = "You must select whether to use a New or Used block."
+            elif pmma_source == 'nuevo' and not pmma_thickness:
+                error = "You must select the thickness for the new PMMA block."
+            elif pmma_source == 'usado' and not pmma_usado_id:
+                error = "You must select a used PMMA block from the list."
+            elif cantidad_modelos == 2 and not pmma_thickness:
+                error = "You must select the thickness for the new PMMA block."
+            
         if not error and codigos_orden:
             codigos_lista = [c.strip() for c in codigos_orden.split(',') if c.strip()]
             
+            # --- PMMA LOGIC ---
+            if is_pmma:
+                if is_pmma_clear:
+                    if cantidad_modelos == 1:
+                        if pmma_source == 'nuevo':
+                            # Generar codigo Grosor-MM.DD
+                            current_date = datetime.now(VANCOUVER_TZ)
+                            code_suffix = current_date.strftime("%m.%d")
+                            pmma_code = f"{pmma_thickness}-{code_suffix}"
+                            
+                            # Buscar bloque nuevo de ese grosor
+                            bloque_nuevo = Bloque.query.filter_by(material='PMMA', shade='Clear', grosor=int(pmma_thickness), estado='nuevo').first()
+                            if not bloque_nuevo or bloque_nuevo.cantidad <= 0:
+                                error = f"No new PMMA Clear {pmma_thickness}mm blocks available."
+                            else:
+                                # Descontar deposito general
+                                bloque_nuevo.cantidad -= 1
+                                if bloque_nuevo.cantidad > 0:
+                                    bloque_nuevo.fecha_creacion = current_date
+                                else:
+                                    db.session.delete(bloque_nuevo)
+                                    
+                                # Crear el usado
+                                nuevo_bloque_usado = Bloque(
+                                    material='PMMA',
+                                    marca=bloque_nuevo.marca if bloque_nuevo.marca else 'Generic',
+                                    shade='Clear',
+                                    grosor=int(pmma_thickness),
+                                    cantidad=1, # Se cuenta como 1 entity usada
+                                    codigo_barra=pmma_code,
+                                    estado='usado',
+                                    modelos_fresados=1,
+                                    codigos_orden_fresados=','.join(codigos_lista),
+                                    fecha_creacion=current_date
+                                )
+                                db.session.add(nuevo_bloque_usado)
+                                db.session.flush()
+                                bloque_referencia = nuevo_bloque_usado
+                        elif pmma_source == 'usado':
+                            # Gastar bloque usado y mandarlo a historial (agotado)
+                            bloque_usado = Bloque.query.get(int(pmma_usado_id))
+                            if not bloque_usado or bloque_usado.estado != 'usado':
+                                error = "Invalid Used Block selected."
+                            else:
+                                pmma_code = bloque_usado.codigo_barra
+                                bloque_usado.modelos_fresados += 1
+                                cods = bloque_usado.get_codigos_orden_fresados()
+                                cods.extend(codigos_lista)
+                                bloque_usado.codigos_orden_fresados = ','.join(cods)
+                                bloque_usado.estado = 'agotado' # Lo eliminamos de la circulacion
+                                bloque_referencia = bloque_usado
+                    elif cantidad_modelos == 2:
+                        # Gastar bloque nuevo directamente a historial (agotado)
+                        current_date = datetime.now(VANCOUVER_TZ)
+                        code_suffix = current_date.strftime("%m.%d")
+                        pmma_code = f"{pmma_thickness}-{code_suffix}"
+                        
+                        bloque_nuevo = Bloque.query.filter_by(material='PMMA', shade='Clear', grosor=int(pmma_thickness), estado='nuevo').first()
+                        if not bloque_nuevo or bloque_nuevo.cantidad <= 0:
+                            error = f"No new PMMA Clear {pmma_thickness}mm blocks available."
+                        else:
+                            bloque_nuevo.cantidad -= 1
+                            if bloque_nuevo.cantidad > 0:
+                                bloque_nuevo.fecha_creacion = current_date
+                            else:
+                                db.session.delete(bloque_nuevo)
+                                
+                            # Crear el agotado (historial directo)
+                            bloque_agotado = Bloque(
+                                material='PMMA',
+                                marca=bloque_nuevo.marca if bloque_nuevo.marca else 'Generic',
+                                shade='Clear',
+                                grosor=int(pmma_thickness),
+                                cantidad=0, # Agotado logic assumes 0 active 
+                                codigo_barra=pmma_code,
+                                estado='agotado',
+                                modelos_fresados=2,
+                                codigos_orden_fresados=','.join(codigos_lista),
+                                fecha_creacion=current_date
+                            )
+                            db.session.add(bloque_agotado)
+                            db.session.flush()
+                            bloque_referencia = bloque_agotado
+
+                    if not error:
+                        # Create Order object for Clear
+                        nueva_orden = Orden(
+                            codigos_caso=','.join(codigos_lista),
+                            material='PMMA',
+                            marca=bloque_referencia.marca,
+                            shade='Clear',
+                            codigo_barra=pmma_code,
+                            maquina=maquina,
+                            cantidad_modelos=cantidad_modelos,
+                            fecha_creacion=datetime.now(VANCOUVER_TZ)
+                        )
+                        db.session.add(nueva_orden)
+                        
+                        # Cleanup pendientes
+                        for codigo_orden in codigos_lista:
+                            pendiente = OrdenPendiente.query.filter_by(codigo_orden=codigo_orden).first()
+                            if pendiente:
+                                db.session.delete(pendiente)
+                                
+                        db.session.commit()
+                        flash('PMMA Clear Order created successfully.')
+                        return redirect(url_for('ordenes.ordenes', material='PMMA', shade='Clear'))
+
+                else:
+                    # PMMA Normal Shades (Bulk Deduction)
+                    # Find any bulk block for this shade regardless of thickness
+                    # If user wants specific thickness tracking, they should add it, but right now we just deduct from the shade general pool
+                    bloques_pool = Bloque.query.filter_by(material='PMMA', shade=shade_form, estado='nuevo').all()
+                    total_disp = sum(b.cantidad for b in bloques_pool)
+                    
+                    if total_disp < cantidad_modelos:
+                        error = f"Not enough PMMA {shade_form} stock. Requested: {cantidad_modelos}, Available: {total_disp}"
+                    else:
+                        # Deduct from pool progressively
+                        f_qty = cantidad_modelos
+                        for b in bloques_pool:
+                            if f_qty <= 0: break
+                            if b.cantidad >= f_qty:
+                                b.cantidad -= f_qty
+                                f_qty = 0
+                            else:
+                                f_qty -= b.cantidad
+                                b.cantidad = 0
+                            
+                            if b.cantidad == 0:
+                                db.session.delete(b)
+                        
+                        # Create Order using generic generic label
+                        nueva_orden = Orden(
+                            codigos_caso=','.join(codigos_lista),
+                            material='PMMA',
+                            marca='Bulk',
+                            shade=shade_form,
+                            codigo_barra=f'PMMA-{shade_form}',
+                            maquina=maquina,
+                            cantidad_modelos=cantidad_modelos,
+                            fecha_creacion=datetime.now(VANCOUVER_TZ)
+                        )
+                        db.session.add(nueva_orden)
+                        
+                        for codigo_orden in codigos_lista:
+                            pendiente = OrdenPendiente.query.filter_by(codigo_orden=codigo_orden).first()
+                            if pendiente:
+                                db.session.delete(pendiente)
+                                
+                        db.session.commit()
+                        flash(f'PMMA {shade_form} Bulk Order created successfully.')
+                        return redirect(url_for('ordenes.ordenes', material='PMMA', shade=shade_form))
+
             # --- TITANIUM LOGIC ---
-            is_titanium = material_form and material_form.lower() in ['titanio', 'titanium']
-            if is_titanium:
+            elif is_titanium:
                 titanium_block_ids = request.form.getlist('titanium_block_ids')
                 aditamento_holder = request.form.get('aditamento_holder')
                 if not titanium_block_ids:
@@ -328,15 +535,24 @@ def ordenes():
                             break
                     
                     if not error:
+                        # Grab brand from first block
+                        first_block = Bloque.query.get(int(next(iter(block_counts))))
+                        order_marca = first_block.marca if first_block else request.form.get('marca')
+                        
+                        consumed_types = []
+                        consumed_pure_refs = []
+                        
                         for bid, qty_t in block_counts.items():
                             bloque = Bloque.query.get(int(bid))
                             bloque.cantidad -= qty_t
                             if bloque.cantidad > 0:
                                 bloque.fecha_creacion = datetime.now(VANCOUVER_TZ)
                             
-                            # Log Type (shade) and real ref if it exists for the display badge
-                            ref_display = f"{bloque.shade} ({bloque.codigo_referencia})" if bloque.codigo_referencia else bloque.shade
-                            consumed_refs.extend([ref_display] * qty_t)
+                            # Keep types and pure refs isolated
+                            consumed_types.extend([bloque.shade] * qty_t)
+                            
+                            pure_ref = bloque.codigo_referencia if bloque.codigo_referencia else bloque.shade
+                            consumed_pure_refs.extend([pure_ref] * qty_t)
                             
                             log = LogInventario(
                                 accion='CONSUMO_TITANIO',
@@ -347,13 +563,16 @@ def ordenes():
                             db.session.add(log)
                             
                         import json
+                        # Unique types for the Shade column
+                        unique_types = list(dict.fromkeys(consumed_types))
+                        
                         nueva_orden = Orden(
                             codigos_caso=','.join(codigos_lista),
                             material=material_form,
-                            marca=request.form.get('marca'),
-                            shade='NA',
+                            marca=aditamento_holder,
+                            shade=','.join(unique_types),
                             aditamento_holder=aditamento_holder,
-                            codigo_barra=json.dumps(consumed_refs),
+                            codigo_barra=', '.join(consumed_pure_refs),
                             maquina=maquina,
                             cantidad_modelos=cantidad_modelos,
                             fecha_creacion=datetime.now(VANCOUVER_TZ)
@@ -591,8 +810,13 @@ def editar_orden(orden_id):
         # Actualizar datos de la orden
         orden.codigos_caso = request.form['codigos_caso']
         orden.material = request.form['material']
-        orden.marca = request.form['marca']
-        orden.shade = request.form['shade']
+        if orden.material.lower() in ['titanio', 'titanium']:
+            orden.marca = request.form.get('aditamento_holder', '')
+            orden.aditamento_holder = orden.marca
+            orden.shade = request.form.get('shade', '')
+        else:
+            orden.marca = request.form['marca']
+            orden.shade = request.form['shade']
         orden.maquina = request.form['maquina']
         orden.cantidad_modelos = int(request.form['cantidad_modelos'])
         # Ajustar modelos_fresados en fresas instaladas (restar a las viejas, sumar a las nuevas)
@@ -626,7 +850,9 @@ def editar_orden(orden_id):
         db.session.commit()
         flash('Orden actualizada correctamente.')
         return redirect(url_for('ordenes.ordenes'))
-    return render_template('editar_orden.html', orden=orden, materiales=materiales, marcas=marcas, shades=shades, maquinas=maquinas, materiales_avanzado=materiales_avanzado)
+        
+    aditamento_holders = Configuracion.get_lista('aditamento_holders', default=['Medentica', 'DESS', 'Zimmer', 'BioHorizons'])
+    return render_template('editar_orden.html', orden=orden, materiales=materiales, marcas=marcas, shades=shades, maquinas=maquinas, materiales_avanzado=materiales_avanzado, aditamento_holders=aditamento_holders)
 
 @ordenes_bp.route('/editar_pendiente/<int:pendiente_id>', methods=['POST'])
 def editar_pendiente(pendiente_id):
@@ -758,6 +984,17 @@ def api_shades():
     
     shade_list = [s[0] for s in shades if s[0]]
     
+    # PMMA needs global shades (A1, A2, etc) active even if inventory is 0 
+    # to support the "Bulk" deduction workflow.
+    if material.lower() == 'pmma':
+        from models import Configuracion
+        global_shades = Configuracion.get_lista('shades')
+        for gs in global_shades:
+            if gs not in shade_list:
+                shade_list.append(gs)
+        if 'Clear' not in shade_list:
+            shade_list.append('Clear')
+            
     return jsonify({'shades': sorted(shade_list)})
 
 @ordenes_bp.route('/api/record-cases')
