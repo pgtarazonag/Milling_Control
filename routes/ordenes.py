@@ -1406,6 +1406,42 @@ def confirmar_codigo_bloque(bloque_id):
                     }
                 })
 
+@ordenes_bp.route('/api/daily-stats')
+def api_daily_stats():
+    tz = pytz.timezone('America/Vancouver')
+    hoy = datetime.now(tz).date()
+    
+    material_filter = request.args.get('material')
+    # Can be a single string or comma separated
+    materiales = [m.strip() for m in material_filter.split(',')] if material_filter else []
+    
+    query = Orden.query
+    if materiales:
+        query = query.filter(Orden.material.in_(materiales))
+        
+    todas_ordenes = query.all()
+    
+    def to_vancouver(dt):
+        if dt is None: return None
+        if dt.tzinfo: return dt.astimezone(tz)
+        else: return dt.replace(tzinfo=pytz.UTC).astimezone(tz)
+        
+    ordenes_hoy = []
+    for o in todas_ordenes:
+        dt = to_vancouver(o.fecha_creacion)
+        if dt and dt.date() == hoy:
+            ordenes_hoy.append(o)
+            
+    total_ordenes = len(ordenes_hoy)
+    total_casos = sum(len(o.get_codigos_caso()) for o in ordenes_hoy)
+    total_modelos = sum(o.cantidad_modelos or 0 for o in ordenes_hoy)
+    
+    return jsonify({
+        'total_ordenes': total_ordenes,
+        'total_casos': total_casos,
+        'total_modelos': total_modelos
+    })
+
 @ordenes_bp.route('/api/analytics/shade-distribution')
 def api_analytics_shade_distribution():
     """

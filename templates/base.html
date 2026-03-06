@@ -403,14 +403,26 @@
         // No hacer nada aquí
     </script>
     <script>
-        // Actualizar stats del Navbar
+        // Actualizar stats del Navbar (reads saved material filter from localStorage)
         $(document).ready(function () {
             if ($('#navbar-stats-container').length > 0) {
-                $.getJSON('/ordenes/api/resumen-dia', function (data) {
+                var params = {};
+                var savedMatsRaw = localStorage.getItem('dashboard_daily_stats_materials');
+                if (savedMatsRaw) {
+                    try {
+                        var savedMats = JSON.parse(savedMatsRaw);
+                        if (savedMats.length > 0) {
+                            params.material = savedMats.join(',');
+                        } else {
+                            params.material = 'NONE_SELECTED';
+                        }
+                    } catch (e) { }
+                }
+                $.getJSON('/ordenes/api/daily-stats', params, function (data) {
                     if (data) {
-                        $('#nav-stat-ordenes').text(data.ordenes || 0);
-                        $('#nav-stat-casos').text(data.casos || 0);
-                        $('#nav-stat-modelos').text(data.modelos || 0);
+                        $('#nav-stat-ordenes').text(data.total_ordenes || 0);
+                        $('#nav-stat-casos').text(data.total_casos || 0);
+                        $('#nav-stat-modelos').text(data.total_modelos || 0);
                     }
                 }).fail(function () {
                     console.error('Error fetching navbar stats');
