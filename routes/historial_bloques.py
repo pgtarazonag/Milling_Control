@@ -299,10 +299,6 @@ def reporte_semanal():
     # Helper to get week string
     def get_week_str(dt_obj):
         # Ensure dt_obj is timezone aware or handle consistently
-        # dt_obj comes from DB, might be naive UTC.
-        # Bloque.fecha_creacion is usually UTC. 
-        # Convert to Vancouver for correct week attribution?
-        # The user works in Vancouver time.
         if dt_obj.tzinfo is None:
              dt_obj = pytz.utc.localize(dt_obj)
         dt_vancouver = dt_obj.astimezone(VANCOUVER_TZ)
@@ -311,6 +307,7 @@ def reporte_semanal():
 
     weeks_in_range = set()
     
+    # Process Standard 'Used' blocks (Zirconia, etc)
     for b in all_blocks:
         key = (b.material, b.shade, b.marca or '', b.grosor or '', b.codigo_referencia or '')
         w_str = get_week_str(b.fecha_creacion)
@@ -320,6 +317,68 @@ def reporte_semanal():
             usage_map[key] = {}
         
         usage_map[key][w_str] = usage_map[key].get(w_str, 0) + 1
+
+    # Process Titanium direct deductions from Audit Log
+    titanium_logs_query = LogInventario.query.filter(
+        LogInventario.accion == 'CONSUMO_TITANIO',
+        LogInventario.fecha >= start_date,
+        LogInventario.fecha <= end_date
+    )
+    titanium_logs = titanium_logs_query.all()
+    
+    import json
+    import re
+    
+    for log in titanium_logs:
+        mat, shade, brand, grosor, ref_code = None, None, None, None, None
+        qty = 0
+        if log.detalles:
+            try:
+                data = json.loads(log.detalles)
+                mat = data.get('material')
+                shade = data.get('shade')
+                brand = data.get('marca')
+                grosor = data.get('grosor')
+                ref_code = data.get('codigo_referencia')
+                qty = data.get('qty', 1)
+            except Exception:
+                pass
+                
+        if not mat: # Fallback for legacy logs before JSON detailing
+            match = re.search(r'(?i)consumed\s+(\d+)\s+units', log.descripcion)
+            if match:
+                qty = int(match.group(1))
+            else:
+                qty = 1
+                
+            b = Bloque.query.get(log.bloque_id)
+            if not b:
+                b = BloqueHistorial.query.filter_by(id=log.bloque_id).first()
+            if b:
+                mat = b.material
+                shade = b.shade
+                brand = b.marca
+                grosor = b.grosor
+                ref_code = b.codigo_referencia
+        
+        if not mat:
+            mat = 'Titanio'
+            brand = 'Unknown'
+            shade = 'Unknown'
+            grosor = ''
+            ref_code = 'Unknown'
+            
+        if selected_materials and mat not in selected_materials:
+            continue
+            
+        key = (mat, shade, brand or '', grosor or '', ref_code or '')
+        w_str = get_week_str(log.fecha)
+        weeks_in_range.add(w_str)
+        
+        if key not in usage_map:
+            usage_map[key] = {}
+            
+        usage_map[key][w_str] = usage_map[key].get(w_str, 0) + qty
 
     # 4. Combine Data
     all_keys = set(inventory_map.keys()) | set(usage_map.keys())

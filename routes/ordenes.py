@@ -554,10 +554,21 @@ def ordenes():
                             pure_ref = bloque.codigo_referencia if bloque.codigo_referencia else bloque.shade
                             consumed_pure_refs.extend([pure_ref] * qty_t)
                             
+                            import json
+                            detalles_json = json.dumps({
+                                'material': bloque.material,
+                                'shade': bloque.shade,
+                                'marca': bloque.marca,
+                                'grosor': bloque.grosor,
+                                'codigo_referencia': pure_ref,
+                                'qty': qty_t
+                            })
+                            
                             log = LogInventario(
                                 accion='CONSUMO_TITANIO',
                                 bloque_id=bloque.id,
                                 descripcion=f"Consumed {qty_t} units for Order {codigos_orden}",
+                                detalles=detalles_json,
                                 usuario='System'
                             )
                             db.session.add(log)
