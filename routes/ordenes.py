@@ -759,9 +759,61 @@ def ordenes():
 @ordenes_bp.route('/eliminar/<int:orden_id>', methods=['POST'])
 def eliminar_orden(orden_id):
     orden = Orden.query.get_or_404(orden_id)
+    
+    is_titanium = orden.material and orden.material.lower() in ['titanio', 'titanium']
+    restaurar = request.form.get('restaurar_inventario') == 'true'
+    
+    if is_titanium and restaurar:
+        import json
+        from models import Bloque, LogInventario
+        
+        try:
+            barcodes = json.loads(orden.codigo_barra) if orden.codigo_barra and orden.codigo_barra.startswith('[') else [b.strip() for b in (orden.codigo_barra or '').split(',') if b.strip()]
+        except:
+            barcodes = [b.strip() for b in (orden.codigo_barra or '').split(',') if b.strip()]
+            
+        holder = orden.aditamento_holder or orden.marca
+        restored_count = 0
+            
+        for ref in barcodes:
+            bloque = Bloque.query.filter_by(
+                aditamento_holder=holder,
+                codigo_referencia=ref,
+                estado='nuevo'
+            ).first()
+            
+            if bloque:
+                bloque.cantidad += 1
+                restored_count += 1
+                
+                detalles = {
+                    'material': orden.material,
+                    'shade': bloque.shade,
+                    'marca': orden.marca,
+                    'grosor': bloque.grosor,
+                    'codigo_referencia': ref,
+                    'qty': 1
+                }
+                
+                log = LogInventario(
+                    accion='RESTAURACION_TITANIO',
+                    bloque_id=bloque.id,
+                    descripcion=f"Restauración de 1 unidad (Orden eliminada: {orden.id})",
+                    detalles=json.dumps(detalles),
+                    usuario='System',
+                    fecha=datetime.now(VANCOUVER_TZ)
+                )
+                db.session.add(log)
+                
+        if restored_count > 0:
+            flash(f'Orden eliminada y {restored_count} bloques de titanio devueltos al inventario con éxito.', 'success')
+        else:
+            flash('Orden eliminada. No se encontraron bloques activos para restaurar.', 'warning')
+    else:
+        flash('Orden eliminada correctamente.')
+
     db.session.delete(orden)
     db.session.commit()
-    flash('Orden eliminada correctamente.')
     return redirect(url_for('ordenes.ordenes'))
 
 @ordenes_bp.route('/eliminar_pendiente/<int:pendiente_id>', methods=['POST'])
@@ -814,22 +866,128 @@ def editar_orden(orden_id):
         materiales_avanzado = {}
     if request.method == 'POST':
         # --- GUARDAR CAMBIOS Y AJUSTAR FRESAS INSTALADAS ---
-        # Guardar valores anteriores para ajustar el conteo de fresas
         old_maquina = orden.maquina
         old_material = orden.material
         old_cantidad = orden.cantidad_modelos
-        # Actualizar datos de la orden
+        old_marca = orden.aditamento_holder or orden.marca
+        
         orden.codigos_caso = request.form['codigos_caso']
         orden.material = request.form['material']
+        
         if orden.material.lower() in ['titanio', 'titanium']:
             orden.marca = request.form.get('aditamento_holder', '')
             orden.aditamento_holder = orden.marca
-            orden.shade = request.form.get('shade', '')
+            
+            # --- SMART DIFFING ---
+            titanium_block_refs = request.form.getlist('titanium_block_refs')
+            auto_restore = request.form.get('auto_restore_blanks') == 'true'
+            
+            import json
+            import pytz
+            from datetime import datetime
+            from collections import Counter
+            from models import Bloque, LogInventario
+            
+            VANCOUVER_TZ = pytz.timezone('America/Vancouver')
+            
+            old_barcodes = []
+            try:
+                old_barcodes = json.loads(orden.codigo_barra) if orden.codigo_barra and orden.codigo_barra.startswith('[') else [b.strip() for b in (orden.codigo_barra or '').split(',') if b.strip()]
+            except:
+                old_barcodes = [b.strip() for b in (orden.codigo_barra or '').split(',') if b.strip()]
+                
+            new_barcodes = [r.strip() for r in titanium_block_refs if r.strip()]
+            
+            old_counts = Counter(old_barcodes)
+            new_counts = Counter(new_barcodes)
+            
+            added_refs = list((new_counts - old_counts).elements())
+            removed_refs = list((old_counts - new_counts).elements())
+            
+            stock_error = False
+            added_counts = Counter(added_refs)
+            for ref, qty in added_counts.items():
+                active_blocks = Bloque.query.filter_by(
+                    aditamento_holder=orden.marca,
+                    codigo_referencia=ref,
+                    estado='nuevo'
+                ).all()
+                total_stock = sum(b.cantidad for b in active_blocks)
+                if total_stock < qty:
+                    flash(f"Error: Inventory insufficient for added reference {ref}. Required: {qty}, Available: {total_stock}", "danger")
+                    stock_error = True
+                    break
+                    
+            if not stock_error:
+                # Deduct newly added blanks
+                for ref in added_refs:
+                    bloque = Bloque.query.filter_by(
+                        codigo_referencia=ref, estado='nuevo'
+                    ).filter(Bloque.cantidad > 0).first()
+                    
+                    if bloque:
+                        bloque.cantidad -= 1
+                        detalles = {
+                            'material': orden.material,
+                            'shade': bloque.shade,
+                            'marca': bloque.aditamento_holder or bloque.marca,
+                            'grosor': bloque.grosor,
+                            'codigo_referencia': ref,
+                            'qty': 1
+                        }
+                        log = LogInventario(accion='CONSUMO_TITANIO', bloque_id=bloque.id, descripcion=f"Consumed 1 unit (Edit Order: {orden.id})", detalles=json.dumps(detalles), usuario='System', fecha=datetime.now(VANCOUVER_TZ))
+                        db.session.add(log)
+                
+                # Restore removed blanks (if toggled ON)
+                if auto_restore:
+                    for ref in removed_refs:
+                        # We use old_marca to find the block that was originally assigned to the order before the edit
+                        bloque = Bloque.query.filter_by(
+                            aditamento_holder=old_marca, codigo_referencia=ref, estado='nuevo'
+                        ).first()
+                        
+                        if bloque:
+                            bloque.cantidad += 1
+                            detalles = {
+                                'material': 'Titanio',
+                                'shade': bloque.shade,
+                                'marca': bloque.aditamento_holder or bloque.marca,
+                                'grosor': bloque.grosor,
+                                'codigo_referencia': ref,
+                                'qty': 1
+                            }
+                            log = LogInventario(accion='RESTAURACION_TITANIO', bloque_id=bloque.id, descripcion=f"Restauración de 1 unidad (Edit Order: {orden.id})", detalles=json.dumps(detalles), usuario='System', fecha=datetime.now(VANCOUVER_TZ))
+                            db.session.add(log)
+                            
+                # Rebuild Unique Types for the Shade column
+                final_types = []
+                final_brands = []
+                for ref in new_barcodes:
+                    bk = Bloque.query.filter_by(codigo_referencia=ref).first()
+                    if bk:
+                        final_types.append(bk.shade)
+                        if bk.aditamento_holder:
+                            final_brands.append(bk.aditamento_holder)
+                
+                # Only update Order entity logic here, so Fresa Instlada below can read `orden.cantidad_modelos` safely
+                # Update the order's brand dynamically to whatever the new blocks dictate
+                if final_brands:
+                    orden.marca = final_brands[0]
+                    orden.aditamento_holder = final_brands[0]
+                    
+                orden.shade = ','.join(list(dict.fromkeys(final_types))) if final_types else ''
+                orden.codigo_barra = ', '.join(new_barcodes)
+                orden.maquina = request.form['maquina']
+                orden.cantidad_modelos = int(request.form['cantidad_modelos'])
+            else:
+                return redirect(url_for('ordenes.editar_orden', orden_id=orden_id))
+
         else:
             orden.marca = request.form['marca']
             orden.shade = request.form['shade']
-        orden.maquina = request.form['maquina']
-        orden.cantidad_modelos = int(request.form['cantidad_modelos'])
+            orden.maquina = request.form['maquina']
+            orden.cantidad_modelos = int(request.form['cantidad_modelos'])
+            
         # Ajustar modelos_fresados en fresas instaladas (restar a las viejas, sumar a las nuevas)
         from models import FresaInstalada
         # Restar a fresas viejas (si cambió máquina/material/cantidad)
@@ -863,7 +1021,47 @@ def editar_orden(orden_id):
         return redirect(url_for('ordenes.ordenes'))
         
     aditamento_holders = Configuracion.get_lista('aditamento_holders', default=['Medentica', 'DESS', 'Zimmer', 'BioHorizons'])
-    return render_template('editar_orden.html', orden=orden, materiales=materiales, marcas=marcas, shades=shades, maquinas=maquinas, materiales_avanzado=materiales_avanzado, aditamento_holders=aditamento_holders)
+    
+    titanium_inventory = []
+    assigned_titanium_refs = []
+    
+    if orden.material and orden.material.lower() in ['titanio', 'titanium']:
+        import json
+        from models import Bloque
+        
+        try:
+            assigned_titanium_refs = json.loads(orden.codigo_barra) if orden.codigo_barra and orden.codigo_barra.startswith('[') else [b.strip() for b in (orden.codigo_barra or '').split(',') if b.strip()]
+        except:
+            assigned_titanium_refs = [b.strip() for b in (orden.codigo_barra or '').split(',') if b.strip()]
+            
+        titanium_blocks = Bloque.query.filter(
+            Bloque.estado == 'nuevo',
+            Bloque.material.in_(['Titanio', 'Titanium'])
+        ).all()
+        
+        titanium_inventory = [
+            {
+                'id': b.id, 
+                'ref': b.shade, 
+                'real_ref': b.codigo_referencia if b.codigo_referencia else b.shade,
+                'qty': b.cantidad, 
+                'holder': b.aditamento_holder
+            } 
+            for b in titanium_blocks if b.cantidad > 0
+        ]
+        
+    return render_template(
+        'editar_orden.html', 
+        orden=orden, 
+        materiales=materiales, 
+        marcas=marcas, 
+        shades=shades, 
+        maquinas=maquinas, 
+        materiales_avanzado=materiales_avanzado, 
+        aditamento_holders=aditamento_holders,
+        titanium_inventory=titanium_inventory,
+        assigned_titanium_refs=assigned_titanium_refs
+    )
 
 @ordenes_bp.route('/editar_pendiente/<int:pendiente_id>', methods=['POST'])
 def editar_pendiente(pendiente_id):

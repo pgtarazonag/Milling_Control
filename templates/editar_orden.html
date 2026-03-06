@@ -123,14 +123,37 @@ Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser<html lang="
                     <div class="col-md-6" id="container-shade">
                         <label class="form-label" id="label-shade"><i class="bi bi-palette"></i> {{ _('Shade')
                             }}</label>
+
                         <select name="shade" class="form-select" id="shade-select">
                             <option value="">-- {{ _('Select') }} --</option>
                             {% for s in shades %}
                             <option value="{{ s }}" {% if orden.shade==s %}selected{% endif %}>{{ s }}</option>
                             {% endfor %}
                         </select>
-                        <input type="text" name="shade_text" class="form-control" id="shade-input"
-                            value="{{ orden.shade }}" style="display:none;" placeholder="{{ _('e.g. NC, WP') }}">
+
+                        <div id="titanium-selection-container" style="display:none;">
+                            <div class="form-check form-switch mb-2">
+                                <input class="form-check-input" type="checkbox" id="auto-restore-blanks"
+                                    name="auto_restore_blanks" value="true" checked>
+                                <label class="form-check-label small text-muted" for="auto-restore-blanks"><i
+                                        class="bi bi-arrow-counterclockwise"></i> {{ _('Auto-restore removed blanks')
+                                    }}</label>
+                            </div>
+
+                            <div id="titanium-selected-list"
+                                class="d-flex flex-wrap gap-1 mb-2 p-1 border rounded bg-white"
+                                style="min-height: 38px;"></div>
+
+                            <div class="border rounded p-2 bg-light">
+                                <label class="small fw-bold text-muted mb-1">{{ _('Add Blanks from Inventory:')
+                                    }}</label>
+                                <div id="titanium-grid" class="d-grid"
+                                    style="grid-template-columns: repeat(auto-fill, minmax(85px, 1fr)); gap: 8px;">
+                                    <div class="text-muted small w-100 text-center">{{ _("Select an Abutment System
+                                        first") }}</div>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                     <div class="col-md-6">
                         <label class="form-label"><i class="bi bi-gear"></i> {{ _('Machine') }}</label>
@@ -172,10 +195,46 @@ Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser<html lang="
     </footer>
     <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script type="application/json" id="titanium-inventory-data">
+        {{ titanium_inventory|default([]) | tojson | safe }}
+    </script>
+    <script type="application/json" id="titanium-assigned-data">
+        {{ assigned_titanium_refs|default([]) | tojson | safe }}
+    </script>
+    <style>
+        .btn-ti-blank {
+            width: 100%;
+            font-weight: 600;
+            font-size: 0.8em;
+            padding: 5px 2px;
+            border-radius: 4px;
+            line-height: 1.1;
+            border: 1px solid #ced4da;
+            color: #212529;
+            background-color: #fff;
+        }
+
+        .btn-ti-blank:hover {
+            background-color: #e9ecef;
+        }
+    </style>
     <script>
         const materialesAvanzado = {{ materiales_avanzado|default ({}) | tojson | safe }};
         const marcasGlobales = {{ marcas| tojson | safe }};
+
+        let titaniumInventory = [];
+        let selectedTitaniumBlocks = [];
+
         $(document).ready(function () {
+
+            try {
+                titaniumInventory = JSON.parse(document.getElementById('titanium-inventory-data').textContent || '[]');
+                const initialRefs = JSON.parse(document.getElementById('titanium-assigned-data').textContent || '[]');
+
+                // Initialize selection array with only references
+                selectedTitaniumBlocks = initialRefs.map(ref => ({ ref: ref }));
+            } catch (e) { console.error('Error parsing Titanium JSON', e); }
+
             function actualizarDropdownMarcas() {
                 const mat = $('select[name=material]').val();
                 let marcas = (materialesAvanzado[mat] && materialesAvanzado[mat]['marcas'] && materialesAvanzado[mat]['marcas'].length > 0)
@@ -183,7 +242,7 @@ Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser<html lang="
                 let $marca = $('#marca-select');
                 let marcaActual = "{{ orden.marca|e }}";
                 $marca.empty();
-                $marca.append('<option value="">-- {{ _('Select') }} --</option>');
+                $marca.append('<option value="">-- {{ _("Select") }} --</option>');
                 marcas.forEach(function (m) {
                     if (typeof m === 'string') {
                         $marca.append('<option value="' + m + '"' + (marcaActual === m ? ' selected' : '') + '>' + m + '</option>');
@@ -191,7 +250,6 @@ Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser<html lang="
                         $marca.append('<option value="' + m.nombre + '"' + (marcaActual === m.nombre ? ' selected' : '') + '>' + m.nombre + '</option>');
                     }
                 });
-                // Si la marca actual no está en la lista, agregarla para que no se pierda
                 if (marcaActual && $marca.find('option[value="' + marcaActual + '"]').length === 0) {
                     $marca.append('<option value="' + marcaActual + '" selected>' + marcaActual + '</option>');
                 }
@@ -203,14 +261,18 @@ Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser<html lang="
                 if (isTitanium) {
                     $('#container-holder').show();
                     $('#marca-select').closest('.col-md-6').hide();
-                    $('#label-shade').html('<i class="bi bi-tag"></i> {{ _("Type") }}');
+                    $('#label-shade').html('<i class="bi bi-tag"></i> {{ _("Type / Blanks") }}');
                     $('#shade-select').hide().removeAttr('name');
-                    $('#shade-input').show().attr('name', 'shade');
+                    $('#titanium-selection-container').show();
+
+                    const holder = $('select[name=aditamento_holder]').val();
+                    if (holder) { renderTitaniumGrid(holder); }
+                    updateTitaniumSelectionUI();
                 } else {
                     $('#container-holder').hide();
                     $('#marca-select').closest('.col-md-6').show();
                     $('#label-shade').html('<i class="bi bi-palette"></i> {{ _("Shade") }}');
-                    $('#shade-input').hide().removeAttr('name');
+                    $('#titanium-selection-container').hide();
                     $('#shade-select').show().attr('name', 'shade');
                 }
             }
@@ -219,6 +281,124 @@ Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser<html lang="
                 actualizarDropdownMarcas();
                 actualizarUI();
             });
+
+            $('select[name=aditamento_holder]').on('change', function () {
+                const holder = $(this).val();
+                // We do NOT clear selected blanks automatically on edit screen just because holder drops down? 
+                // Ah, if they change the system, the old blanks are technically invalid. But it's an edit screen. Let's warn them or just leave them in the pending tray until saved.
+                renderTitaniumGrid(holder);
+            });
+
+            // Titanium Grid Logic
+            function renderTitaniumGrid(holder) {
+                const grid = $('#titanium-grid');
+                grid.empty();
+
+                const blocks = titaniumInventory.filter(b => b.holder === holder);
+
+                if (blocks.length === 0) {
+                    grid.css('display', 'block');
+                    grid.html('<div class="text-muted small w-100 text-center py-2">{{ _("No matching blanks available") }}</div>');
+                    return;
+                }
+
+                grid.css('display', 'grid');
+                const grouped = {};
+                blocks.forEach(b => {
+                    const groupKey = b.real_ref || b.ref;
+                    if (!grouped[groupKey]) grouped[groupKey] = { ref: b.ref, real_ref: b.real_ref, qty: 0 };
+                    grouped[groupKey].qty += b.qty;
+                });
+
+                Object.keys(grouped).sort().forEach(groupKey => {
+                    const data = grouped[groupKey];
+                    // Display both Type (ref) and Reference (real_ref)
+                    const btn = $(`
+                        <button type="button" class="btn btn-ti-blank shadow-sm" data-ref="${groupKey}">
+                            <div>${data.ref}</div>
+                            <div class="text-muted" style="font-size: 0.75em;">${data.real_ref}</div>
+                            <small>Avail: ${data.qty}</small>
+                        </button>
+                    `);
+                    grid.append(btn);
+                });
+
+                // Immediately disable buttons if no qty available
+                updateTitaniumSelectionUI();
+            }
+
+            $(document).on('click', '.btn-ti-blank', function () {
+                const ref = $(this).data('ref').toString();
+                const holder = $('select[name=aditamento_holder]').val();
+
+                const blocksForRef = titaniumInventory.filter(b => (b.real_ref || b.ref).toString() === ref && b.holder === holder);
+                const totalQty = blocksForRef.reduce((a, b) => a + b.qty, 0);
+
+                // Active count of newly added only? 
+                // Actually, the inventory passed from backend ALREADY EXCLUDES the previously consumed references!
+                // So any 'totalQty' displayed from titaniumInventory is pure NEW active stock.
+                // We only need to check if they clicked MORE TIMES than the available active stock.
+
+                // Only count newly added blocks that share this ref (not the ones loaded from assigned list)
+                const newlyAddedCount = selectedTitaniumBlocks.filter(item => item.ref === ref && item.is_new).length;
+
+                if (newlyAddedCount >= totalQty) {
+                    alert('No more active units available for ' + ref);
+                    return;
+                }
+
+                selectedTitaniumBlocks.push({ ref: ref, is_new: true });
+                updateTitaniumSelectionUI();
+            });
+
+            $(document).on('click', '.btn-remove-ti-sel', function () {
+                const idx = $(this).data('index');
+                selectedTitaniumBlocks.splice(idx, 1);
+                updateTitaniumSelectionUI();
+            });
+
+            function updateTitaniumSelectionUI() {
+                let list = $('#titanium-selected-list');
+                list.empty();
+
+                selectedTitaniumBlocks.forEach((item, index) => {
+                    const badgeClass = item.is_new ? 'bg-success' : 'bg-primary';
+                    list.append(`
+                        <span class="badge ${badgeClass} d-flex align-items-center gap-1">
+                            ${item.ref}
+                            <i class="bi bi-x-circle btn-remove-ti-sel ms-1" style="cursor:pointer;" data-index="${index}"></i>
+                        </span>
+                    `);
+                });
+
+                $('#titanium-inputs-container').remove();
+                const container = $('<div id="titanium-inputs-container"></div>');
+                selectedTitaniumBlocks.forEach(item => {
+                    // Injecting an array of final chosen references
+                    container.append(`<input type="hidden" name="titanium_block_refs" value="${item.ref}">`);
+                });
+                $('form').append(container);
+
+                $('#titanium-grid .btn-ti-blank').each(function () {
+                    const ref = $(this).data('ref').toString();
+                    const holder = $('select[name=aditamento_holder]').val();
+                    const blocks = titaniumInventory.filter(b => (b.real_ref || b.ref).toString() === ref && b.holder === holder);
+                    const totalQty = blocks.reduce((a, b) => a + b.qty, 0);
+
+                    const newlyAdded = selectedTitaniumBlocks.filter(i => i.ref === ref && i.is_new).length;
+                    const remaining = totalQty - newlyAdded;
+
+                    $(this).find('small').text('Avail: ' + remaining);
+                    if (remaining <= 0) $(this).addClass('disabled opacity-50');
+                    else $(this).removeClass('disabled opacity-50');
+                });
+
+                // Update unit count
+                const isTitanium = ['titanio', 'titanium'].includes(($('select[name=material]').val() || '').toLowerCase());
+                if (isTitanium && selectedTitaniumBlocks.length > 0) {
+                    $("input[name='cantidad_modelos']").val(selectedTitaniumBlocks.length);
+                }
+            }
 
             // Inicializar al cargar
             actualizarDropdownMarcas();

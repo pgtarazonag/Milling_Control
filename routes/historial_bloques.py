@@ -13,7 +13,7 @@ Este archivo permite consultar fácilmente los cambios y eliminaciones de bloque
 # Importamos Blueprint para crear un grupo de rutas y render_template para mostrar páginas HTML
 from flask import Blueprint, render_template, send_file, request, abort
 # Importamos el modelo que representa el historial de bloques en la base de datos
-from models import BloqueHistorial, Orden, Bloque, FresaInventario, FresaInstalada, Mantenimiento, OrdenPendiente, Configuracion
+from models import BloqueHistorial, Orden, Bloque, FresaInventario, FresaInstalada, Mantenimiento, OrdenPendiente, Configuracion, LogInventario
 from extensions import db
 import io
 import pandas as pd
@@ -267,7 +267,11 @@ def reporte_semanal():
     inv_query = inv_query_base.all()
     inventory_map = {} # Key: (Material, Shade, Marca, Grosor, RefCode), Value: count
     for b in inv_query:
-        key = (b.material, b.shade, b.marca or '', b.grosor or '', b.codigo_referencia or '')
+        grosor_val = b.grosor or ''
+        if getattr(b, 'material', '').lower() in ['titanio', 'titanium']:
+            grosor_val = getattr(b, 'aditamento_holder', '') or grosor_val
+            
+        key = (b.material, b.shade, b.marca or '', grosor_val, b.codigo_referencia or '')
         inventory_map[key] = inventory_map.get(key, 0) + (b.cantidad or 0)
 
     # 3. Fetch Weekly Usage (Active + Hist)
@@ -309,7 +313,11 @@ def reporte_semanal():
     
     # Process Standard 'Used' blocks (Zirconia, etc)
     for b in all_blocks:
-        key = (b.material, b.shade, b.marca or '', b.grosor or '', b.codigo_referencia or '')
+        grosor_val = b.grosor or ''
+        if getattr(b, 'material', '').lower() in ['titanio', 'titanium']:
+            grosor_val = getattr(b, 'aditamento_holder', '') or grosor_val
+            
+        key = (b.material, b.shade, b.marca or '', grosor_val, b.codigo_referencia or '')
         w_str = get_week_str(b.fecha_creacion)
         weeks_in_range.add(w_str)
         
@@ -318,9 +326,9 @@ def reporte_semanal():
         
         usage_map[key][w_str] = usage_map[key].get(w_str, 0) + 1
 
-    # Process Titanium direct deductions from Audit Log
+    # Process Titanium direct deductions and restorations from Audit Log
     titanium_logs_query = LogInventario.query.filter(
-        LogInventario.accion == 'CONSUMO_TITANIO',
+        LogInventario.accion.in_(['CONSUMO_TITANIO', 'RESTAURACION_TITANIO']),
         LogInventario.fecha >= start_date,
         LogInventario.fecha <= end_date
     )
@@ -344,23 +352,25 @@ def reporte_semanal():
             except Exception:
                 pass
                 
-        if not mat: # Fallback for legacy logs before JSON detailing
-            match = re.search(r'(?i)consumed\s+(\d+)\s+units', log.descripcion)
-            if match:
-                qty = int(match.group(1))
-            else:
-                qty = 1
-                
+        if not mat or (mat.lower() in ['titanio', 'titanium'] and (not grosor or grosor == 0 or grosor == '0')):
+            # Fallback or need to fetch holder from block
             b = Bloque.query.get(log.bloque_id)
             if not b:
                 b = BloqueHistorial.query.filter_by(id=log.bloque_id).first()
             if b:
-                mat = b.material
-                shade = b.shade
-                brand = b.marca
-                grosor = b.grosor
-                ref_code = b.codigo_referencia
-        
+                if not mat:
+                    mat = b.material
+                    shade = b.shade
+                    brand = b.marca
+                    ref_code = b.codigo_referencia
+                if mat and mat.lower() in ['titanio', 'titanium']:
+                    grosor = getattr(b, 'aditamento_holder', '') or getattr(b, 'grosor', '')
+                elif not mat:
+                    grosor = b.grosor
+                    
+        if mat and mat.lower() in ['titanio', 'titanium'] and not grosor:
+             grosor = data.get('holder') if 'data' in locals() and isinstance(data, dict) else ''
+
         if not mat:
             mat = 'Titanio'
             brand = 'Unknown'
@@ -378,7 +388,8 @@ def reporte_semanal():
         if key not in usage_map:
             usage_map[key] = {}
             
-        usage_map[key][w_str] = usage_map[key].get(w_str, 0) + qty
+        qty_to_apply = qty if log.accion == 'CONSUMO_TITANIO' else -qty
+        usage_map[key][w_str] = usage_map[key].get(w_str, 0) + qty_to_apply
 
     # 4. Combine Data
     all_keys = set(inventory_map.keys()) | set(usage_map.keys())

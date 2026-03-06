@@ -488,11 +488,93 @@
   </div>
 </div>
 
+<!-- Modal Confirmar Eliminación Titanio -->
+<div class="modal fade" id="modalEliminarTitanio" tabindex="-1" aria-labelledby="modalEliminarTitanioLabel"
+  aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content border-0 shadow">
+      <div class="modal-header bg-danger text-white">
+        <h5 class="modal-title" id="modalEliminarTitanioLabel"><i class="bi bi-exclamation-triangle-fill me-2"></i>{{
+          _('Delete Titanium Order') }}</h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <p>{{ _('You are about to delete a Titanium order. What would you like to do with the Titanium blanks consumed
+          by it?') }}</p>
+        <div class="d-grid gap-2 mt-4">
+          <button type="button" class="btn btn-success" id="btn-titanium-restore">
+            <i class="bi bi-arrow-return-left me-2"></i>{{ _('Restore to Inventory & Delete') }}
+          </button>
+          <button type="button" class="btn btn-outline-danger" id="btn-titanium-keep">
+            <i class="bi bi-trash3 me-2"></i>{{ _('Keep Consumed & Delete') }} <small
+              class="d-block text-muted px-2 py-1">{{ _('(e.g., if blanks broke during milling)') }}</small>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
 {% endblock %}
 {% block scripts %}
 {{ super() }}
 <script>
   $(document).ready(function () {
+    // INTERACTIVO: Control de eliminación de órdenes Titanio vs Zirconia
+    let pendingDeleteForm = null;
+
+    $(document).on('submit', '.form-eliminar-orden', function (e) {
+      if ($(this).data('confirmed')) return true; // Let it pass if already confirmed
+
+      e.preventDefault();
+
+      const codigo = $(this).data('codigo');
+      const material = $(this).data('material') || '';
+      const marca = $(this).data('marca');
+      const shade = $(this).data('shade');
+      const maquina = $(this).data('maquina');
+
+      const isTitanium = ['titanio', 'titanium'].includes(material.toString().toLowerCase());
+
+      if (isTitanium) {
+        pendingDeleteForm = $(this);
+        $('#modalEliminarTitanio').modal('show');
+      } else {
+        const msgs = $('#ordenes-msgs');
+        const MSG_DELETE_ORDER = msgs.data('msg-delete-order') || "Are you sure you want to delete this order?";
+        const LABEL_CODE = msgs.data('label-code') || "Code";
+        const LABEL_MATERIAL = msgs.data('label-material') || "Material";
+        const LABEL_BRAND = msgs.data('label-brand') || "Brand";
+        const LABEL_SHADE = msgs.data('label-shade') || "Shade";
+        const LABEL_MACHINE = msgs.data('label-machine') || "Machine";
+
+        const msg = `${MSG_DELETE_ORDER}\n\n${LABEL_CODE}: ${codigo}\n${LABEL_MATERIAL}: ${material}\n${LABEL_BRAND}: ${marca || '-'}\n${LABEL_SHADE}: ${shade}\n${LABEL_MACHINE}: ${maquina}`;
+
+        if (confirm(msg)) {
+          $(this).data('confirmed', true);
+          $(this).submit();
+        }
+      }
+    });
+
+    $('#btn-titanium-restore').on('click', function () {
+      if (pendingDeleteForm) {
+        $('<input>').attr({ type: 'hidden', name: 'restaurar_inventario', value: 'true' }).appendTo(pendingDeleteForm);
+        pendingDeleteForm.data('confirmed', true);
+        pendingDeleteForm.submit();
+        $('#modalEliminarTitanio').modal('hide');
+      }
+    });
+
+    $('#btn-titanium-keep').on('click', function () {
+      if (pendingDeleteForm) {
+        $('<input>').attr({ type: 'hidden', name: 'restaurar_inventario', value: 'false' }).appendTo(pendingDeleteForm);
+        pendingDeleteForm.data('confirmed', true);
+        pendingDeleteForm.submit();
+        $('#modalEliminarTitanio').modal('hide');
+      }
+    });
+
     // FORM SUBMISSION HANDLER
     $('#orden-form').off('submit').on('submit', function (e) {
       // Manual submit (Button or Enter) -> set creation intent
@@ -956,18 +1038,7 @@
     abrirModalConfirmarCodigo(bloqueId, ordenData);
   }
 </script>
-<script>
-  // Confirmación al eliminar orden
-  $(document).on('submit', '.form-eliminar-orden', function (e) {
-    const codigo = $(this).data('codigo');
-    const material = $(this).data('material');
-    const marca = $(this).data('marca');
-    const shade = $(this).data('shade');
-    const maquina = $(this).data('maquina');
-    const msg = `${MSG_DELETE_ORDER}\n\n${LABEL_CODE}: ${codigo}\n${LABEL_MATERIAL}: ${material}\n${LABEL_BRAND}: ${marca}\n${LABEL_SHADE}: ${shade}\n${LABEL_MACHINE}: ${maquina}`;
-    if (!confirm(msg)) e.preventDefault();
-  });
-</script>
+
 <script>
   $(document).ready(function () {
     // DataTable para tabla de pendientes (ordenar y filtrar)
@@ -1203,9 +1274,12 @@
     setTimeout(function () { $btn.prop('disabled', false); }, 800);
   });
 </script>
+<script type="application/json" id="titanium-inventory-data">
+  {{ titanium_inventory|default([]) | tojson | safe }}
+</script>
 <script>
   // TITANIUM LOGIC
-  const titaniumInventory = {{ titanium_inventory|default ([]) | tojson | safe }};
+  const titaniumInventory = JSON.parse(document.getElementById('titanium-inventory-data').textContent || '[]');
 
   $(document).ready(function () {
     // Keep global Titanium array
