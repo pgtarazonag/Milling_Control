@@ -31,7 +31,7 @@ class Orden(db.Model):
     # Marca del material
     marca = db.Column(db.String(50))
     # Color o shade del material
-    shade = db.Column(db.String(20))
+    shade = db.Column(db.String(255))
     # Código de barra del bloque usado (JSON list for Titanium, Single String for Zirconia)
     codigo_barra = db.Column(db.Text) 
     # Máquina utilizada
@@ -66,7 +66,7 @@ class Bloque(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     material = db.Column(db.String(50), nullable=False)
     marca = db.Column(db.String(50))
-    shade = db.Column(db.String(20))
+    shade = db.Column(db.String(255))
     grosor = db.Column(db.Integer)
     cantidad = db.Column(db.Integer, default=1)
     codigo_barra = db.Column(db.String(100))
@@ -90,7 +90,7 @@ class BloqueHistorial(db.Model):
     bloque_id = db.Column(db.Integer)
     material = db.Column(db.String(50))
     marca = db.Column(db.String(50))
-    shade = db.Column(db.String(20))
+    shade = db.Column(db.String(255))
     grosor = db.Column(db.Integer)
     cantidad = db.Column(db.Integer)
     codigo_barra = db.Column(db.String(100))
