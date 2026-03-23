@@ -342,6 +342,19 @@
             min-width: 0;
           }
         </style>
+        </style>
+        <div class="mb-3">
+          <h5 class="mb-0"><i class="bi bi-clock-history text-primary me-2"></i>{{ _('Orders History') }}</h5>
+        </div>
+        <div id="filter-orden-container" class="d-none">
+          <span class="small fw-bold text-muted me-1"><i class="bi bi-funnel"></i></span>
+          <select id="filter-orden-material" class="form-select form-select-sm shadow-sm" style="min-width:140px; border-radius: 6px;">
+            <option value="">{{ _('All Materials') }}</option>
+          </select>
+          <select id="filter-orden-marca" class="form-select form-select-sm shadow-sm" style="min-width:140px; border-radius: 6px;">
+            <option value="">{{ _('All Brands') }}</option>
+          </select>
+        </div>
         <div class="table-responsive animate__animated animate__fadeIn">
           <table class="table table-striped table-hover ordenes-table" id="tabla-ordenes">
             <thead class="table-primary">
@@ -1072,12 +1085,86 @@
 <script>
   $(document).ready(function () {
     // DataTable para tabla de órdenes
-    $('#tabla-ordenes').DataTable({
+    var tablaOrdenes = $('#tabla-ordenes').DataTable({
       language: { url: window.getDataTablesLangUrl() },
       order: [[0, 'desc']], // Ordenar por ID descendente por defecto
       paging: true,
       searching: true,
       info: true
+    });
+
+    // Move filters into DataTables search row
+    $('#filter-orden-container').removeClass('d-none').addClass('d-flex gap-2 align-items-center me-3').prependTo('#tabla-ordenes_filter');
+    $('#tabla-ordenes_filter').addClass('d-flex justify-content-end align-items-center');
+    $('#tabla-ordenes_filter label').addClass('mb-0');
+
+    var materialBrandsMap = {};
+    var allBrands = new Set();
+    
+    // Populate Select Filters dynamically
+    function initializeFilterData() {
+      var materials = new Set();
+      
+      tablaOrdenes.rows().every(function() {
+        var data = this.data();
+        var mat = data[3] ? data[3].trim() : null;
+        var bra = data[4] && data[4].trim() !== '-' ? data[4].trim() : null;
+        
+        if (mat) {
+          materials.add(mat);
+          if (!materialBrandsMap[mat]) materialBrandsMap[mat] = new Set();
+          if (bra) {
+            materialBrandsMap[mat].add(bra);
+            allBrands.add(bra);
+          }
+        }
+      });
+
+      var matSelect = $('#filter-orden-material');
+      var currMat = matSelect.val();
+      matSelect.empty().append(`<option value="">{{ _('All Materials') }}</option>`);
+      Array.from(materials).sort().forEach(m => {
+        matSelect.append(`<option value="${m}">${m}</option>`);
+      });
+      matSelect.val(currMat);
+      
+      updateBrandDropdown(currMat);
+    }
+    
+    function updateBrandDropdown(selectedMat) {
+      var brSelect = $('#filter-orden-marca');
+      var currBr = brSelect.val();
+      brSelect.empty().append(`<option value="">{{ _('All Brands') }}</option>`);
+      
+      var brandsToShow = (selectedMat && materialBrandsMap[selectedMat]) ? materialBrandsMap[selectedMat] : allBrands;
+      
+      Array.from(brandsToShow).sort().forEach(b => {
+        brSelect.append(`<option value="${b}">${b}</option>`);
+      });
+      
+      if (currBr && brandsToShow.has(currBr)) {
+        brSelect.val(currBr);
+      } else {
+        brSelect.val('');
+      }
+    }
+    
+    initializeFilterData();
+
+    // Bind Filter Events
+    $('#filter-orden-material').on('change', function() {
+      var selectedMat = $(this).val();
+      var val = $.fn.dataTable.util.escapeRegex(selectedMat);
+      tablaOrdenes.column(3).search(val ? '^' + val + '$' : '', true, false).draw();
+      
+      updateBrandDropdown(selectedMat);
+      $('#filter-orden-marca').val('');
+      tablaOrdenes.column(4).search('', true, false).draw();
+    });
+    
+    $('#filter-orden-marca').on('change', function() {
+      var val = $.fn.dataTable.util.escapeRegex($(this).val());
+      tablaOrdenes.column(4).search(val ? '^' + val + '$' : '', true, false).draw();
     });
   });
 </script>

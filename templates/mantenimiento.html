@@ -1,392 +1,669 @@
 {% extends "base.html" %}
-{# Repo sync: 2025-09-21T21:15Z #}
-{% block title %}{{ _('Maintenance') }} | Fresado Pro{% endblock %}
-{% block instructions %}
-<div class="alert alert-info d-flex align-items-center" role="alert">
-  <i class="bi bi-gear me-2"></i>
-  {{ _('Register and view maintenance activities. Use groups to filter and keep your lab in optimal condition.') }}
-</div>
-{% endblock %}
+{# Repo sync: Kanban Maintenance UI #}
+{% block title %}{{ _('Maintenance Board') }} | Fresado Pro{% endblock %}
+
 {% block content %}
 <style>
-  /* Minimal Tailwind-like utilities for this view */
-  .max-w-7xl {
-    max-width: 80rem;
-  }
-
-  .mx-auto {
-    margin-left: auto;
-    margin-right: auto;
-  }
-
-  .px-3 {
-    padding-left: 0.75rem;
-    padding-right: 0.75rem
-  }
-
-  .grid {
-    display: grid;
-  }
-
-  .gap-6 {
-    gap: 1.5rem
-  }
-
-  .grid-cols-1 {
-    grid-template-columns: repeat(1, minmax(0, 1fr))
-  }
-
-  @media (min-width: 640px) {
-    .sm\:grid-cols-2 {
-      grid-template-columns: repeat(2, minmax(0, 1fr))
-    }
-  }
-
-  @media (min-width: 1280px) {
-    .xl\:grid-cols-3 {
-      grid-template-columns: repeat(3, minmax(0, 1fr))
-    }
-
-    .xl\:col-span-2 {
-      grid-column: span 2 / span 2
-    }
-  }
-
-  .rounded-2xl {
-    border-radius: 1rem !important
-  }
-
-  .sticky-header {
-    position: sticky;
-    top: 60px;
-    z-index: 1010;
-    backdrop-filter: saturate(180%) blur(8px);
-    background: rgba(255, 255, 255, 0.9);
-    border-bottom: 1px solid #eef2f7
-  }
-
-  .kpi {
+  /* Kanban Layout CSS */
+  .kanban-wrapper {
     display: flex;
-    align-items: center;
-    gap: .6rem;
-    padding: .75rem 1rem;
-    border-radius: .8rem;
-    border: 1px solid #eef2f7;
-    background: #fff
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    gap: 1.5rem;
+    padding-bottom: 1rem;
+    min-height: 65vh;
+    align-items: flex-start;
+  }
+  
+  /* Scrollbar styling for Kanban */
+  .kanban-wrapper::-webkit-scrollbar {
+    height: 10px;
+  }
+  .kanban-wrapper::-webkit-scrollbar-track {
+    background: #f1f5f9;
+    border-radius: 8px;
+  }
+  .kanban-wrapper::-webkit-scrollbar-thumb {
+    background-color: #cbd5e1;
+    border-radius: 8px;
+    border: 2px solid #f1f5f9;
   }
 
-  .kpi .num {
-    font-weight: 700;
-    font-size: 1.15rem
+  /* Swimlane (Column) */
+  .swimlane {
+    flex: 0 0 320px;
+    background: #f8fafc;
+    border-radius: 12px;
+    border: 1px solid #e2e8f0;
+    display: flex;
+    flex-direction: column;
+    max-height: 100%;
   }
 
-  .segmented {
-    display: inline-flex;
-    border: 1px solid #d6dbe3;
-    border-radius: .7rem;
-    overflow: hidden;
-    background: #fff
-  }
-
-  .segmented a {
-    padding: .4rem .75rem;
-    text-decoration: none;
-    color: #1565c0;
-    border-right: 1px solid #d6dbe3;
-    font-weight: 600
-  }
-
-  .segmented a:last-child {
-    border-right: none
-  }
-
-  .segmented a.active,
-  .segmented a:hover {
-    background: #e3f2fd;
-    color: #0d47a1
-  }
-
-  .card-soft {
+  .swimlane-header {
+    padding: 1rem;
     background: #fff;
-    border: 1px solid #eef2f7
+    border-bottom: 2px solid #e2e8f0;
+    border-top-left-radius: 12px;
+    border-top-right-radius: 12px;
+    position: sticky;
+    top: 0;
+    z-index: 10;
   }
 
-  /* Skeletons */
-  .skeleton {
+  .swimlane-body {
+    padding: 1rem;
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+  }
+
+  /* Task Card */
+  .mant-card {
+    background: #fff;
+    border-radius: 8px;
+    padding: 1rem;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.04);
+    border-left: 4px solid #cbd5e1;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
     position: relative;
-    overflow: hidden;
-    background: #eef2f7;
-    border-radius: .6rem
+  }
+  .mant-card:hover {
+    box-shadow: 0 4px 6px rgba(0,0,0,0.08);
   }
 
-  .skeleton::after {
-    content: "";
-    position: absolute;
-    inset: 0;
-    transform: translateX(-100%);
-    background: linear-gradient(90deg, rgba(255, 255, 255, 0) 0, rgba(255, 255, 255, .6) 50%, rgba(255, 255, 255, 0) 100%);
-    animation: shimmer 1.2s infinite
+  /* Color Coding */
+  .status-vencido { border-left-color: #ef4444; } /* Red */
+  .status-proximo { border-left-color: #f59e0b; } /* Yellow */
+  .status-aldia   { border-left-color: #10b981; } /* Green */
+  .status-none    { border-left-color: #94a3b8; } /* Gray */
+
+  .card-title {
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: #1e293b;
+    margin-bottom: 0.5rem;
+  }
+  
+  .card-meta {
+    font-size: 0.8rem;
+    color: #64748b;
+    margin-bottom: 0.2rem;
   }
 
-  @keyframes shimmer {
-    100% {
-      transform: translateX(100%)
-    }
+  .btn-log-quick {
+    background: #f1f5f9;
+    color: #10b981;
+    border: 1px solid #10b981;
+    font-size: 0.85rem;
+    padding: 0.35rem 0.5rem;
+    border-radius: 6px;
+    font-weight: 700;
+    transition: all 0.2s;
+    width: 100%;
+  }
+  .btn-log-quick:hover {
+    background: #10b981;
+    color: #fff;
   }
 
-  .skeleton-line {
-    height: 12px;
-    margin: 8px 0
+  /* Filters */
+  .filter-bar {
+    background: #fff;
+    padding: 1rem;
+    border-radius: 12px;
+    margin-bottom: 1.5rem;
+    border: 1px solid #e2e8f0;
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .filter-btn {
+    padding: 0.4rem 1rem;
+    border-radius: 20px;
+    font-weight: 600;
+    font-size: 0.9rem;
+    border: 1px solid #cbd5e1;
+    background: #fff;
+    color: #475569;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .filter-btn.active {
+    background: #2563eb;
+    color: #fff;
+    border-color: #2563eb;
   }
 
-  .skeleton-sm {
-    height: 8px;
-    margin: 6px 0
+  .freq-btn-group {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+  }
+  .freq-btn {
+    flex: 1;
+    min-width: 80px;
   }
 </style>
-<div class="mx-auto max-w-7xl px-3">
-  <!-- Sticky header with KPIs and segmented filters -->
-  <div class="sticky-header py-2 mb-3">
-    <div class="d-flex flex-wrap align-items-center justify-content-between gap-2">
-      <div>
-        <div class="segmented">
-          <a href="{{ url_for('mantenimiento.mantenimiento') }}" class="{% if not grupo %}active{% endif %}">{{ _('All')
-            }}</a>
-          <a href="{{ url_for('mantenimiento.mantenimiento', grupo='fresadoras') }}"
-            class="{% if grupo == 'fresadoras' %}active{% endif %}">{{ _('Milling Machines') }}</a>
-          <a href="{{ url_for('mantenimiento.mantenimiento', grupo='hornos') }}"
-            class="{% if grupo == 'hornos' %}active{% endif %}">{{ _('Ovens') }}</a>
-          <a href="{{ url_for('mantenimiento.mantenimiento', grupo='aspiradoras') }}"
-            class="{% if grupo == 'aspiradoras' %}active{% endif %}">{{ _('Vacuum Cleaners') }}</a>
+
+<div class="container-fluid px-4 py-3">
+  
+  <!-- Top Filter Bar -->
+  <div class="filter-bar shadow-sm">
+    <div class="d-flex gap-2 align-items-center">
+      <i class="bi bi-funnel text-muted me-2"></i>
+      <button class="filter-btn active" data-filter="all">{{ _('All Machines') }}</button>
+      <button class="filter-btn" data-filter="fresadoras">{{ _('Milling Machines') }}</button>
+      <button class="filter-btn" data-filter="hornos">{{ _('Furnaces') }}</button>
+      <button class="filter-btn" data-filter="aspiradoras">{{ _('Vacuums') }}</button>
+    </div>
+    <div class="d-flex gap-2">
+      <!-- Removed Configure Activities button per user request -->
+      <button class="btn btn-primary btn-sm rounded-pill shadow-sm fw-bold" onclick="openScheduleModal()">
+        <i class="bi bi-calendar-plus"></i> {{ _('Schedule New Activity') }}
+      </button>
+      <button class="btn btn-outline-primary btn-sm rounded-pill fw-bold" id="toggleViewBtn" onclick="toggleView()">
+        <i class="bi bi-clock-history"></i> {{ _('View History Log') }}
+      </button>
+    </div>
+  </div>
+
+  <!-- Kanban Board -->
+  <div class="kanban-wrapper" id="kanbanBoard">
+    {% for group in board_data %}
+      {% for maquina in group.maquinas %}
+      <div class="swimlane" data-group="{{ group.id }}">
+        <div class="swimlane-header">
+          <div class="d-flex justify-content-between align-items-center">
+            <h6 class="mb-0 fw-bold text-dark"><i class="bi bi-cpu me-2 text-primary"></i>{{ maquina.nombre }}</h6>
+            <span class="badge bg-light text-secondary border">{{ group.label }}</span>
+          </div>
+        </div>
+        
+        <div class="swimlane-body">
+          {% for act in maquina.actividades %}
+          <div class="mant-card status-{{ act.estado }}">
+            <div class="card-title">{{ act.nombre }}</div>
+            
+            {% if act.ultimo_registro and act.ultimo_registro.fecha %}
+              <div class="card-meta">
+                <i class="bi bi-check2-circle text-success me-1"></i> 
+                {{ _('Last done') }}: <strong>{{ act.ultimo_registro.fecha.strftime('%b %d, %Y') }}</strong>
+              </div>
+            {% else %}
+              <div class="card-meta">
+                <i class="bi bi-dash-circle text-muted me-1"></i> {{ _('Never logged') }}
+              </div>
+            {% endif %}
+
+            {% if act.ultimo_registro and act.ultimo_registro.proxima_fecha %}
+              <div class="card-meta mt-1">
+                {% if act.estado == 'vencido' %}
+                  <i class="bi bi-exclamation-triangle-fill text-danger me-1"></i>
+                  <span class="text-danger fw-bold">{{ _('Overdue by') }} {{ act.days_diff|abs }} {{ _('days') }}</span>
+                {% elif act.estado == 'proximo' %}
+                  <i class="bi bi-clock-fill text-warning me-1"></i>
+                  <span class="text-warning fw-bold">{{ _('Due in') }} {{ act.days_diff }} {{ _('days') }}</span>
+                {% else %}
+                  <i class="bi bi-calendar-event text-success me-1"></i>
+                  <span>{{ _('Due') }}: {{ act.ultimo_registro.proxima_fecha.strftime('%b %d, %Y') }}</span>
+                {% endif %}
+              </div>
+            {% endif %}
+
+            <div class="d-flex gap-2 pe-3 mt-3">
+              <form method="post" action="{{ url_for('mantenimiento.realizar_proxima', mant_id=act.ultimo_registro.id) }}" class="flex-grow-1 mb-0">
+                <button type="submit" class="btn-log-quick w-100 h-100">
+                  <i class="bi bi-check-circle-fill me-1"></i> {{ _('Done') }}
+                </button>
+              </form>
+              <button type="button" class="btn btn-light btn-sm border text-muted px-3" 
+                      data-id="{{ act.ultimo_registro.id }}"
+                      data-fecha="{{ act.ultimo_registro.fecha.strftime('%Y-%m-%d') if act.ultimo_registro.fecha else '' }}"
+                      data-prox="{{ act.ultimo_registro.proxima_fecha.strftime('%Y-%m-%d') if act.ultimo_registro.proxima_fecha else '' }}"
+                      data-desc="{{ act.ultimo_registro.descripcion or '' }}"
+                      data-tipo="{{ group.label }}"
+                      data-maq="{{ maquina.nombre }}"
+                      data-act="{{ act.nombre }}"
+                      onclick="editMant(this)" title="{{ _('Edit Scheduled Maintenance') }}">
+                <i class="bi bi-pencil-fill"></i>
+              </button>
+              <form method="post" action="{{ url_for('mantenimiento.eliminar_mantenimiento', mant_id=act.ultimo_registro.id) }}" class="mb-0" onsubmit='return confirm("{{ _("Delete this activity completely?") }}");'>
+                <button type="submit" class="btn btn-light btn-sm border text-danger px-3 h-100" title="{{ _('Delete Scheduled Maintenance') }}">
+                  <i class="bi bi-trash-fill"></i>
+                </button>
+              </form>
+            </div>
+          </div>
+          {% else %}
+          <div class="text-center py-4 text-muted small">
+            <i class="bi bi-inbox fs-4 d-block mb-1"></i>
+            {{ _('No activities configured for this machine.') }}
+          </div>
+          {% endfor %}
         </div>
       </div>
-      <div class="d-flex flex-wrap gap-2">
-        <div class="kpi shadow-sm"><i class="bi bi-exclamation-octagon text-danger"></i> <span>{{ _('Overdue')
-            }}:</span> <span class="num" id="kpi-overdue">—</span></div>
-        <div class="kpi shadow-sm"><i class="bi bi-calendar-week text-warning"></i> <span>{{ _('This week') }}:</span>
-          <span class="num" id="kpi-week">—</span>
+      {% endfor %}
+    {% endfor %}
+  </div>
+
+  <!-- Legacy History Table (Hidden by default) -->
+  <div class="mt-4" id="historyTable" style="display: none;">
+    <div class="card card-soft shadow-sm border-0 rounded-4">
+      <div class="card-header bg-white fw-bold py-3"><i class="bi bi-clock-history text-primary me-2"></i>{{ _('Full Maintenance History') }}</div>
+      <div class="card-body">
+        <div id="filter-mant-container" class="d-none">
+          <span class="small fw-bold text-muted me-1"><i class="bi bi-funnel"></i></span>
+          <select id="filter-mant-maquina" class="form-select form-select-sm shadow-sm" style="min-width:140px; border-radius: 6px;">
+            <option value="">{{ _('All Machines') }}</option>
+          </select>
         </div>
-        <div class="kpi shadow-sm"><i class="bi bi-calendar3 text-success"></i> <span>{{ _('Next 30d') }}:</span> <span
-            class="num" id="kpi-30d">—</span></div>
+        <div class="table-responsive">
+          <table class="table table-hover align-middle" id="tabla-mant">
+            <thead class="table-light">
+              <tr>
+                <th>{{ _('Date') }}</th>
+                <th>{{ _('Machine') }}</th>
+                <th>{{ _('Activity') }}</th>
+                <th>{{ _('Description') }}</th>
+                <th>{{ _('Next Scheduled') }}</th>
+                <th>{{ _('Actions') }}</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for reg in all_records %}
+              <tr>
+                <td>{{ reg.fecha.strftime('%Y-%m-%d %H:%M') }}</td>
+                <td class="fw-bold">{{ reg.maquina }}</td>
+                <td>{{ reg.actividad }}</td>
+                <td class="text-muted">{{ reg.descripcion or '-' }}</td>
+                <td>
+                  {% if reg.proxima_fecha %}
+                    {{ reg.proxima_fecha.strftime('%Y-%m-%d') }}
+                  {% else %}
+                    -
+                  {% endif %}
+                </td>
+                <td>
+                  <form method="post" action="{{ url_for('mantenimiento.eliminar_mantenimiento', mant_id=reg.id) }}" style="display:inline;" onsubmit='return confirm("{{ _("Delete this record?") }}");'>
+                    <button type="submit" class="btn btn-outline-danger btn-sm border-0"><i class="bi bi-trash"></i></button>
+                  </form>
+                  <a href="{{ url_for('mantenimiento.editar_mantenimiento', mant_id=reg.id) }}" class="btn btn-outline-primary btn-sm border-0"><i class="bi bi-pencil-square"></i></a>
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
   </div>
 
-  <!-- Grilla principal -->
-  <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-6">
-    <!-- Columna principal: formulario + tabla (span 2 en xl) -->
-    <div class="xl:col-span-2">
-      <div class="card card-soft rounded-2xl shadow-sm">
-        <div class="card-body">
-          <div class="d-flex justify-content-between align-items-center mb-3">
-            <h5 class="mb-0"><i class="bi bi-gear-wide-connected text-primary"></i> {{ _('Maintenance and Calibrations')
-              }}</h5>
-            <a href="{{ url_for('mantenimiento.documentacion') }}" target="_blank" class="btn btn-outline-info btn-sm">
-              <i class="bi bi-journal-text me-1"></i> {{ _('Documentation') }}
-            </a>
+</div>
+
+<!-- Schedule New Activity Modal -->
+<div class="modal fade" id="scheduleModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content border-0 rounded-4 shadow-lg">
+      <div class="modal-header border-bottom-0 pb-0">
+        <h5 class="modal-title fw-bold"><i class="bi bi-calendar-plus text-primary me-2"></i>{{ _('Schedule New Activity') }}</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <form method="post" action="{{ url_for('mantenimiento.mantenimiento') }}" id="formLogMant">
+        <div class="modal-body">
+          <input type="hidden" name="proxima_fecha" id="modalProximaFecha">
+          
+          <div class="mb-3">
+            <label class="form-label small fw-bold mb-2">{{ _('Machine Type') }}</label>
+            <div id="tipoBtnsContainer" class="d-flex flex-wrap gap-2"></div>
           </div>
 
-          <!-- New registration form -->
-          <div class="p-3 bg-light rounded-3 mb-4 border">
-            <h6 class="text-muted small fw-bold mb-3 text-uppercase"><i class="bi bi-plus-circle me-1"></i> {{
-              _('Register New Activity') }}</h6>
-            <form method="post">
-              <div class="row g-3">
-                <div class="col-md-4">
-                  <label class="form-label small fw-bold mb-1">{{ _('Machine / Device') }}</label>
-                  <select name="maquina" class="form-select form-select-sm" required>
-                    <option value="" disabled selected>{{ _('Select Machine') }}</option>
-                    {% for m in maquinas %}
-                    <option value="{{ m }}">{{ m }}</option>
-                    {% endfor %}
-                  </select>
-                </div>
-                <div class="col-md-8">
-                  <div class="row g-2">
-                    <div class="col-md-6">
-                      <label class="form-label small fw-bold mb-1">{{ _('Activity') }}</label>
-                      <select name="actividad" class="form-select form-select-sm" required>
-                        {% for act in actividades %}
-                        <option value="{{ act.nombre }}">{{ act.nombre }}</option>
-                        {% endfor %}
-                      </select>
-                    </div>
-                    <div class="col-md-3">
-                      <label class="form-label small fw-bold mb-1">{{ _('Every') }}</label>
-                      <input type="number" name="intervalo" class="form-control form-control-sm" min="1" value="1"
-                        required>
-                    </div>
-                    <div class="col-md-3">
-                      <label class="form-label small fw-bold mb-1">{{ _('Unit') }}</label>
-                      <select name="unidad" class="form-select form-select-sm" required>
-                        <option value="semana">{{ _('Week(s)') }}</option>
-                        <option value="mes">{{ _('Month(s)') }}</option>
-                        <option value="año">{{ _('Year(s)') }}</option>
-                      </select>
-                    </div>
-                  </div>
-                </div>
-                <div class="col-md-9">
-                  <label class="form-label small fw-bold mb-1">{{ _('Optional Description / Observations') }}</label>
-                  <input type="text" name="descripcion" class="form-control form-control-sm"
-                    placeholder="{{ _('e.g. Changed filter, level adjusted...') }}">
-                </div>
-                <div class="col-md-3 d-flex align-items-end">
-                  <button type="submit" class="btn btn-primary btn-sm w-100"><i class="bi bi-save me-1"></i> {{
-                    _('Register') }}</button>
+          <div class="row">
+            <div class="col-md-6 mb-3">
+              <label class="form-label small fw-bold">{{ _('Machine') }}</label>
+              <select name="maquina" id="selectMaquina" class="form-select" required disabled>
+                <option value="" disabled selected>{{ _('Select Machine...') }}</option>
+              </select>
+            </div>
+            
+            <div class="col-md-6 mb-3">
+              <label class="form-label small fw-bold">{{ _('Activity') }}</label>
+              <select name="actividad" id="selectActividad" class="form-select" required disabled>
+                <option value="" disabled selected>{{ _('Select Activity...') }}</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="row mt-1">
+            <div class="col-md-6 mb-3">
+              <div class="d-flex align-items-center justify-content-between mb-2">
+                <label class="form-label small fw-bold mb-0" id="labelFecha">{{ _('Date Performed') }}</label>
+                <div class="form-check form-switch mb-0" title="{{ _('Turn off to only schedule it for the future without logging an execution today.') }}">
+                  <input class="form-check-input" type="checkbox" id="isDoneSwitch" name="is_done" checked onchange="toggleDoneState()">
+                  <label class="form-check-label small lh-1 ms-1 text-primary fw-bold" for="isDoneSwitch">{{ _('Already done?') }}</label>
                 </div>
               </div>
-            </form>
+              <input type="date" name="fecha" id="modalFecha" class="form-control" required>
+            </div>
+            
+            <div class="col-md-6 mb-3">
+              <label class="form-label small fw-bold">{{ _('Optional Notes') }}</label>
+              <input type="text" name="descripcion" class="form-control" placeholder="{{ _('Any observations...') }}">
+            </div>
           </div>
 
-          <!-- Table skeleton -->
-          <div id="mant-skeleton" class="skeleton" style="height:180px;" aria-hidden="true"></div>
-
-          <!-- Table -->
-          <div class="table-responsive animate__animated animate__fadeIn d-none" id="mant-table-wrap">
-            <table class="table table-striped table-hover" id="tabla-mant">
-              <thead class="table-info">
-                <tr>
-                  <th><i class="bi bi-calendar"></i> {{ _('Date') }}</th>
-                  <th><i class="bi bi-cpu"></i> {{ _('Machine') }}</th>
-                  <th><i class="bi bi-gear"></i> {{ _('Activity') }}</th>
-                  <th><i class="bi bi-card-text"></i> {{ _('Description') }}</th>
-                  <th><i class="bi bi-calendar-check"></i> {{ _('Next') }}</th>
-                  <th><i class="bi bi-gear"></i> {{ _('Actions') }}</th>
-                </tr>
-              </thead>
-              <tbody>
-                {% for reg in registros %}
-                <tr>
-                  <td><span class="fecha-tabla">{{ reg.fecha.strftime('%Y-%m-%d %H:%M') }}</span></td>
-                  <td>{{ reg.maquina }}</td>
-                  <td>{{ reg.actividad }}</td>
-                  <td>{{ reg.descripcion or '' }}</td>
-                  <td>{% if reg.proxima_fecha %}<span class="fecha-tabla"
-                      data-proxima="{{ reg.proxima_fecha.strftime('%Y-%m-%dT%H:%M:%S') }}">{{
-                      reg.proxima_fecha.strftime('%Y-%m-%d %H:%M') }}</span>{% endif %}</td>
-                  <td>
-                    <form method="post" action="{{ url_for('mantenimiento.eliminar_mantenimiento', mant_id=reg.id) }}"
-                      style="display:inline;">
-                      <button type="submit" class="btn btn-outline-danger btn-sm" title="{{ _('Delete') }}"><i
-                          class="bi bi-trash"></i></button>
-                    </form>
-                    <a href="{{ url_for('mantenimiento.editar_mantenimiento', mant_id=reg.id) }}"
-                      class="btn btn-outline-primary btn-sm ms-1" title="{{ _('Edit') }}">
-                      <i class="bi bi-pencil-square"></i>
-                    </a>
-                  </td>
-                </tr>
-                {% endfor %}
-              </tbody>
-            </table>
+          <div class="mb-2">
+            <label class="form-label small fw-bold mb-2" id="labelProxima">{{ _('Next Scheduled Date (Frequency)') }}</label>
+            <div class="freq-btn-group">
+              <button type="button" class="btn btn-outline-secondary btn-sm freq-btn" onclick="setFreq('1w', this)">1 {{ _('Week') }}</button>
+              <button type="button" class="btn btn-outline-secondary btn-sm freq-btn" onclick="setFreq('1m', this)">1 {{ _('Month') }}</button>
+              <button type="button" class="btn btn-outline-secondary btn-sm freq-btn" onclick="setFreq('2m', this)">2 {{ _('Months') }}</button>
+              <button type="button" class="btn btn-outline-secondary btn-sm freq-btn" onclick="setFreq('6m', this)">6 {{ _('Months') }}</button>
+              <button type="button" class="btn btn-outline-secondary btn-sm freq-btn" onclick="setFreq('1y', this)">1 {{ _('Year') }}</button>
+              <button type="button" class="btn btn-outline-secondary btn-sm freq-btn" onclick="setFreq('', this)">{{ _('No Repeat') }}</button>
+            </div>
+            
+            <div class="mt-2 d-flex align-items-center gap-2">
+              <span class="small text-muted">{{ _('Or select specific date:') }}</span>
+              <input type="date" id="customNextDate" class="form-control form-control-sm w-auto" onchange="setCustomDate()">
+            </div>
           </div>
-        </div>
-      </div>
-    </div>
 
-    <!-- Sidebar: upcoming activities -->
-    <div>
-      <div class="card card-soft rounded-2xl shadow-sm">
-        <div class="card-header bg-white" style="font-weight:600"><i class="bi bi-calendar-check me-1"></i> {{
-          _('Upcoming Activities') }}</div>
-        <!-- Skeleton lista -->
-        <div id="prox-skeleton" class="p-3">
-          <div class="skeleton skeleton-line"></div>
-          <div class="skeleton skeleton-line"></div>
-          <div class="skeleton skeleton-line"></div>
         </div>
-        <ul class="list-group list-group-flush d-none" id="prox-list">
-          {% for prox in proximas_actividades %}
-          <li class="list-group-item p-3 border-bottom">
-            <div class="d-flex justify-content-between align-items-start mb-2">
-              <span class="badge bg-primary rounded-pill px-2 py-1 small">{{ _('Upcoming') }}</span>
-              <div class="d-flex gap-1">
-                <form method="post" action="{{ url_for('mantenimiento.descartar_proxima', mant_id=prox.id) }}"
-                  style="display:inline;" data-confirm-msg="{{ _('Are you sure you want to discard this reminder?') }}"
-                  onsubmit="return confirm(this.getAttribute('data-confirm-msg'));">
-                  <button type="submit" class="btn btn-outline-danger btn-xs border-0"
-                    title="{{ _('Discard / Postpone') }}"><i class="bi bi-x-lg"></i></button>
-                </form>
-                <form method="post" action="{{ url_for('mantenimiento.realizar_proxima', mant_id=prox.id) }}"
-                  style="display:inline;">
-                  <button type="submit" class="btn btn-outline-success btn-xs border-0"
-                    title="{{ _('Mark as Done') }}"><i class="bi bi-check-lg"></i></button>
-                </form>
-              </div>
-            </div>
-            <div class="fw-bold mb-1"><i class="bi bi-cpu me-1 text-muted"></i> {{ prox.maquina }}</div>
-            <div class="small text-dark mb-2">
-              {% set act = prox.actividad %}
-              {% set act_en = act
-              |replace('Cada ', 'Every ')
-              |replace('cada ', 'every ')
-              |replace('semanas', _('weeks'))
-              |replace('semana', _('week'))
-              |replace('meses', _('months'))
-              |replace('mes', _('month'))
-              |replace('años', _('years'))
-              |replace('año', _('year'))
-              %}
-              {{ act_en }}
-            </div>
-            <div class="d-flex align-items-center justify-content-between">
-              <span class="text-muted small">
-                <i class="bi bi-calendar-event me-1"></i> <span class="fecha-tabla"
-                  data-proxima="{{ prox.proxima_fecha.strftime('%Y-%m-%dT%H:%M:%S') }}">{{
-                  prox.proxima_fecha.strftime('%Y-%m-%d %H:%M') }}</span>
-              </span>
-            </div>
-          </li>
-          {% else %}
-          <li class="list-group-item text-center py-4 text-muted">
-            <i class="bi bi-calendar-check fs-2 d-block mb-2"></i>
-            {{ _('No upcoming activities scheduled.') }}
-          </li>
-          {% endfor %}
-        </ul>
-      </div>
+        <div class="modal-footer border-top-0 pt-0">
+          <button type="button" class="btn btn-light" data-bs-dismiss="modal">{{ _('Cancel') }}</button>
+          <button type="submit" class="btn btn-primary px-4 fw-bold">{{ _('Save Log') }}</button>
+        </div>
+      </form>
     </div>
   </div>
 </div>
+
 {% endblock %}
+
 {% block scripts %}
 {{ super() }}
+<script src="https://cdn.datatables.net/buttons/2.4.2/js/dataTables.buttons.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<script src="https://cdn.datatables.net/buttons/2.4.2/js/buttons.html5.min.js"></script>
 <script>
-  $(document).ready(function () {
-    // Show real content and hide skeletons when DataTable is ready
-    const $table = $('#tabla-mant');
-    const dt = $table.DataTable({
-      language: { url: window.getDataTablesLangUrl ? window.getDataTablesLangUrl() : '/static/es-ES.json' },
-      order: [[0, 'desc']]
+  $(document).ready(function() {
+    // Check if table initialized
+    // Re-initialize or apply options
+    var tablaMant = $('#tabla-mant').DataTable({
+      language: { url: window.getDataTablesLangUrl() },
+      order: [[0, 'desc']],
+      dom: "<'row'<'col-sm-12 col-md-3'l><'col-sm-12 col-md-9 d-flex justify-content-end align-items-center gap-2'Bf>>" +
+           "<'row'<'col-sm-12'tr>>" +
+           "<'row'<'col-sm-12 col-md-5'i><'col-sm-12 col-md-7'p>>",
+      buttons: [
+        {
+            extend: 'excelHtml5',
+            text: '<i class="bi bi-file-earmark-spreadsheet"></i> Excel',
+            className: 'btn btn-success btn-sm shadow-sm',
+            title: 'Maintenance_History',
+            exportOptions: {
+                columns: [0, 1, 2, 3, 4] // Ignore Actions col
+            }
+        }
+      ]
     });
-    $('#mant-skeleton').addClass('d-none');
-    $('#mant-table-wrap').removeClass('d-none');
-    $('#prox-skeleton').addClass('d-none');
-    $('#prox-list').removeClass('d-none');
 
-    // KPI counters from dates in DOM (without touching data logic)
-    function computeKPIs() {
-      const now = new Date();
-      const in7d = new Date(now.getTime() + 7 * 24 * 3600 * 1000);
-      const in30d = new Date(now.getTime() + 30 * 24 * 3600 * 1000);
-      let overdue = 0, week = 0, next30 = 0;
-      // Buscar fechas en tabla y lista lateral
-      const $fechas = $("#mant-table-wrap [data-proxima], #prox-list [data-proxima]");
-      $fechas.each(function () {
-        const s = $(this).attr('data-proxima');
-        if (!s) return;
-        const d = new Date(s);
-        if (isNaN(d)) return;
-        if (d < now) overdue++;
-        else if (d <= in7d) week++;
-        else if (d <= in30d) next30++;
-      });
-      $('#kpi-overdue').text(overdue);
-      $('#kpi-week').text(week);
-      $('#kpi-30d').text(next30);
+    // Populate Machine Filter
+    var mantMachines = new Set();
+    tablaMant.rows().every(function() {
+         var data = this.data();
+         if(data[1]) mantMachines.add(' ' + data[1].trim()); // The HTML has class mapping or bold tags
+    });
+    // actually, let's make sure we strip HTML if needed, but dt data() returns HTML or string?
+    // DataTables `.data()` returns the raw innerHTML if populated from DOM. Better to use nodes or text.
+    var mantMachinesClean = new Set();
+    tablaMant.cells(null, 1).render('display').each(function(val) {
+        var cleanVal = $('<div>').html(val).text().trim();
+        if(cleanVal) mantMachinesClean.add(cleanVal);
+    });
+
+    var maqSelect = $('#filter-mant-maquina');
+    var currMaq = maqSelect.val();
+    maqSelect.empty().append(`<option value="">{{ _('All Machines') }}</option>`);
+    Array.from(mantMachinesClean).sort().forEach(m => {
+         maqSelect.append(`<option value="${m}">${m}</option>`);
+    });
+    if (currMaq) maqSelect.val(currMaq);
+
+    // Move filter to DataTables search row
+    $('#filter-mant-container').removeClass('d-none').addClass('d-flex gap-2 align-items-center me-3').prependTo('#tabla-mant_filter');
+    $('#tabla-mant_filter').addClass('d-flex justify-content-end align-items-center');
+    $('#tabla-mant_filter label').addClass('mb-0 me-2');
+
+    maqSelect.on('change', function() {
+         var val = $.fn.dataTable.util.escapeRegex($(this).val());
+         tablaMant.column(1).search(val ? '^' + val + '$' : '', true, false).draw();
+    });
+
+    // Restore Kanban filter
+    const savedFilter = localStorage.getItem('mant_board_filter');
+    if (savedFilter && savedFilter !== 'all') {
+      const btn = $(`.filter-btn[data-filter="${savedFilter}"]`);
+      if (btn.length) {
+        btn.click();
+      }
     }
-    computeKPIs();
   });
+</script>
+<script>
+  // Set today's date safely in local time
+  document.getElementById('modalFecha').valueAsDate = new Date();
+
+  // Kanban Filtering
+  $('.filter-btn').on('click', function() {
+    $('.filter-btn').removeClass('active');
+    $(this).addClass('active');
+    
+    const filter = $(this).data('filter');
+    localStorage.setItem('mant_board_filter', filter);
+    
+    if (filter === 'all') {
+      $('.swimlane').show();
+    } else {
+      $('.swimlane').hide();
+      $(`.swimlane[data-group="${filter}"]`).show();
+    }
+  });
+
+  // View Toggle Logic
+  function toggleView() {
+    const kanban = document.getElementById('kanbanBoard');
+    const table = document.getElementById('historyTable');
+    const btn = document.getElementById('toggleViewBtn');
+    
+    if (kanban.style.display !== 'none') {
+      kanban.style.display = 'none';
+      table.style.display = 'block';
+      btn.innerHTML = '<i class="bi bi-kanban"></i> {{ _("View Kanban Board") }}';
+      btn.classList.replace('btn-outline-primary', 'btn-primary');
+      localStorage.setItem('mant_view_mode', 'table');
+    } else {
+      kanban.style.display = 'flex';
+      table.style.display = 'none';
+      btn.innerHTML = '<i class="bi bi-clock-history"></i> {{ _("View History Log") }}';
+      btn.classList.replace('btn-primary', 'btn-outline-primary');
+      localStorage.setItem('mant_view_mode', 'kanban');
+    }
+  }
+
+  $(document).ready(function() {
+    if (localStorage.getItem('mant_view_mode') === 'table') {
+      const kanban = document.getElementById('kanbanBoard');
+      const table = document.getElementById('historyTable');
+      const btn = document.getElementById('toggleViewBtn');
+      kanban.style.display = 'none';
+      table.style.display = 'block';
+      btn.innerHTML = '<i class="bi bi-kanban"></i> {{ _("View Kanban Board") }}';
+      btn.classList.replace('btn-outline-primary', 'btn-primary');
+    }
+  });
+
+  // Cascading Buttons for Schedule Modal
+  const dropdownData = {{ dropdown_data|safe }};
+  const tipoBtnsContainer = document.getElementById('tipoBtnsContainer');
+  const selectMaquina = document.getElementById('selectMaquina');
+  const selectActividad = document.getElementById('selectActividad');
+
+  // Populate Machine Types exactly once as buttons
+  Object.keys(dropdownData).forEach(tipo => {
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'btn btn-outline-primary btn-sm rounded-pill px-3 fw-bold';
+    btn.textContent = tipo;
+    btn.onclick = function() {
+      // Manage active state
+      Array.from(tipoBtnsContainer.children).forEach(c => {
+        c.classList.remove('btn-primary', 'text-white');
+        c.classList.add('btn-outline-primary');
+      });
+      this.classList.remove('btn-outline-primary');
+      this.classList.add('btn-primary', 'text-white');
+      
+      const data = dropdownData[tipo];
+      
+      // Reset secondary dropdowns
+      selectMaquina.innerHTML = '<option value="" disabled selected>{{ _("Select Machine...") }}</option>';
+      selectActividad.innerHTML = '<option value="" disabled selected>{{ _("Select Activity...") }}</option>';
+      
+      if (data && data.maquinas && data.maquinas.length > 0) {
+        data.maquinas.forEach(m => {
+          const opt = document.createElement('option');
+          opt.value = m;
+          opt.textContent = m;
+          selectMaquina.appendChild(opt);
+        });
+        selectMaquina.disabled = false;
+      } else {
+        selectMaquina.disabled = true;
+      }
+
+      if (data && data.actividades && data.actividades.length > 0) {
+        data.actividades.forEach(a => {
+          const opt = document.createElement('option');
+          opt.value = a;
+          opt.textContent = a;
+          selectActividad.appendChild(opt);
+        });
+        selectActividad.disabled = false;
+      } else {
+        selectActividad.disabled = true;
+      }
+    };
+    tipoBtnsContainer.appendChild(btn);
+  });
+
+  // Modal Logic
+  const scheduleModal = new bootstrap.Modal(document.getElementById('scheduleModal'));
+  
+  function openScheduleModal() {
+    document.querySelector('#scheduleModal form').reset();
+    document.getElementById('modalFecha').valueAsDate = new Date();
+    
+    // Reset form elements
+    document.getElementById('isDoneSwitch').checked = true;
+    document.getElementById('isDoneSwitch').closest('.form-check').parentElement.style.display = 'block';
+    toggleDoneState();
+    
+    Array.from(tipoBtnsContainer.children).forEach(c => {
+      c.classList.remove('btn-primary', 'text-white');
+      c.classList.add('btn-outline-primary');
+    });
+    selectMaquina.innerHTML = '<option value="" disabled selected>{{ _("Select Machine...") }}</option>';
+    selectMaquina.disabled = true;
+    selectActividad.innerHTML = '<option value="" disabled selected>{{ _("Select Activity...") }}</option>';
+    selectActividad.disabled = true;
+    
+    // Reset frequency buttons
+    $('.freq-btn').removeClass('btn-primary text-white').addClass('btn-outline-secondary');
+    document.getElementById('modalProximaFecha').value = '';
+    document.getElementById('customNextDate').value = '';
+    
+    scheduleModal.show();
+  }
+
+  function setFreq(val, btn) {
+    document.getElementById('modalProximaFecha').value = val;
+    document.getElementById('customNextDate').value = '';
+    // Visual styling
+    $('.freq-btn').removeClass('btn-primary text-white').addClass('btn-outline-secondary');
+    $(btn).removeClass('btn-outline-secondary').addClass('btn-primary text-white');
+  }
+
+  function setCustomDate() {
+    const custom = document.getElementById('customNextDate').value;
+    document.getElementById('modalProximaFecha').value = custom;
+    $('.freq-btn').removeClass('btn-primary text-white').addClass('btn-outline-secondary');
+  }
+
+  $(document).ready(function() {
+      // (Old datatables initialization removed)
+  });
+
+  function toggleDoneState() {
+    const isDone = document.getElementById('isDoneSwitch').checked;
+    const labelFecha = document.getElementById('labelFecha');
+    const labelProxima = document.getElementById('labelProxima');
+    
+    if (isDone) {
+      labelFecha.textContent = "{{ _('Date Performed') }}";
+      labelProxima.textContent = "{{ _('Next Scheduled Date (Frequency)') }}";
+    } else {
+      labelFecha.textContent = "{{ _('Schedule For Date') }}";
+      labelProxima.textContent = "{{ _('Recurrence (After it is performed)') }}";
+    }
+  }
+
+  function editMant(btnElement) {
+    const btn = $(btnElement);
+    const mId = btn.data('id');
+    
+    // Set form action for editing
+    const form = document.querySelector('#scheduleModal form');
+    form.action = "{{ url_for('mantenimiento.mantenimiento') }}editar/" + mId;
+    
+    // Reset the modal UI first
+    openScheduleModal();
+    
+    // Hide the 'Already Performed' switch when testing editing since it's an existing record
+    document.getElementById('isDoneSwitch').closest('.form-check').parentElement.style.display = 'none';
+    
+    // Switch title
+    document.querySelector('#scheduleModal .modal-title').innerHTML = '<i class="bi bi-pencil-square text-primary me-2"></i>{{ _("Edit Scheduled Maintenance") }}';
+    
+    // Click the matching machine type pill
+    Array.from(tipoBtnsContainer.children).forEach(c => {
+      if (c.textContent === btn.data('tipo')) {
+        c.click();
+      }
+    });
+    
+    // Set specific machine/activity
+    setTimeout(() => {
+      if (document.getElementById('selectMaquina')) document.getElementById('selectMaquina').value = btn.data('maq');
+      if (document.getElementById('selectActividad')) document.getElementById('selectActividad').value = btn.data('act');
+    }, 50);
+
+    // Set dates
+    if (btn.data('fecha')) document.getElementById('modalFecha').value = btn.data('fecha');
+    
+    const prox = btn.data('prox');
+    if (prox) {
+      document.getElementById('customNextDate').value = prox;
+      document.getElementById('modalProximaFecha').value = prox;
+      $('.freq-btn').removeClass('btn-primary text-white').addClass('btn-outline-secondary');
+    }
+
+    // Set notes
+    const descArea = form.querySelector('[name="descripcion"]');
+    if (descArea) descArea.value = btn.data('desc');
+  }
 </script>
 {% endblock %}

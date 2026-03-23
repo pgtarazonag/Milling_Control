@@ -574,14 +574,14 @@ def ordenes():
                             db.session.add(log)
                             
                         import json
-                        # Unique types for the Shade column
-                        unique_types = list(dict.fromkeys(consumed_types))
+                        # Keep ALL types including duplicates for accurate consumption tracking
+                        # e.g. ['RN', 'RN', 'WB'] -> 'RN,RN,WB'
                         
                         nueva_orden = Orden(
                             codigos_caso=','.join(codigos_lista),
                             material=material_form,
                             marca=aditamento_holder,
-                            shade=','.join(unique_types),
+                            shade=','.join(consumed_types),
                             aditamento_holder=aditamento_holder,
                             codigo_barra=', '.join(consumed_pure_refs),
                             maquina=maquina,
@@ -975,7 +975,7 @@ def editar_orden(orden_id):
                     orden.marca = final_brands[0]
                     orden.aditamento_holder = final_brands[0]
                     
-                orden.shade = ','.join(list(dict.fromkeys(final_types))) if final_types else ''
+                orden.shade = ','.join(final_types) if final_types else ''
                 orden.codigo_barra = ', '.join(new_barcodes)
                 orden.maquina = request.form['maquina']
                 orden.cantidad_modelos = int(request.form['cantidad_modelos'])
@@ -1498,20 +1498,33 @@ def api_analytics_shade_distribution():
     # unless we want to use complex SQL array functions. Given the scale, Python processing is fine.
     ordenes = query.all()
     
+    is_titanium = material and material.lower() in ['titanio', 'titanium']
     distribution = {}
     
     for orden in ordenes:
-        shade = orden.shade or 'Unknown'
-        if shade not in distribution:
-            distribution[shade] = 0
-            
-        if metric == 'orders':
-            distribution[shade] += 1
-        elif metric == 'units':
-            distribution[shade] += (orden.cantidad_modelos or 0)
-        elif metric == 'cases':
-            count = len(orden.get_codigos_caso())
-            distribution[shade] += count
+        shade_raw = orden.shade or 'Unknown'
+        
+        if is_titanium and ',' in shade_raw:
+            # Titanium: shade stores comma-separated types like 'RN,RN,WB'
+            # Decompose and count each individual type
+            individual_types = [t.strip() for t in shade_raw.split(',') if t.strip()]
+            for tipo in individual_types:
+                if tipo not in distribution:
+                    distribution[tipo] = 0
+                # Each type in the list represents 1 unit consumed
+                distribution[tipo] += 1
+        else:
+            # Standard materials: one shade per order
+            if shade_raw not in distribution:
+                distribution[shade_raw] = 0
+                
+            if metric == 'orders':
+                distribution[shade_raw] += 1
+            elif metric == 'units':
+                distribution[shade_raw] += (orden.cantidad_modelos or 0)
+            elif metric == 'cases':
+                count = len(orden.get_codigos_caso())
+                distribution[shade_raw] += count
 
     # Sort by value desc
     sorted_dist = sorted(distribution.items(), key=lambda x: x[1], reverse=True)

@@ -717,7 +717,8 @@
             let cleanShade = shadeRaw.toString().split(' (')[0];
 
             let count = data.values && data.values[i] !== undefined ? data.values[i] : 0;
-            let fresados = parseFloat((count / 19).toFixed(1));
+            let isTitanium = safeMat.toLowerCase() === 'titanium' || safeMat.toLowerCase() === 'titanio';
+            let fresados = isTitanium ? count : parseFloat((count / 19).toFixed(1));
 
             let inventory = 0;
             if (data.inventory && data.inventory[i] !== undefined) {

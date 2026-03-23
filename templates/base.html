@@ -15,20 +15,22 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
     <style>
         /* --- RESET Y FIXES PARA LAYOUT --- */
-        body,
         html {
             margin: 0;
             padding: 0;
             box-sizing: border-box;
             height: 100%;
             width: 100%;
+            overflow-x: hidden;
         }
-
-        .container-fluid {
+        body {
             margin: 0;
             padding: 0;
-            padding-top: 56px !important;
-            width: 100vw;
+            box-sizing: border-box;
+            height: 100%;
+            width: 100%;
+            overflow-x: hidden;
+            padding-top: 56px; /* Clearing the fixed topbar ONCE */
         }
 
         /* --- TOPBAR --- */
@@ -36,7 +38,7 @@
             position: fixed;
             top: 0;
             left: 0;
-            width: 100vw;
+            width: 100%;
             z-index: 2000;
             height: 56px;
             display: flex;
@@ -334,11 +336,11 @@
             </nav>
             <!-- Contenido principal -->
             <main class="content">
-                <div class="container-fluid pt-3 px-4">
+                <div class="container-fluid px-4">
                     <!-- Global Flash Messages -->
                     {% with messages = get_flashed_messages(with_categories=true) %}
                     {% if messages %}
-                    <div class="row">
+                    <div class="row mt-3">
                         <div class="col-12">
                             {% for category, message in messages %}
                             <div class="alert alert-{{ category }} alert-dismissible fade show shadow-sm" role="alert"
