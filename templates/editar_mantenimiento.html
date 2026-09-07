@@ -43,7 +43,7 @@
           </div>
           <div class="mb-3">
             <label class="form-label">{{ _('Date') }}</label>
-            <input type="datetime-local" name="fecha" class="form-control" value="{{ mant.fecha.strftime('%Y-%m-%dT%H:%M') }}" required>
+            <input type="datetime-local" name="fecha" class="form-control" value="{{ mant.fecha|vancouver_input }}" required>
           </div>
           <div class="mb-3">
             <label class="form-label">{{ _('Frequency') }}</label>

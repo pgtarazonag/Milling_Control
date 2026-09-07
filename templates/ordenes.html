@@ -84,7 +84,7 @@
                 <div class="d-flex flex-column gap-2" id="zirconia-blocks-container" style="width:100%;">
                   <div>
                     <label class="form-label small fw-bold">{{ _('New Blocks') }}</label>
-                    <select name="bloque_nuevo_id" class="form-select" style="width:100%;">
+                    <select name="bloque_nuevo_id" id="bloque_nuevo_id" class="form-select" style="width:100%;">
                       <option value="">-- {{ _('Select') }} --</option>
                       {% for bloque in bloques_nuevos %}
                       <option value="{{ bloque.id }}" {% if (request.form.get('bloque_nuevo_id') and
@@ -102,7 +102,7 @@
                   </div>
                   <div>
                     <label class="form-label small fw-bold">{{ _('Used Blocks') }}</label>
-                    <select name="bloque_usado_id" class="form-select" style="width:100%;">
+                    <select name="bloque_usado_id" id="bloque_usado_id" class="form-select" style="width:100%;">
                       <option value="">-- {{ _('Select') }} --</option>
                       {% for bloque in bloques_usados %}
                       <option value="{{ bloque.id }}" {% if (request.form.get('bloque_usado_id') and
@@ -754,6 +754,9 @@
           if (currentShade) {
             $(`.btn-shade[data-value="${currentShade}"]`).addClass('btn-custom-red');
             console.log('Highlighted restored shade:', currentShade);
+            if ($('#bloque_nuevo_id option').length <= 1 && $('#bloque_usado_id option').length <= 1) {
+              actualizarBloquesDisponibles(material, currentShade);
+            }
           }
         }
       }).fail(function (jqXHR, textStatus, errorThrown) {
@@ -937,6 +940,50 @@
       });
     }
 
+    // Function to dynamically update available blocks via AJAX without reloading
+    function actualizarBloquesDisponibles(material, shade, selectedNuevoId, selectedUsadoId) {
+      const $nuevoSelect = $('#bloque_nuevo_id');
+      const $usadoSelect = $('#bloque_usado_id');
+
+      if (!material || !shade) {
+        $nuevoSelect.html('<option value="">-- {{ _("Select") }} --</option>');
+        $usadoSelect.html('<option value="">-- {{ _("Select") }} --</option>');
+        return;
+      }
+
+      $nuevoSelect.prop('disabled', true);
+      $usadoSelect.prop('disabled', true);
+
+      $.getJSON('/ordenes/api/bloques-disponibles', { material: material, shade: shade }, function (data) {
+        let nuevoOptions = '<option value="">-- {{ _("Select") }} --</option>';
+        if (data.bloques_nuevos && data.bloques_nuevos.length > 0) {
+          data.bloques_nuevos.forEach(function (b) {
+            const isSel = (selectedNuevoId && parseInt(selectedNuevoId) === b.id) ? 'selected' : '';
+            const brand = b.marca || '-';
+            const thick = b.grosor || '-';
+            nuevoOptions += `<option value="${b.id}" ${isSel}>{{ _('Shade') }}: ${b.shade} | {{ _('Brand') }}: ${brand} | {{ _('Thickness') }}: ${thick} | {{ _('Count') }}: ${b.cantidad}</option>`;
+          });
+        }
+        $nuevoSelect.html(nuevoOptions);
+
+        let usadoOptions = '<option value="">-- {{ _("Select") }} --</option>';
+        if (data.bloques_usados && data.bloques_usados.length > 0) {
+          data.bloques_usados.forEach(function (b) {
+            const isSel = (selectedUsadoId && parseInt(selectedUsadoId) === b.id) ? 'selected' : '';
+            const brand = b.marca || '-';
+            const thick = b.grosor || '-';
+            usadoOptions += `<option value="${b.id}" ${isSel}>${b.codigo_barra} | ${b.material} | {{ _('Brand') }}: ${brand} | {{ _('Shade') }}: ${b.shade} | {{ _('Thickness') }}: ${thick} | {{ _('# Units') }}: ${b.modelos_fresados}</option>`;
+          });
+        }
+        $usadoSelect.html(usadoOptions);
+      }).fail(function (err) {
+        console.error('Error fetching available blocks:', err);
+      }).always(function () {
+        $nuevoSelect.prop('disabled', false);
+        $usadoSelect.prop('disabled', false);
+      });
+    }
+
     // Handler for Material button clicks
     $(document).on('click', '.btn-material-pill', function () {
       const mat = $(this).data('value');
@@ -955,20 +1002,26 @@
         window.isInitialLoad = false; // ensure resets happen
         toggleMaterialUI(mat, ''); // Initially shade is empty on material change
 
+        // Clear blocks dropdowns until shade is picked
+        actualizarBloquesDisponibles(mat, '');
+
         // Update Hidden Input and Trigger Change (which loads shades via AJAX)
         $('#material').val(mat).trigger('change');
       }
     });
 
-    // Handler for Shade button clicks
+    // Handler for Shade button clicks (Instant AJAX block loading - No page reload!)
     $(document).on('click', '.btn-shade', function () {
       $('.btn-shade').removeClass('btn-custom-red');
       $(this).addClass('btn-custom-red');
       const selectedShade = $(this).data('value');
-      $('#shade').val(selectedShade).trigger('change');
+      $('#shade').val(selectedShade);
 
       const mat = $('#material').val();
       toggleMaterialUI(mat, selectedShade);
+
+      // Load available blocks dynamically in milliseconds
+      actualizarBloquesDisponibles(mat, selectedShade);
     });
 
     // Handler for Machine button clicks
@@ -1168,77 +1221,7 @@
     });
   });
 </script>
-<script>
-  $(document).ready(function () {
-    // --- Filtro dinámico de bloques por Shade (Material now handled via AJAX) ---
-    $('#shade').on('change', function () {
-      // Only submit if shade actually has a value
-      var shadeValue = $(this).val();
-      if (!shadeValue || shadeValue.trim() === '') {
-        console.log('Shade is empty, not submitting form');
-        return;
-      }
 
-      var codigoOrdenInput = $("input[name='codigo_orden']");
-      var modelosPorCasoInput = $("input[name='modelos_por_caso']");
-      var cantidadModelosInput = $("input[name='cantidad_modelos']");
-      var pendientesSeleccionados = $(".pendiente-checkbox:checked");
-      // Solo guardar el código de orden si NO hay pendientes seleccionados y el input NO está vacío
-      if (pendientesSeleccionados.length === 0 && codigoOrdenInput.val().trim() !== "") {
-        localStorage.setItem('ordenes_codigo_orden', codigoOrdenInput.val());
-      } else {
-        // Si hay pendientes seleccionados o el input está vacío, no guardar el código de orden
-        localStorage.removeItem('ordenes_codigo_orden');
-      }
-      localStorage.setItem('ordenes_modelos_por_caso', modelosPorCasoInput.val());
-      localStorage.setItem('ordenes_cantidad_modelos', cantidadModelosInput.val());
-      var pendientes = [];
-      $(".pendiente-checkbox:checked").each(function () { pendientes.push($(this).val()); });
-      localStorage.setItem('ordenes_pendientes', pendientes.join(","));
-      var modelos = [];
-      $(".modelos-input").each(function () { modelos.push($(this).val()); });
-      localStorage.setItem('ordenes_modelos_inputs', modelos.join(","));
-      var form = $('#orden-form');
-      $('#is_creation').val('0'); // Ensure it's 0 for filtering
-      form.attr('method', 'post');
-      // Use native submit to bypass jQuery validation handlers for filtering
-      if (form.length > 0) form[0].submit();
-    });
-
-    // Al cargar, si hay valores en localStorage, restáuralos (espera a que los inputs existan)
-    setTimeout(function () {
-      if (localStorage.getItem('ordenes_codigo_orden')) {
-        // Solo restaurar si NO hay pendientes seleccionados y el input está vacío
-        if ($(".pendiente-checkbox:checked").length === 0 && $("input[name='codigo_orden']").val().trim() === "") {
-          $("input[name='codigo_orden']").val(localStorage.getItem('ordenes_codigo_orden'));
-        }
-        localStorage.removeItem('ordenes_codigo_orden');
-      }
-      if (localStorage.getItem('ordenes_modelos_por_caso')) {
-        $("input[name='modelos_por_caso']").val(localStorage.getItem('ordenes_modelos_por_caso'));
-        localStorage.removeItem('ordenes_modelos_por_caso');
-      }
-      if (localStorage.getItem('ordenes_cantidad_modelos')) {
-        $("input[name='cantidad_modelos']").val(localStorage.getItem('ordenes_cantidad_modelos'));
-        localStorage.removeItem('ordenes_cantidad_modelos');
-      }
-      if (localStorage.getItem('ordenes_pendientes')) {
-        var pendientesSeleccionados = localStorage.getItem('ordenes_pendientes').split(',');
-        pendientesSeleccionados.forEach(function (codigo) {
-          $(".pendiente-checkbox[value='" + codigo + "']").prop('checked', true).trigger('change');
-        });
-        localStorage.removeItem('ordenes_pendientes');
-      }
-      if (localStorage.getItem('ordenes_modelos_inputs')) {
-        var modelos = localStorage.getItem('ordenes_modelos_inputs').split(',');
-        $(".modelos-input").each(function (idx) {
-          if (modelos[idx]) $(this).val(modelos[idx]);
-        });
-        localStorage.removeItem('ordenes_modelos_inputs');
-      }
-    }, 100);
-  });
-</script>
 <script>
   $(function () {
     // Selección de casos pendientes: llena el input de código de orden automáticamente

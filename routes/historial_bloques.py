@@ -248,12 +248,14 @@ def reporte_semanal():
         # Parse Start Week (Monday)
         s_year, s_week = map(int, start_week_str.split('-W'))
         start_date_naive = datetime.fromisocalendar(s_year, s_week, 1) # Monday
-        start_date = VANCOUVER_TZ.localize(datetime.combine(start_date_naive, datetime.min.time()))
+        start_date_van = VANCOUVER_TZ.localize(datetime.combine(start_date_naive, datetime.min.time()))
+        start_date = start_date_van.astimezone(pytz.utc).replace(tzinfo=None)
 
         # Parse End Week (Sunday)
         e_year, e_week = map(int, end_week_str.split('-W'))
         end_date_naive = datetime.fromisocalendar(e_year, e_week, 7) # Sunday
-        end_date = VANCOUVER_TZ.localize(datetime.combine(end_date_naive, datetime.max.time()))
+        end_date_van = VANCOUVER_TZ.localize(datetime.combine(end_date_naive, datetime.max.time()))
+        end_date = end_date_van.astimezone(pytz.utc).replace(tzinfo=None)
         
     except ValueError:
          abort(400, description="Invalid Week Format")
@@ -356,7 +358,7 @@ def reporte_semanal():
             # Fallback or need to fetch holder from block
             b = Bloque.query.get(log.bloque_id)
             if not b:
-                b = BloqueHistorial.query.filter_by(id=log.bloque_id).first()
+                b = BloqueHistorial.query.filter_by(bloque_id=log.bloque_id).first()
             if b:
                 if not mat:
                     mat = b.material

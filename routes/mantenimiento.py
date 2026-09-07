@@ -20,6 +20,7 @@ import re
 import json
 import pytz
 from flask_babel import _  # Asegúrate de tener flask_babel instalado en requirements.txt
+from utils import current_utc, to_vancouver_tz, vancouver_to_utc_naive
 
 mantenimiento_bp = Blueprint('mantenimiento', __name__, url_prefix='/mantenimiento')
 VANCOUVER_TZ = pytz.timezone('America/Vancouver')
@@ -35,12 +36,13 @@ def mantenimiento():
         proxima_fecha_str = request.form.get('proxima_fecha')
         is_done = request.form.get('is_done') == 'on'
         
-        base_date = datetime.now(VANCOUVER_TZ)
+        base_date = current_utc()
         if fecha_str:
             try:
                 dt = datetime.strptime(fecha_str, '%Y-%m-%d')
-                base_date = dt.replace(hour=base_date.hour, minute=base_date.minute, second=base_date.second)
-                base_date = VANCOUVER_TZ.localize(base_date)
+                now_van = to_vancouver_tz(current_utc())
+                local_dt = VANCOUVER_TZ.localize(datetime.combine(dt.date(), now_van.time()))
+                base_date = local_dt.astimezone(pytz.utc).replace(tzinfo=None)
             except ValueError:
                 pass
 
@@ -52,8 +54,9 @@ def mantenimiento():
             
             if proxima_fecha_str:
                 try:
-                    proxima_fecha = datetime.strptime(proxima_fecha_str, '%Y-%m-%d')
-                    proxima_fecha = VANCOUVER_TZ.localize(proxima_fecha)
+                    dt = datetime.strptime(proxima_fecha_str, '%Y-%m-%d')
+                    local_dt = VANCOUVER_TZ.localize(datetime.combine(dt.date(), datetime.min.time()))
+                    proxima_fecha = local_dt.astimezone(pytz.utc).replace(tzinfo=None)
                 except ValueError:
                     if proxima_fecha_str == '1w':
                         proxima_fecha = base_date + timedelta(weeks=1)
@@ -117,12 +120,10 @@ def mantenimiento():
         if not record or not record.proxima_fecha:
             return 'none' # Gray
         
-        # Ensure UTC comparison
-        now_utc = datetime.now(pytz.utc)
-        if record.proxima_fecha.tzinfo is None:
-            prox_utc = VANCOUVER_TZ.localize(record.proxima_fecha).astimezone(pytz.utc)
-        else:
-            prox_utc = record.proxima_fecha.astimezone(pytz.utc)
+        now_utc = current_utc()
+        prox_utc = record.proxima_fecha
+        if prox_utc.tzinfo is not None:
+            prox_utc = prox_utc.astimezone(pytz.utc).replace(tzinfo=None)
             
         if prox_utc < now_utc:
             return 'vencido' # Red
@@ -136,13 +137,12 @@ def mantenimiento():
         if not record or not record.proxima_fecha:
             return None
             
-        now_utc = datetime.now(pytz.utc).date()
-        if record.proxima_fecha.tzinfo is None:
-            prox_utc = VANCOUVER_TZ.localize(record.proxima_fecha).astimezone(pytz.utc).date()
-        else:
-            prox_utc = record.proxima_fecha.astimezone(pytz.utc).date()
+        now_utc = current_utc().date()
+        prox = record.proxima_fecha
+        if prox.tzinfo is not None:
+            prox = prox.astimezone(pytz.utc).replace(tzinfo=None)
             
-        return (prox_utc - now_utc).days
+        return (prox.date() - now_utc).days
 
     # Load all records into memory to avoid N+1 queries
     all_records = Mantenimiento.query.order_by(Mantenimiento.fecha.desc()).all()
@@ -213,7 +213,7 @@ def mantenimiento():
     if request.args.get('api') == '1':
         proximas_validas = [r for r in all_records if r.proxima_fecha]
         def get_utc(dt):
-            return VANCOUVER_TZ.localize(dt).astimezone(pytz.utc) if dt.tzinfo is None else dt.astimezone(pytz.utc)
+            return dt.replace(tzinfo=pytz.utc) if dt.tzinfo is None else dt.astimezone(pytz.utc)
         proximas_validas = [r for r in proximas_validas if get_utc(r.proxima_fecha) >= datetime.now(pytz.utc)]
         # Sort by upcoming date
         proximas_validas.sort(key=lambda r: get_utc(r.proxima_fecha))
@@ -232,7 +232,7 @@ def mantenimiento():
                 'id': r.id,
                 'maquina': r.maquina,
                 'actividad': r.actividad,
-                'proxima_fecha': r.proxima_fecha.isoformat()
+                'proxima_fecha': to_vancouver_tz(r.proxima_fecha).isoformat()
             }
             for r in unique_proximas
         ])
@@ -271,31 +271,31 @@ def editar_mantenimiento_kanban(mant_id):
     
     if fecha_str:
         try:
-            fecha_nueva = datetime.strptime(fecha_str, '%Y-%m-%d')
-            now_time = datetime.now(VANCOUVER_TZ)
-            fecha_nueva = fecha_nueva.replace(hour=now_time.hour, minute=now_time.minute, second=now_time.second)
-            fecha_nueva = VANCOUVER_TZ.localize(fecha_nueva)
-            mant.fecha = fecha_nueva
+            dt = datetime.strptime(fecha_str, '%Y-%m-%d')
+            now_van = to_vancouver_tz(current_utc())
+            local_dt = VANCOUVER_TZ.localize(datetime.combine(dt.date(), now_van.time()))
+            mant.fecha = local_dt.astimezone(pytz.utc).replace(tzinfo=None)
         except ValueError:
             pass
             
     proxima_fecha_str = request.form.get('proxima_fecha')
     if proxima_fecha_str:
         try:
-            proxima_fecha = datetime.strptime(proxima_fecha_str, '%Y-%m-%d')
-            proxima_fecha = VANCOUVER_TZ.localize(proxima_fecha)
-            mant.proxima_fecha = proxima_fecha
+            dt = datetime.strptime(proxima_fecha_str, '%Y-%m-%d')
+            local_dt = VANCOUVER_TZ.localize(datetime.combine(dt.date(), datetime.min.time()))
+            mant.proxima_fecha = local_dt.astimezone(pytz.utc).replace(tzinfo=None)
         except ValueError:
+            base = mant.fecha or current_utc()
             if proxima_fecha_str == '1w':
-                mant.proxima_fecha = mant.fecha + timedelta(weeks=1)
+                mant.proxima_fecha = base + timedelta(weeks=1)
             elif proxima_fecha_str == '1m':
-                mant.proxima_fecha = mant.fecha + timedelta(days=30)
+                mant.proxima_fecha = base + timedelta(days=30)
             elif proxima_fecha_str == '2m':
-                mant.proxima_fecha = mant.fecha + timedelta(days=60)
+                mant.proxima_fecha = base + timedelta(days=60)
             elif proxima_fecha_str == '6m':
-                mant.proxima_fecha = mant.fecha + timedelta(days=180)
+                mant.proxima_fecha = base + timedelta(days=180)
             elif proxima_fecha_str == '1y':
-                mant.proxima_fecha = mant.fecha + timedelta(days=365)
+                mant.proxima_fecha = base + timedelta(days=365)
     else:
         mant.proxima_fecha = None
         
@@ -316,7 +316,7 @@ def realizar_proxima(mant_id):
     # Extraer intervalo y unidad (Soporte bilingüe)
     match = re.search(r'(?:cada|every) (\d+) (semana|week|mes|month|months|año|year)', mant.actividad, re.IGNORECASE)
     
-    fecha = datetime.now(VANCOUVER_TZ)
+    fecha = current_utc()
     proxima_fecha = None
     
     if match:
@@ -401,7 +401,9 @@ def editar_mantenimiento(mant_id):
     fecha_str = request.form.get('fecha')
     # Parse date
     try:
-        fecha = datetime.strptime(fecha_str, '%Y-%m-%dT%H:%M')
+        fecha = vancouver_to_utc_naive(fecha_str) if fecha_str else mant.fecha
+        if not fecha:
+            fecha = mant.fecha
     except Exception:
         fecha = mant.fecha
     mant.maquina = maquina

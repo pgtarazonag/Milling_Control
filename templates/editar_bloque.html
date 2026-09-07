@@ -78,6 +78,10 @@
         <label class="form-label">{{ _('Reference Code') }}</label>
         <input type="text" name="codigo_referencia" class="form-control" value="{{ bloque.codigo_referencia or '' }}">
       </div>
+      <div class="col-md-6">
+        <label class="form-label">{{ _('Creation Date') }}</label>
+        <input type="datetime-local" name="fecha_creacion" class="form-control" value="{{ bloque.fecha_creacion|vancouver_input }}">
+      </div>
       <input type="hidden" name="estado" value="{{ bloque.estado }}">
       {% if bloque.estado == 'nuevo' %}
       <div class="col-md-6">

@@ -68,16 +68,15 @@ def create_app():
     db.init_app(app)
     migrate.init_app(app, db)
 
+    from utils import format_vancouver, format_vancouver_input, to_vancouver_tz
+
     @app.template_filter('vancouver')
-    def vancouver_filter(dt):
-        if not dt:
-            return ''
-        tz = pytz.timezone('America/Vancouver')
-        if dt.tzinfo:
-            return dt.astimezone(tz).strftime('%Y-%m-%d %H:%M')
-        else:
-            # Si viene naive, asumir UTC
-            return dt.replace(tzinfo=pytz.UTC).astimezone(tz).strftime('%Y-%m-%d %H:%M')
+    def vancouver_filter(dt, fmt='%Y-%m-%d %H:%M'):
+        return format_vancouver(dt, fmt=fmt)
+
+    @app.template_filter('vancouver_input')
+    def vancouver_input_filter(dt):
+        return format_vancouver_input(dt)
 
     # Importamos los modelos para que se creen las tablas
     import models
@@ -157,19 +156,11 @@ def create_app():
         maquinas = Configuracion.get_lista('maquinas', default=['A','B','C','D'])
         fresas_nuevas = db.session.query(FresaInventario).all()
         # Calcular resumen del día (zona horaria Vancouver)
-        tz = pytz.timezone('America/Vancouver')
-        hoy = datetime.now(tz).date()
-        from sqlalchemy import or_
-        def to_vancouver(dt):
-            if dt is None:
-                return None
-            if dt.tzinfo:
-                return dt.astimezone(tz)
-            else:
-                return dt.replace(tzinfo=pytz.UTC).astimezone(tz)
+        ahora_van = to_vancouver_tz(datetime.now(pytz.UTC))
+        hoy = ahora_van.date()
         ordenes_hoy = []
         for o in db.session.query(Orden).all():
-            dt = to_vancouver(o.fecha_creacion)
+            dt = to_vancouver_tz(o.fecha_creacion)
             if dt and dt.date() == hoy:
                 ordenes_hoy.append(o)
         total_ordenes = len(ordenes_hoy)

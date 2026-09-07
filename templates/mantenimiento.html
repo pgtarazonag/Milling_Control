@@ -208,7 +208,7 @@
                   <span class="text-warning fw-bold">{{ _('Due in') }} {{ act.days_diff }} {{ _('days') }}</span>
                 {% else %}
                   <i class="bi bi-calendar-event text-success me-1"></i>
-                  <span>{{ _('Due') }}: {{ act.ultimo_registro.proxima_fecha.strftime('%b %d, %Y') }}</span>
+                  <span>{{ _('Due') }}: {{ act.ultimo_registro.proxima_fecha|vancouver('%b %d, %Y') }}</span>
                 {% endif %}
               </div>
             {% endif %}
@@ -221,8 +221,8 @@
               </form>
               <button type="button" class="btn btn-light btn-sm border text-muted px-3" 
                       data-id="{{ act.ultimo_registro.id }}"
-                      data-fecha="{{ act.ultimo_registro.fecha.strftime('%Y-%m-%d') if act.ultimo_registro.fecha else '' }}"
-                      data-prox="{{ act.ultimo_registro.proxima_fecha.strftime('%Y-%m-%d') if act.ultimo_registro.proxima_fecha else '' }}"
+                      data-fecha="{{ act.ultimo_registro.fecha|vancouver('%Y-%m-%d') }}"
+                      data-prox="{{ act.ultimo_registro.proxima_fecha|vancouver('%Y-%m-%d') }}"
                       data-desc="{{ act.ultimo_registro.descripcion or '' }}"
                       data-tipo="{{ group.label }}"
                       data-maq="{{ maquina.nombre }}"
@@ -275,13 +275,13 @@
             <tbody>
               {% for reg in all_records %}
               <tr>
-                <td>{{ reg.fecha.strftime('%Y-%m-%d %H:%M') }}</td>
+                <td>{{ reg.fecha|vancouver }}</td>
                 <td class="fw-bold">{{ reg.maquina }}</td>
                 <td>{{ reg.actividad }}</td>
                 <td class="text-muted">{{ reg.descripcion or '-' }}</td>
                 <td>
                   {% if reg.proxima_fecha %}
-                    {{ reg.proxima_fecha.strftime('%Y-%m-%d') }}
+                    {{ reg.proxima_fecha|vancouver('%Y-%m-%d') }}
                   {% else %}
                     -
                   {% endif %}

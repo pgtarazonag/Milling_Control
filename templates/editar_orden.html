@@ -172,7 +172,7 @@ Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser<html lang="
                     <div class="col-md-6">
                         <label class="form-label"><i class="bi bi-calendar-event"></i> {{ _('Creation Date') }}</label>
                         <input type="datetime-local" name="fecha_creacion" class="form-control"
-                            value="{{ orden.fecha_creacion.strftime('%Y-%m-%dT%H:%M') }}" required>
+                            value="{{ orden.fecha_creacion|vancouver_input }}" required>
                     </div>
                     <div class="col-12 text-end">
                         <button type="submit" class="btn btn-primary"><i class="bi bi-save"></i> {{ _('Save Changes')

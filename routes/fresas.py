@@ -18,6 +18,7 @@ from extensions import db
 from datetime import datetime
 import pytz
 import json
+from utils import current_utc, to_vancouver_tz
 VANCOUVER_TZ = pytz.timezone('America/Vancouver')
 
 # Definimos el blueprint para las rutas de fresas
@@ -71,7 +72,7 @@ def fresas():
                 tipo=tipo,
                 maquina=maquina,
                 materiales=inventario.materiales,
-                fecha_instalacion=datetime.now(VANCOUVER_TZ),
+                fecha_instalacion=current_utc(),
                 modelos_fresados=0
             )
             db.session.add(nueva_instalada)
@@ -113,7 +114,7 @@ def eliminar_instalada(fresa_id):
             diametro=diametro,
             maquina=fresa.maquina,
             materiales=materiales,
-            fecha_instalacion=datetime.now(VANCOUVER_TZ),
+            fecha_instalacion=current_utc(),
             modelos_fresados=0
         )
         db.session.add(nueva_instalada)
@@ -195,7 +196,7 @@ def api_fresas_nuevas():
             'diametro': f.diametro,
             'materiales': f.materiales,
             'cantidad': f.cantidad,
-            'fecha': f.fecha_registro.astimezone(VANCOUVER_TZ).strftime('%Y-%m-%d %H:%M') if f.fecha_registro else ''
+            'fecha': to_vancouver_tz(f.fecha_registro).strftime('%Y-%m-%d %H:%M') if f.fecha_registro else ''
         })
     return jsonify(data)
 

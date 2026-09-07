@@ -19,6 +19,7 @@ from extensions import db
 from datetime import datetime
 import pytz
 import json
+from utils import current_utc, to_vancouver_tz, vancouver_to_utc_naive
 VANCOUVER_TZ = pytz.timezone('America/Vancouver')
 
 # Definimos el blueprint para las rutas de bloques
@@ -127,10 +128,7 @@ def bloques():
             try:
                 grosor = int(grosor_str)
                 cantidad = int(cantidad_str)
-                from datetime import datetime
-                import pytz
-                VANCOUVER_TZ = pytz.timezone('America/Vancouver')
-                ahora_van = datetime.now(VANCOUVER_TZ)
+                ahora_utc = current_utc()
                 
                 # Upsert query construction
                 query_kwargs = {
@@ -158,13 +156,7 @@ def bloques():
                         existente.codigo_referencia = codigo_referencia
                         
                     existente.cantidad = old_qty + cantidad
-                    
-                    # Guardar la fecha en UTC para consistencia con la vista
-                    try:
-                        import pytz as _p
-                        existente.fecha_creacion = ahora_van.astimezone(_p.utc)
-                    except Exception:
-                        existente.fecha_creacion = ahora_van
+                    existente.fecha_creacion = ahora_utc
                     
                     # LOG
                     log_desc = f"Added {cantidad} units: {material} {aditamento_holder if is_titanium else shade}"
@@ -196,7 +188,7 @@ def bloques():
                         codigo_referencia=codigo_referencia,
                         aditamento_holder=aditamento_holder if is_titanium else None,
                         estado='nuevo',
-                        fecha_creacion=ahora_van
+                        fecha_creacion=ahora_utc
                     )
                     db.session.add(nuevo_bloque)
                     db.session.commit()
@@ -253,20 +245,6 @@ def bloques():
     else:
         bloques_usados = query_usados.order_by(Bloque.fecha_creacion.desc()).all()
         bloques_nuevos = query_nuevos.order_by(Bloque.fecha_creacion.desc()).all()
-
-    # Convertir fechas a Vancouver para mostrar en la tabla
-    from pytz import timezone, UTC
-    tz_van = timezone('America/Vancouver')
-    for b in bloques_usados:
-        if b.fecha_creacion:
-            b.fecha_vancouver = b.fecha_creacion.replace(tzinfo=UTC).astimezone(tz_van)
-        else:
-            b.fecha_vancouver = None
-    for b in bloques_nuevos:
-        if b.fecha_creacion:
-            b.fecha_vancouver = b.fecha_creacion.replace(tzinfo=UTC).astimezone(tz_van)
-        else:
-            b.fecha_vancouver = None
 
     # Renderizamos la plantilla HTML con los bloques encontrados
     return render_template(
@@ -347,11 +325,12 @@ def editar_bloque(bloque_id):
         codigos_orden = request.form.get('codigos_orden_fresados')
         if codigos_orden is not None:
             bloque.codigos_orden_fresados = codigos_orden
-        # Actualizar la fecha de edición
-        from datetime import datetime
-        import pytz
-        VANCOUVER_TZ = pytz.timezone('America/Vancouver')
-        bloque.fecha_creacion = datetime.now(VANCOUVER_TZ)
+        # Actualizar la fecha de creación solo si se especificó en el formulario
+        fecha_creacion_form = request.form.get('fecha_creacion', '').strip()
+        if fecha_creacion_form:
+            parsed_utc = vancouver_to_utc_naive(fecha_creacion_form)
+            if parsed_utc:
+                bloque.fecha_creacion = parsed_utc
         
         # LOG
         detalles_json = json.dumps({
@@ -407,7 +386,7 @@ def eliminar_bloque(bloque_id):
         modelos_fresados=bloque.modelos_fresados,
         codigos_orden_fresados=bloque.codigos_orden_fresados,
         fecha_creacion=bloque.fecha_creacion,
-        fecha_eliminacion=datetime.now(VANCOUVER_TZ)
+        fecha_eliminacion=current_utc()
     )
     db.session.add(historial)
     
@@ -448,9 +427,6 @@ def usar_bloque_nuevo(bloque_id):
         return redirect(url_for('bloques.bloques'))
     from random import choices
     import string
-    from datetime import datetime
-    import pytz
-    VANCOUVER_TZ = pytz.timezone('America/Vancouver')
     # Permitir código personalizado desde el formulario
     codigo = request.form.get('codigo')
     usados = set(b.codigo_barra for b in Bloque.query.filter_by(estado='usado').all())
@@ -492,13 +468,13 @@ def usar_bloque_nuevo(bloque_id):
         cantidad=1,
         codigo_barra=codigo,
         estado='usado',
-        fecha_creacion=datetime.now(VANCOUVER_TZ)
+        fecha_creacion=current_utc()
     )
     db.session.add(bloque_usado)
     bloque.cantidad -= 1
     # ACTUALIZAR FECHA DE CREACIÓN DEL BLOQUE NUEVO SI SIGUE EN INVENTARIO
     if bloque.cantidad > 0:
-        bloque.fecha_creacion = datetime.now(VANCOUVER_TZ)
+        bloque.fecha_creacion = current_utc()
     # else: bloque.cantidad is 0, keep it (do not delete) for reference
     db.session.commit() # Commit to get ID
     
@@ -539,8 +515,6 @@ def api_generar_codigo_usado():
     bloque = Bloque.query.get_or_404(bloque_id)
     from random import choices
     import string
-    import pytz
-    VANCOUVER_TZ = pytz.timezone('America/Vancouver')
     grosor_str = str(bloque.grosor).zfill(2)
     materiales_avanzado = Configuracion.get_lista('materiales_avanzado')
     import json
@@ -568,14 +542,8 @@ def modificar_cantidad(bloque_id):
     accion = request.form.get('accion')
     if accion == '+1':
         bloque.cantidad += 1
-        # Actualizar la fecha de edición
-        from datetime import datetime
-        import pytz
-        VANCOUVER_TZ = pytz.timezone('America/Vancouver')
-        bloque.fecha_creacion = datetime.now(VANCOUVER_TZ)
-        bloque.fecha_creacion = datetime.now(VANCOUVER_TZ)
+        bloque.fecha_creacion = current_utc()
         
-        # LOG
         # LOG
         log = LogInventario(
             accion='AJUSTE_CANTIDAD',
@@ -596,14 +564,8 @@ def modificar_cantidad(bloque_id):
         flash('Cantidad aumentada.', 'success')
     elif accion == '-1' and bloque.cantidad > 1:
         bloque.cantidad -= 1
-        # Actualizar la fecha de edición
-        from datetime import datetime
-        import pytz
-        VANCOUVER_TZ = pytz.timezone('America/Vancouver')
-        bloque.fecha_creacion = datetime.now(VANCOUVER_TZ)
-        bloque.fecha_creacion = datetime.now(VANCOUVER_TZ)
+        bloque.fecha_creacion = current_utc()
         
-        # LOG
         # LOG
         log = LogInventario(
             accion='AJUSTE_CANTIDAD',
@@ -653,7 +615,7 @@ def eliminar_bloque_usado(bloque_id):
             modelos_fresados=bloque.modelos_fresados,
             codigos_orden_fresados=bloque.codigos_orden_fresados,
             fecha_creacion=bloque.fecha_creacion,
-            fecha_eliminacion=datetime.now(VANCOUVER_TZ)
+            fecha_eliminacion=current_utc()
         )
         db.session.add(historial)
         msg = 'Used block successfully deleted (archived in history).'
@@ -705,7 +667,7 @@ def eliminar_varios_bloques_usados():
                 modelos_fresados=bloque.modelos_fresados,
                 codigos_orden_fresados=bloque.codigos_orden_fresados,
                 fecha_creacion=bloque.fecha_creacion,
-                fecha_eliminacion=datetime.now(VANCOUVER_TZ)
+                fecha_eliminacion=current_utc()
             )
             db.session.add(historial)
             

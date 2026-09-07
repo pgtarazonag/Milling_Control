@@ -23,6 +23,7 @@ import random
 import string
 from sqlalchemy import func, text, literal_column
 import pytz
+from utils import current_utc, to_vancouver_tz, vancouver_to_utc_naive
 
 # Definimos el blueprint para las rutas de órdenes
 ordenes_bp = Blueprint('ordenes', __name__, url_prefix='/ordenes')
@@ -202,7 +203,7 @@ def ordenes():
                         codigo_barra=bloque.codigo_barra,
                         maquina=maquina,
                         cantidad_modelos=cantidad_modelos,
-                        fecha_creacion=datetime.now(VANCOUVER_TZ)
+                        fecha_creacion=current_utc()
                     )
                     db.session.add(nueva_orden)
                     pendiente = OrdenPendiente.query.filter_by(codigo_orden=codigo_orden).first()
@@ -225,7 +226,7 @@ def ordenes():
                 bloque_nuevo.cantidad -= 1
                 # Si el bloque nuevo sigue en inventario, actualizar su fecha de creacion
                 if bloque_nuevo.cantidad > 0:
-                    bloque_nuevo.fecha_creacion = datetime.now(VANCOUVER_TZ)
+                    bloque_nuevo.fecha_creacion = current_utc()
                 nuevo_bloque_usado = Bloque(
                     material=bloque_nuevo.material,
                     marca=bloque_nuevo.marca,
@@ -236,7 +237,7 @@ def ordenes():
                     estado='usado',
                     modelos_fresados=cantidad_modelos,
                     codigos_orden_fresados=','.join(codigos_seleccionados),
-                    fecha_creacion=datetime.now(VANCOUVER_TZ)
+                    fecha_creacion=current_utc()
                 )
                 db.session.add(nuevo_bloque_usado)
                 db.session.flush()  # Para obtener el ID
@@ -261,7 +262,7 @@ def ordenes():
                     codigo_barra=bloque.codigo_barra,
                     maquina=maquina,
                     cantidad_modelos=cantidad_modelos,
-                    fecha_creacion=datetime.now(VANCOUVER_TZ)
+                    fecha_creacion=current_utc()
                 )
                 db.session.add(nueva_orden)
                 for codigo_orden in codigos_seleccionados:
@@ -368,8 +369,7 @@ def ordenes():
                     if cantidad_modelos == 1:
                         if pmma_source == 'nuevo':
                             # Generar codigo Grosor-MM.DD
-                            current_date = datetime.now(VANCOUVER_TZ)
-                            code_suffix = current_date.strftime("%m.%d")
+                            code_suffix = to_vancouver_tz(current_utc()).strftime("%m.%d")
                             pmma_code = f"{pmma_thickness}-{code_suffix}"
                             
                             # Buscar bloque nuevo de ese grosor
@@ -380,7 +380,7 @@ def ordenes():
                                 # Descontar deposito general
                                 bloque_nuevo.cantidad -= 1
                                 if bloque_nuevo.cantidad > 0:
-                                    bloque_nuevo.fecha_creacion = current_date
+                                    bloque_nuevo.fecha_creacion = current_utc()
                                 else:
                                     db.session.delete(bloque_nuevo)
                                     
@@ -395,7 +395,7 @@ def ordenes():
                                     estado='usado',
                                     modelos_fresados=1,
                                     codigos_orden_fresados=','.join(codigos_lista),
-                                    fecha_creacion=current_date
+                                    fecha_creacion=current_utc()
                                 )
                                 db.session.add(nuevo_bloque_usado)
                                 db.session.flush()
@@ -415,8 +415,7 @@ def ordenes():
                                 bloque_referencia = bloque_usado
                     elif cantidad_modelos == 2:
                         # Gastar bloque nuevo directamente a historial (agotado)
-                        current_date = datetime.now(VANCOUVER_TZ)
-                        code_suffix = current_date.strftime("%m.%d")
+                        code_suffix = to_vancouver_tz(current_utc()).strftime("%m.%d")
                         pmma_code = f"{pmma_thickness}-{code_suffix}"
                         
                         bloque_nuevo = Bloque.query.filter_by(material='PMMA', shade='Clear', grosor=int(pmma_thickness), estado='nuevo').first()
@@ -425,7 +424,7 @@ def ordenes():
                         else:
                             bloque_nuevo.cantidad -= 1
                             if bloque_nuevo.cantidad > 0:
-                                bloque_nuevo.fecha_creacion = current_date
+                                bloque_nuevo.fecha_creacion = current_utc()
                             else:
                                 db.session.delete(bloque_nuevo)
                                 
@@ -440,7 +439,7 @@ def ordenes():
                                 estado='agotado',
                                 modelos_fresados=2,
                                 codigos_orden_fresados=','.join(codigos_lista),
-                                fecha_creacion=current_date
+                                fecha_creacion=current_utc()
                             )
                             db.session.add(bloque_agotado)
                             db.session.flush()
@@ -456,7 +455,7 @@ def ordenes():
                             codigo_barra=pmma_code,
                             maquina=maquina,
                             cantidad_modelos=cantidad_modelos,
-                            fecha_creacion=datetime.now(VANCOUVER_TZ)
+                            fecha_creacion=current_utc()
                         )
                         db.session.add(nueva_orden)
                         
@@ -503,7 +502,7 @@ def ordenes():
                             codigo_barra=f'PMMA-{shade_form}',
                             maquina=maquina,
                             cantidad_modelos=cantidad_modelos,
-                            fecha_creacion=datetime.now(VANCOUVER_TZ)
+                            fecha_creacion=current_utc()
                         )
                         db.session.add(nueva_orden)
                         
@@ -546,7 +545,7 @@ def ordenes():
                             bloque = Bloque.query.get(int(bid))
                             bloque.cantidad -= qty_t
                             if bloque.cantidad > 0:
-                                bloque.fecha_creacion = datetime.now(VANCOUVER_TZ)
+                                bloque.fecha_creacion = current_utc()
                             
                             # Keep types and pure refs isolated
                             consumed_types.extend([bloque.shade] * qty_t)
@@ -586,7 +585,7 @@ def ordenes():
                             codigo_barra=', '.join(consumed_pure_refs),
                             maquina=maquina,
                             cantidad_modelos=cantidad_modelos,
-                            fecha_creacion=datetime.now(VANCOUVER_TZ)
+                            fecha_creacion=current_utc()
                         )
                         db.session.add(nueva_orden)
                         
@@ -625,7 +624,7 @@ def ordenes():
                         codigo_barra=bloque.codigo_barra,
                         maquina=maquina,
                         cantidad_modelos=cantidad_modelos,
-                        fecha_creacion=datetime.now(VANCOUVER_TZ)
+                        fecha_creacion=current_utc()
                     )
                     db.session.add(nueva_orden)
                     for codigo_orden in codigos_lista:
@@ -648,7 +647,7 @@ def ordenes():
                 if bloque_nuevo and bloque_nuevo.cantidad > 0:
                     bloque_nuevo.cantidad -= 1
                     if bloque_nuevo.cantidad > 0:
-                        bloque_nuevo.fecha_creacion = datetime.now(VANCOUVER_TZ)
+                        bloque_nuevo.fecha_creacion = current_utc()
                     nuevo_bloque_usado = Bloque(
                         material=bloque_nuevo.material,
                         marca=bloque_nuevo.marca,
@@ -659,7 +658,7 @@ def ordenes():
                         estado='usado',
                         modelos_fresados=cantidad_modelos,
                         codigos_orden_fresados=','.join(codigos_lista),
-                        fecha_creacion=datetime.now(VANCOUVER_TZ)
+                        fecha_creacion=current_utc()
                     )
                     db.session.add(nuevo_bloque_usado)
                     bloque = nuevo_bloque_usado
@@ -801,7 +800,7 @@ def eliminar_orden(orden_id):
                     descripcion=f"Restauración de 1 unidad (Orden eliminada: {orden.id})",
                     detalles=json.dumps(detalles),
                     usuario='System',
-                    fecha=datetime.now(VANCOUVER_TZ)
+                    fecha=current_utc()
                 )
                 db.session.add(log)
                 
@@ -935,7 +934,7 @@ def editar_orden(orden_id):
                             'codigo_referencia': ref,
                             'qty': 1
                         }
-                        log = LogInventario(accion='CONSUMO_TITANIO', bloque_id=bloque.id, descripcion=f"Consumed 1 unit (Edit Order: {orden.id})", detalles=json.dumps(detalles), usuario='System', fecha=datetime.now(VANCOUVER_TZ))
+                        log = LogInventario(accion='CONSUMO_TITANIO', bloque_id=bloque.id, descripcion=f"Consumed 1 unit (Edit Order: {orden.id})", detalles=json.dumps(detalles), usuario='System', fecha=current_utc())
                         db.session.add(log)
                 
                 # Restore removed blanks (if toggled ON)
@@ -956,7 +955,7 @@ def editar_orden(orden_id):
                                 'codigo_referencia': ref,
                                 'qty': 1
                             }
-                            log = LogInventario(accion='RESTAURACION_TITANIO', bloque_id=bloque.id, descripcion=f"Restauración de 1 unidad (Edit Order: {orden.id})", detalles=json.dumps(detalles), usuario='System', fecha=datetime.now(VANCOUVER_TZ))
+                            log = LogInventario(accion='RESTAURACION_TITANIO', bloque_id=bloque.id, descripcion=f"Restauración de 1 unidad (Edit Order: {orden.id})", detalles=json.dumps(detalles), usuario='System', fecha=current_utc())
                             db.session.add(log)
                             
                 # Rebuild Unique Types for the Shade column
@@ -1010,10 +1009,9 @@ def editar_orden(orden_id):
             try:
                 nueva_fecha = request.form['fecha_creacion']
                 if nueva_fecha:
-                    from datetime import datetime
-                    import pytz
-                    VANCOUVER_TZ = pytz.timezone('America/Vancouver')
-                    orden.fecha_creacion = VANCOUVER_TZ.localize(datetime.strptime(nueva_fecha, '%Y-%m-%dT%H:%M'))
+                    parsed_utc = vancouver_to_utc_naive(nueva_fecha)
+                    if parsed_utc:
+                        orden.fecha_creacion = parsed_utc
             except Exception as e:
                 pass
         db.session.commit()
@@ -1081,41 +1079,52 @@ def api_graficas_inventario():
     group = request.args.get('group', 'dia')
     fecha = request.args.get('fecha')
     if not fecha:
-        ahora_van = datetime.now(VANCOUVER_TZ)
+        ahora_van = to_vancouver_tz(datetime.now(pytz.UTC))
         fecha = ahora_van.strftime('%Y-%m-%d')
     bloques_shade = (
         db.session.query(Bloque.shade, func.sum(Bloque.cantidad))
         .group_by(Bloque.shade)
         .all()
     )
-    result = {'bloques_shade': [{'shade': s, 'cantidad': int(c or 0)} for s, c in bloques_shade]}
-    # Forzar conversión UTC -> Vancouver para la fecha de la orden
-    # Esto es: fecha_creacion AT TIME ZONE 'UTC' AT TIME ZONE 'America/Vancouver'
-    from sqlalchemy import text
-    fecha_expr = text(f"to_char(fecha_creacion AT TIME ZONE 'UTC' AT TIME ZONE 'America/Vancouver', 'YYYY-MM-DD')")
+    result = {
+        'bloques_shade': [{'shade': s, 'cantidad': int(c or 0)} for s, c in bloques_shade],
+        'modelos_material_semana': []
+    }
+    
+    # Calcular rango UTC correspondiente al día en hora Vancouver
+    try:
+        y, m, d = [int(x) for x in fecha.split('-')]
+        day_start_van = VANCOUVER_TZ.localize(datetime(y, m, d, 0, 0, 0))
+        day_end_van = VANCOUVER_TZ.localize(datetime(y, m, d, 23, 59, 59, 999999))
+        day_start_utc = day_start_van.astimezone(pytz.UTC).replace(tzinfo=None)
+        day_end_utc = day_end_van.astimezone(pytz.UTC).replace(tzinfo=None)
+    except Exception:
+        day_start_utc = None
+        day_end_utc = None
+
     if group == 'dia':
-        modelos = db.session.query(
-            fecha_expr, func.sum(Orden.cantidad_modelos)
-        ).filter(text(f"to_char(fecha_creacion AT TIME ZONE 'UTC' AT TIME ZONE 'America/Vancouver', 'YYYY-MM-DD') = :fecha")).params(fecha=fecha)
-        modelos = modelos.group_by(fecha_expr).all()
-        result['modelos_dia'] = [{'dia': d, 'cantidad': int(c or 0)} for d, c in modelos]
+        q = db.session.query(func.sum(Orden.cantidad_modelos))
+        if day_start_utc and day_end_utc:
+            q = q.filter(Orden.fecha_creacion >= day_start_utc, Orden.fecha_creacion <= day_end_utc)
+        total_modelos = q.scalar() or 0
+        result['modelos_dia'] = [{'dia': fecha, 'cantidad': int(total_modelos)}]
     elif group == 'maquina':
-        modelos = db.session.query(
-            Orden.maquina, func.sum(Orden.cantidad_modelos)
-        ).filter(text(f"to_char(fecha_creacion AT TIME ZONE 'UTC' AT TIME ZONE 'America/Vancouver', 'YYYY-MM-DD') = :fecha")).params(fecha=fecha)
-        modelos = modelos.group_by(Orden.maquina).all()
+        q = db.session.query(Orden.maquina, func.sum(Orden.cantidad_modelos))
+        if day_start_utc and day_end_utc:
+            q = q.filter(Orden.fecha_creacion >= day_start_utc, Orden.fecha_creacion <= day_end_utc)
+        modelos = q.group_by(Orden.maquina).all()
         result['modelos_por_maquina'] = [{'maquina': m if m else '-', 'cantidad': int(c or 0)} for m, c in modelos]
     elif group == 'material':
-        modelos = db.session.query(
-            Orden.material, func.sum(Orden.cantidad_modelos)
-        ).filter(text(f"to_char(fecha_creacion AT TIME ZONE 'UTC' AT TIME ZONE 'America/Vancouver', 'YYYY-MM-DD') = :fecha")).params(fecha=fecha)
-        modelos = modelos.group_by(Orden.material).all()
+        q = db.session.query(Orden.material, func.sum(Orden.cantidad_modelos))
+        if day_start_utc and day_end_utc:
+            q = q.filter(Orden.fecha_creacion >= day_start_utc, Orden.fecha_creacion <= day_end_utc)
+        modelos = q.group_by(Orden.material).all()
         result['modelos_por_material'] = [{'material': m if m else '-', 'cantidad': int(c or 0)} for m, c in modelos]
     elif group == 'marca':
-        modelos = db.session.query(
-            Orden.marca, func.sum(Orden.cantidad_modelos)
-        ).filter(text(f"to_char(fecha_creacion AT TIME ZONE 'UTC' AT TIME ZONE 'America/Vancouver', 'YYYY-MM-DD') = :fecha")).params(fecha=fecha)
-        modelos = modelos.group_by(Orden.marca).all()
+        q = db.session.query(Orden.marca, func.sum(Orden.cantidad_modelos))
+        if day_start_utc and day_end_utc:
+            q = q.filter(Orden.fecha_creacion >= day_start_utc, Orden.fecha_creacion <= day_end_utc)
+        modelos = q.group_by(Orden.marca).all()
         result['modelos_por_marca'] = [{'marca': m if m else '-', 'cantidad': int(c or 0)} for m, c in modelos]
     return jsonify(result)
 
@@ -1149,14 +1158,13 @@ def api_cases():
     from sqlalchemy import func
     tipo = request.args.get('tipo', 'ordenes')
     dias = int(request.args.get('dias', 7))
-    ahora = datetime.now(VANCOUVER_TZ)
-    desde = ahora - timedelta(days=dias)
+    desde_utc = current_utc() - timedelta(days=dias)
     # Query base
-    q = db.session.query(Orden).filter(Orden.fecha_creacion >= desde)
+    q = db.session.query(Orden).filter(Orden.fecha_creacion >= desde_utc)
     # Agrupar por día
     results = {}
     for orden in q:
-        fecha = orden.fecha_creacion.astimezone(VANCOUVER_TZ).strftime('%Y-%m-%d')
+        fecha = to_vancouver_tz(orden.fecha_creacion).strftime('%Y-%m-%d')
         if fecha not in results:
             results[fecha] = 0
         if tipo == 'ordenes':
@@ -1206,6 +1214,60 @@ def api_shades():
             
     return jsonify({'shades': sorted(shade_list)})
 
+@ordenes_bp.route('/api/bloques-disponibles')
+def api_bloques_disponibles():
+    """
+    Devuelve los bloques nuevos y usados filtrados por material y shade en formato JSON ligero.
+    """
+    material = request.args.get('material', '').strip()
+    shade = request.args.get('shade', '').strip()
+
+    if not material or not shade:
+        return jsonify({'bloques_nuevos': [], 'bloques_usados': []})
+
+    nuevos_query = Bloque.query.filter_by(estado='nuevo').filter(
+        db.func.lower(Bloque.material) == material.lower(),
+        Bloque.shade == shade
+    ).order_by(Bloque.grosor.asc())
+
+    usados_query = Bloque.query.filter_by(estado='usado').filter(
+        db.func.lower(Bloque.material) == material.lower(),
+        Bloque.shade == shade
+    ).order_by(Bloque.fecha_creacion.desc())
+
+    bloques_nuevos = nuevos_query.all()
+    bloques_usados = usados_query.all()
+
+    nuevos_data = [
+        {
+            'id': b.id,
+            'shade': b.shade or '',
+            'marca': b.marca or '',
+            'grosor': b.grosor or '',
+            'cantidad': b.cantidad or 0,
+            'codigo_referencia': b.codigo_referencia or ''
+        }
+        for b in bloques_nuevos
+    ]
+
+    usados_data = [
+        {
+            'id': b.id,
+            'codigo_barra': b.codigo_barra or '',
+            'material': b.material or '',
+            'marca': b.marca or '',
+            'shade': b.shade or '',
+            'grosor': b.grosor or '',
+            'modelos_fresados': b.modelos_fresados or 0
+        }
+        for b in bloques_usados
+    ]
+
+    return jsonify({
+        'bloques_nuevos': nuevos_data,
+        'bloques_usados': usados_data
+    })
+
 @ordenes_bp.route('/api/record-cases')
 def api_record_cases():
     """
@@ -1221,21 +1283,40 @@ def api_record_cases():
     except Exception:
         dias = 5
     
-    # Expresión para agrupar por fecha en zona horaria Vancouver
+    if db.engine.dialect.name != 'postgresql':
+        ordenes = Orden.query.filter(Orden.fecha_creacion != None).order_by(Orden.fecha_creacion.desc()).all()
+        agrupado = {}
+        for o in ordenes:
+            van_dt = to_vancouver_tz(o.fecha_creacion)
+            if not van_dt:
+                continue
+            dia_str = van_dt.strftime('%Y-%m-%d')
+            if dia_str not in agrupado:
+                agrupado[dia_str] = 0
+            if tipo == 'casos':
+                agrupado[dia_str] += len(o.get_codigos_caso())
+            elif tipo == 'ordenes':
+                agrupado[dia_str] += 1
+            elif tipo == 'modelos':
+                agrupado[dia_str] += (o.cantidad_modelos or 0)
+        dias_ordenados = sorted(agrupado.keys(), reverse=True)[:dias]
+        dias_ordenados.sort()
+        data = [{'dia': d, 'cantidad': agrupado[d]} for d in dias_ordenados]
+        return jsonify(data)
+
+    # Expresión para agrupar por fecha en zona horaria Vancouver (PostgreSQL)
     fecha_expr = literal_column("to_char(fecha_creacion AT TIME ZONE 'UTC' AT TIME ZONE 'America/Vancouver', 'YYYY-MM-DD')")
     
     data = []
     
     if tipo == 'casos':
         # Sumar la cantidad de códigos de caso por día
-        # Primero obtenemos el número de casos por orden
         subq = db.session.query(
             Orden.id,
             func.array_length(func.string_to_array(Orden.codigos_caso, ','), 1).label('num_casos'),
             fecha_expr.label('dia')
         ).subquery()
         
-        # Luego agrupamos por día, ordenamos descendente para limitar, y luego revertimos
         res = db.session.query(subq.c.dia, func.sum(subq.c.num_casos))\
             .group_by(subq.c.dia)\
             .order_by(subq.c.dia.desc())\
@@ -1265,12 +1346,12 @@ def api_record_cases():
 
 @ordenes_bp.route('/api/resumen-dia')
 def api_resumen_dia():
-    from datetime import datetime
-    import pytz
-    VANCOUVER_TZ = pytz.timezone('America/Vancouver')
-    hoy = datetime.now(VANCOUVER_TZ).replace(hour=0, minute=0, second=0, microsecond=0)
-    maniana = hoy.replace(hour=23, minute=59, second=59, microsecond=999999)
-    ordenes = Orden.query.filter(Orden.fecha_creacion >= hoy, Orden.fecha_creacion <= maniana).all()
+    ahora_van = to_vancouver_tz(datetime.now(pytz.UTC))
+    hoy = ahora_van.replace(hour=0, minute=0, second=0, microsecond=0)
+    maniana = ahora_van.replace(hour=23, minute=59, second=59, microsecond=999999)
+    hoy_utc = hoy.astimezone(pytz.UTC).replace(tzinfo=None)
+    maniana_utc = maniana.astimezone(pytz.UTC).replace(tzinfo=None)
+    ordenes = Orden.query.filter(Orden.fecha_creacion >= hoy_utc, Orden.fecha_creacion <= maniana_utc).all()
     num_ordenes = len(ordenes)
     num_casos = sum(len(o.get_codigos_caso()) for o in ordenes)
     num_modelos = sum(o.cantidad_modelos or 0 for o in ordenes)
@@ -1315,7 +1396,7 @@ def confirmar_codigo_bloque(bloque_id):
                         codigo_barra=bloque.codigo_barra,
                         maquina=maquina,
                         cantidad_modelos=cantidad_modelos,
-                        fecha_creacion=datetime.now(VANCOUVER_TZ)
+                        fecha_creacion=current_utc()
                     )
                     db.session.add(nueva_orden)
                     
@@ -1375,7 +1456,7 @@ def confirmar_codigo_bloque(bloque_id):
                 bloque_nuevo.cantidad -= 1
                 # Si el bloque nuevo sigue en inventario, actualizar su fecha de creacion
                 if bloque_nuevo.cantidad > 0:
-                    bloque_nuevo.fecha_creacion = datetime.now(VANCOUVER_TZ)
+                    bloque_nuevo.fecha_creacion = current_utc()
                 nuevo_bloque_usado = Bloque(
                     material=bloque_nuevo.material,
                     marca=bloque_nuevo.marca,
@@ -1386,7 +1467,7 @@ def confirmar_codigo_bloque(bloque_id):
                     estado='usado',
                     modelos_fresados=cantidad_modelos,
                     codigos_orden_fresados=','.join(codigos),
-                    fecha_creacion=datetime.now(VANCOUVER_TZ)
+                    fecha_creacion=current_utc()
                 )
                 db.session.add(nuevo_bloque_usado)
                 db.session.flush()
